@@ -606,6 +606,7 @@ echo -e "\ncrontab set up..."
 
 
        conf_postfix () {
+! [[ -z postfix_already_conf ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
 line=""
 while true;do
@@ -916,6 +917,7 @@ See
 done #this loop goes through the email provider outbound servers & builds connect.txt files until user selects one
 echo "$outemailadd" > "$directoryforscripts/outemailadd"
 chmod 700 "$directoryforscripts/outemailadd"
+postfix_already_conf=True # set this to True or just anything non-empty
           }
           install_rc () {
 directoryforscripts="$( cat directoryforscripts )"
@@ -1547,6 +1549,7 @@ directoryforscripts="${directoryforscripts%%/}"
              echo -e "\nPress a key to acknowledge and continue, Ctrl-c to abort..."
              read -n1
              conf_postfix
+# if conf_postfix_not_already_completed=true;then
         fi
         if [[ "$answer" =~ r ]];then
              echo -e "remote controlling"
@@ -1607,7 +1610,10 @@ printf "\n  The OTP list is a non-encrypted text file: the first line is simply 
 \nover-encrypt, use OTPs that you've encrypted extra times beyond what your OTP\
 \nlist specifies.\
 \n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
-\nthe labels, if you wish, to ensure your security.  Thank you...";\
+\nthe labels, if you wish, to ensure your security.  Better yet for you, get\
+\njust the OTPs yourself for FREE from online sources that advertise themselves\
+\nas \"Ultra High Security Password Generator\"s, then add the labels, etc.\
+\nmanually.  Thank you...";\
                    read -s -n1 -p "   (Press key...)";\
 printf "\n\
 \n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
@@ -1620,7 +1626,7 @@ printf "\n\
 \n  Developers: we encourage you to to create your own OTPs or client scripts and\
 \nprograms.  We have tried to provide you with enough information to enable you to\
 \ndo so, but if you need more, just ask us.  Be aware that actual client-side code\
-\nis licensed and is charged for.\
+\nis otherwise licensed and is charged for.\
 \n  Homeowners: this project is being done with your Internet access, automation,\
 \nsurveillance, and remote access needs in mind, so we welcome you! \n";\
 continue)\
@@ -1635,7 +1641,7 @@ continue)\
             until [[ "$REPLY" =~ [ls] ]]; do
              read -e -r -i "l" -n1 -p "Use loose (l) or strict (s) port knocking rules? (? for help) "
              REPLY="${REPLY,}"
-             [[ "$REPLY" == \? ]] && printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
+             [[ "$REPLY" == \? ]] && ( printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
 \ndemanding be \"knocked\" by computers trying to establish communication to this\
 \none through the Internet-facing interface that will prove their\
 \nauthorization to connect.\n   l) loose knock rules are when you are permitting knocks to arrive here out of\
@@ -1657,8 +1663,15 @@ continue)\
 \nseconds maximum is allowed between each knock.  After the knock sequence is\
 \ncompleted successfully, the knocking computer will be given only 17 seconds in\
 \nwhich to establish valid communication, and the knock sequence must be repeated\
-\nfor each future dialog.   Press a key...";read -n1 -s
+\nfor each future dialog.   Press a key...";read -n1 -s )
             done
+            echo "Setting up port knocking"
+#write rules to iptables rule set
+            if [[ $REPLY == "l" ]];then
+                 echo "Setting loose rules here"
+            else
+                 echo "Setting strict rules here"
+            fi
         fi
     fi
 done
