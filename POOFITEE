@@ -1713,7 +1713,166 @@ continue)\
                  echo "Setting loose rules here"
             else
                  echo "Setting strict rules here"
+(cat <<PORTKNOCKRULES_END
+iptables -wN knockers
+iptables -wN knockerreap
+iptables -wN knockstage1checkout
+iptables -wN knockstage2
+iptables -wN knockstage3
+iptables -wN knockstage4
+iptables -wN knockstage5
+iptables -wN knockstage6
+iptables -wN knockstage7
+iptables -wN knockstage8
+iptables -wN knockstage9
+iptables -wN knockstage10
+iptables -wN knockstage11
+iptables -wN knockstage12
+iptables -wN knockstage13
+iptables -wN knockstage14
+iptables -wN knockstage15
+iptables -wN knockstage16
+iptables -wA INPUT -i $inttogoogle -m conntrack --ctstate NEW -p $knockproto1 --dport $knockport1 -m recent --set --name knocker -j knockstage1checkout -m comment --comment "for port knock capability, 1st port"
+iptables -wA INPUT -i $inttogoogle -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability"
+iptables -wA INPUT -i $intsnottogoogle -p $knockproto1 --dport $knockport1 -m recent --set --name knocker -j knockstage1checkout -m comment --comment "for port knock capability, 1st port"
+iptables -wA INPUT -i $(echo "$intsnottogoogle"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for port knock capability"
+iptables -wN knockerstest
+iptables -wN knockersort
+iptables -wA knockerstest -j knockersort
+iptables -wA knockers -m recent --name knocker --rcheck --reap --seconds 200
+iptables -wA knockers -m recent --name knocker --remove
+iptables -wA knockers -j knockerreap
+iptables -wA knockers -j DROP
+iptables -wA knockerstest -j LOG --log-prefix "knockertest"
+iptables -wA knockerstest -m recent --name knocker --rcheck --reap --seconds 200
+iptables -wA knockerstest -m recent --name knocker --remove
+iptables -wA knockerstest -j knockerreap
+iptables -wA knockerstest -j DROP
+iptables -wA knockerstest -j LOG --log-prefix "pkt fail:knock, late, ctstate"
+iptables -wA knockerstest -m recent --name knocker --rcheck --reap --seconds 200
+iptables -wA knockerstest -m recent --name knocker --remove
+iptables -wA knockerstest -j knockerreap
+iptables -wA knockerstest -j DROP
+iptables -wA knockstage1checkout -j knockerreap
+iptables -wA knockstage1checkout -m recent --name knockstage2 --set -j LOG --log-prefix "knocked: Stage 1" -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires"
+iptables -wA knockstage1checkout -j DROP
+iptables -wA knockers -i $(echo "$intsnottogoogle"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing"
+iptables -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability"
+iptables -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability"
+iptables -wA knockers -j LOG --log-prefix "pkt fail:knock, late, ctstate"
+iptables -wA knockers -m recent --name knocker --rcheck --reap --seconds 200
+iptables -wA knockers -m recent --name knocker --remove
+iptables -wA knockers -j knockerreap
+iptables -wA knockers -j DROP
+iptables -wA knockersort -p $knockproto2 --dport $knockport2 -m recent --name knockstage2 --seconds 12 --rcheck -j knockstage2 -m comment --comment "knock to stage 2 successful"
+iptables -wA knockersort -p $knockproto3 --dport $knockport3 -m recent --name knockstage3 --seconds 12 --rcheck -j knockstage3 -m comment --comment "knock to stage 3 successful"
+iptables -wA knockersort -p $knockproto4 --dport $knockport4 -m recent --name knockstage4 --seconds 12 --rcheck -j knockstage4 -m comment --comment "knock to stage 4 successful"
+iptables -wA knockersort -p $knockproto5 --dport $knockport5 -m recent --name knockstage5 --seconds 12 --rcheck -j knockstage5 -m comment --comment "knock to stage 5 successful"
+iptables -wA knockersort -p $knockproto6 --dport $knockport6 -m recent --name knockstage6 --seconds 12 --rcheck -j knockstage6 -m comment --comment "knock to stage 6 successful"
+iptables -wA knockersort -p $knockproto7 --dport $knockport7 -m recent --name knockstage7 --seconds 12 --rcheck -j knockstage7 -m comment --comment "knock to stage 7 successful"
+iptables -wA knockersort -p $knockproto8 --dport $knockport8 -m recent --name knockstage8 --seconds 12 --rcheck -j knockstage8 -m comment --comment "knock to stage 8 successful"
+iptables -wA knockersort -p $knockproto9 --dport $knockport9 -m recent --name knockstage9 --seconds 12 --rcheck -j knockstage9 -m comment --comment "knock to stage 9 successful"
+iptables -wA knockersort -p $knockproto10 --dport $knockport10 -m recent --name knockstage10 --seconds 12 --rcheck -j knockstage10 -m comment --comment "knock to stage 10 successful"
+iptables -wA knockersort -p $knockproto11 --dport $knockport11 -m recent --name knockstage11 --seconds 12 --rcheck -j knockstage11 -m comment --comment "knock to stage 11 successful"
+iptables -wA knockersort -p $knockproto12 --dport $knockport12 -m recent --name knockstage12 --seconds 12 --rcheck -j knockstage12 -m comment --comment "knock to stage 12 successful"
+iptables -wA knockersort -p $knockproto13 --dport $knockport13 -m recent --name knockstage13 --seconds 12 --rcheck -j knockstage13 -m comment --comment "knock to stage 13 successful"
+iptables -wA knockersort -p $knockproto14 --dport $knockport14 -m recent --name knockstage14 --seconds 12 --rcheck -j knockstage14 -m comment --comment "knock to stage 14 successful"
+iptables -wA knockersort -p $knockproto15 --dport $knockport15 -m recent --name knockstage15 --seconds 12 --rcheck -j knockstage15 -m comment --comment "knock to stage 15 successful"
+iptables -wA knockersort -p $knockproto16 --dport $knockport16 -m recent --name knockstage16 --seconds 12 --rcheck -j knockstage16 -m comment --comment "knock to stage 16 successful"
+iptables -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200
+iptables -wA knockerreap -m recent --name knockstage2 --set
+iptables -wA knockerreap -m recent --name knockstage3 --set
+iptables -wA knockerreap -m recent --name knockstage4 --set
+iptables -wA knockerreap -m recent --name knockstage5 --set
+iptables -wA knockerreap -m recent --name knockstage6 --set
+iptables -wA knockerreap -m recent --name knockstage7 --set
+iptables -wA knockerreap -m recent --name knockstage8 --set
+iptables -wA knockerreap -m recent --name knockstage9 --set
+iptables -wA knockerreap -m recent --name knockstage10 --set
+iptables -wA knockerreap -m recent --name knockstage11 --set
+iptables -wA knockerreap -m recent --name knockstage12 --set
+iptables -wA knockerreap -m recent --name knockstage13 --set
+iptables -wA knockerreap -m recent --name knockstage14 --set
+iptables -wA knockerreap -m recent --name knockstage15 --set
+iptables -wA knockerreap -m recent --name knockstage16 --set
+iptables -wA knockerreap -m recent --name knockstage2 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage3 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage4 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage5 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage6 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage7 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage8 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage9 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage10 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage11 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage12 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage13 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage14 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage15 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage16 --rcheck --reap --seconds 12
+iptables -wA knockerreap -m recent --name knockstage2 --remove
+iptables -wA knockerreap -m recent --name knockstage3 --remove
+iptables -wA knockerreap -m recent --name knockstage4 --remove
+iptables -wA knockerreap -m recent --name knockstage5 --remove
+iptables -wA knockerreap -m recent --name knockstage6 --remove
+iptables -wA knockerreap -m recent --name knockstage7 --remove
+iptables -wA knockerreap -m recent --name knockstage8 --remove
+iptables -wA knockerreap -m recent --name knockstage9 --remove
+iptables -wA knockerreap -m recent --name knockstage10 --remove
+iptables -wA knockerreap -m recent --name knockstage11 --remove
+iptables -wA knockerreap -m recent --name knockstage12 --remove
+iptables -wA knockerreap -m recent --name knockstage13 --remove
+iptables -wA knockerreap -m recent --name knockstage14 --remove
+iptables -wA knockerreap -m recent --name knockstage15 --remove
+iptables -wA knockerreap -m recent --name knockstage16 --remove
 
+iptables -wA knockstage2 -j knockerreap
+iptables -wA knockstage2 -m recent --name knockstage3 --set -j LOG --log-prefix "knocked: Stage 2" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage2 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage3 -j knockerreap
+iptables -wA knockstage3 -m recent --name knockstage4 --set -j LOG --log-prefix "knocked: Stage 3" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage3 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage4 -j knockerreap
+iptables -wA knockstage4 -m recent --name knockstage5 --set -j LOG --log-prefix "knocked: Stage 4" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage4 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage5 -j knockerreap
+iptables -wA knockstage5 -m recent --name knockstage6 --set -j LOG --log-prefix "knocked: Stage 5" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage5 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage6 -j knockerreap
+iptables -wA knockstage6 -m recent --name knockstage7 --set -j LOG --log-prefix "knocked: Stage 6" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage6 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage7 -j knockerreap
+iptables -wA knockstage7 -m recent --name knockstage8 --set -j LOG --log-prefix "knocked: Stage 7" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage7 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage8 -j knockerreap
+iptables -wA knockstage8 -m recent --name knockstage9 --set -j LOG --log-prefix "knocked: Stage 8" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage8 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage9 -j knockerreap
+iptables -wA knockstage9 -m recent --name knockstage10 --set -j LOG --log-prefix "knocked: Stage 9" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage9 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage10 -j knockerreap
+iptables -wA knockstage10 -m recent --name knockstage11 --set -j LOG --log-prefix "knocked: Stage 10" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage10 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage11 -j knockerreap
+iptables -wA knockstage11 -m recent --name knockstage12 --set -j LOG --log-prefix "knocked: Stage 11" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage11 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage12 -j knockerreap
+iptables -wA knockstage12 -m recent --name knockstage13 --set -j LOG --log-prefix "knocked: Stage 12" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage12 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage13 -j knockerreap
+iptables -wA knockstage13 -m recent --name knockstage14 --set -j LOG --log-prefix "knocked: Stage 13" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage13 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage14 -j knockerreap
+iptables -wA knockstage14 -m recent --name knockstage15 --set -j LOG --log-prefix "knocked: Stage 14" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage14 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage15 -j knockerreap
+iptables -wA knockstage15 -m recent --name knockstage16 --set -j LOG --log-prefix "knocked: Stage 15" -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
+iptables -wA knockstage15 -j DROP  -m comment --comment "port knock rule"
+iptables -wA knockstage16 -j knockerreap
+iptables -wA knockstage16 -m recent --name knocker --remove -j LOG --log-prefix "start encryption negotiation for OTP" -m comment --comment "Needed to launch the OTP script process"
+iptables -wA knockstage16 -j DROP  -m comment --comment "port knock rule"
+PORTKNOCKRULES_END
+) > iptables rules in progress
             fi
         fi
     fi
