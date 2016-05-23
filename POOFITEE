@@ -1,5 +1,5 @@
 #! /bin/bash
-# PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - my system is Invisible To Everyone Else" 
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
 # TODO: Firewalling options this install script can alter from the script set defaults:
 # TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious
