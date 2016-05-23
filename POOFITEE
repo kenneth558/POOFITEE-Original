@@ -1,5 +1,14 @@
 #! /bin/bash
-# PROJECT NAME: POOFITEE: "Perfect Owner Only Firewall - Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# TODO: Replicate not getting email even when port 1958 knocked, then fix
+# TODO: Firewalling options this install script can alter from the script set defaults:
+# TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious
+# TODO: -- Open specific ports to offer public services
+# TODO: -- Allow swap interfaces (default=public:eth0, private:eth1)
+# TODO: -- Force single-interface firewalling even though two interfaces exist
+# TODO: -- Alter the IP address of the private-side interface from 192.168.3.1
+# TODO: Testing using DHCP client and server on the private interface
+# TODO: WARNING -- NEVER PIPE THE OUTPUT OF 'IPTABLES -L' INTO 'LESS' OR YOU MAY LOSE ENTIRE CHAINS IN IPTABLES!
 echo "Sorry, POOFITEE is still under development ... press a key to continue"
 read -n1 -s
 usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
@@ -24,28 +33,32 @@ sortpath="$($whereispath $binaryflag sort)"
 sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
 headpath="$($whereispath $binaryflag head)"
 headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
-min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(echo -e "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && trap "echo If you had run-time errors, your version of bash might be too old" EXIT
-if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then echo -e "This firewalling solution does not accommodate Mac nor BSD due to"\
-"\niptables and crontab dysfunction.";exit;fi
-if ! [ "$(whoami)" == "root" ];then echo -e "\nWithout being launched by su, this script\
+exitmsg="\n\n         Thank you for running this POOFITEE configuration script.\n\
+                      God loves you, pass it on\n"
+min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && \
+   trap "echo -e If you had run-time errors, your version of bash might be too old$exitmsg" EXIT || \
+   trap "echo -e $exitmsg" EXIT
+if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then printf "This firewalling solution does not accommodate Mac nor BSD due to"\
+"\niptables and crontab dysfunction in those platforms";exit;fi
+if ! [ "$(whoami)" == "root" ];then printf "\nWithout being launched by su, this script\
  won't be able to do anything except\
 \ndisplay menus.  No control of this computer can be made by this script unless\
 \nre-launched by root.  Press a key to acknowledge, Ctrl-c to abort\n";read -n1 -s;fi
 #  Beginning of copyright message
-echo -e "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT"\
-     "\n\nThis work of authorship is made available to you under only one out of the"\
-     "\nfollowing two arrangements.  In both arrangements, this copyright message must"\
-     "\nremain with this work of authorship and any and all of its derivatives."\
-     "\n\n1.  Arrangement for your freedom from monetary obligation to the author:"\
-     "\n - This copyright message must continue to be displayed at launch time"\
-     "\n - This copyright message includes the statement"\
-     "\n\n\"       Jesus Christ is Lord of all  ... press a key to acknowledge\""\
-     "\n\ndisplayed on its own line with blank lines adjacently both above and below"\
-     "\nsaid nstatement and rendered statically without attempt made to render said"\
-     "\nstatement transiently."\
-     "\n\n2.  Arrangement for your freedom from copyright display obligation, or to"\
-     "\ncontribute, see the comments within the source code of this script"
-echo -e "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
+printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
+\n\nThis work of authorship is made available to you under only one out of the\
+\nfollowing two arrangements.  In both arrangements, this copyright message must\
+\nremain with this work of authorship and any and all of its derivatives.\
+\n\n1.  Arrangement for your freedom from monetary obligation to the author:\
+\n - This copyright message must continue to be displayed at launch time\
+\n - This copyright message includes the statement\
+\n\n\"       Jesus Christ is Lord of all  ... press a key to acknowledge\"\
+\n\ndisplayed on its own line with blank lines adjacently both above and below\
+\nsaid nstatement and rendered statically without attempt made to render said\
+\nstatement transiently.\
+\n\n2.  Arrangement for your freedom from copyright display obligation, or to\
+\ncontribute, see the comments within the source code of this script"
+printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
 read -n1 -r
 #    Arrangement for your freedom from copyright display obligation: Prior to
 #  distribution, email me the author: kenlovesjesus at gmail dot com to arrange USD payment.
@@ -113,18 +126,18 @@ pspath=$($whereispath $binaryflag ps);pspath="${pspath#*:}";pspath="${pspath# }"
 rhel="$($whereispath $binaryflag chkconfig)"
 rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
 eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || eval "echo -e \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -n1 -s" \
+    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -n1 -s" \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|xargs" > "interfacesby.${0#*/}"
 inttogoogle="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
-# echo -e "\n\ninterface going to google=$inttogoogle"
+# printf "\n\ninterface going to google=$inttogoogle"
 intsnottogoogle="$($ippath link show|$greppath -E "^[1-9][0-9]*:"|$greppath -v lo:\
     |$greppath -v "$inttogoogle"\
     |$sedpath 's/://g'\
     |$awkpath '{print $2}')"
-# echo "$( [[ $(echo -e "$intsnottogoogle"|$wcpath -l) == "1" ]] \
-#    && echo "$(echo -e "$intsnottogoogle"|$wcpath -l) interface" \
-#    || echo "$(echo -e "$intsnottogoogle"|$wcpath -l) interfaces") not going to google=$intsnottogoogle"
+# echo "$( [[ $(printf "$intsnottogoogle"|$wcpath -l) == "1" ]] \
+#    && echo "$(printf "$intsnottogoogle"|$wcpath -l) interface" \
+#    || echo "$(printf "$intsnottogoogle"|$wcpath -l) interfaces") not going to google=$intsnottogoogle"
 # echo "Script-required items: whereis path=$whereispath, awk path=$awkpath, python path=$pythonpath, grep path=$greppath, ifconfig path=$ifconfigpath, uniq path=$uniqpath, sort path=$sortpath, head path=$headpath";exit
 #
 # Introduction and what we'll do
@@ -141,28 +154,37 @@ startscreen+="\n\n      (p) port knocking\
 \n\n
 \nTyping the letters f, r, d, p, optionally followed by a question mark, or just\
 \nplain ? with no letters, select all of the five services listed above that you\
-\nwant, then press ENTER: (or Ctrl-c at any time to terminate installer)"
-
-ghscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                              HELPER SCRIPT OVERVIEW\
-\nThis set of Linux scripts can install several capabilities useful for\
-\nhomeowners up to large enterprises that are Internet-connected with Linux.\
-\nAdvantages to using scripting vs. a compiled program include\
-\n\n - you, the owner, don't need to learn new software and config files\
-\n - easier adaptation and expansion by you, the owner\
-\n - less disk and memory space used\
-\n - less internal complexity means less risk of programming bugs and\
-\n     insurmountable limitations\
-\n - less need to restart processes means fewer operating interruptions\
-\n - no obsolescence"
-fwscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\nwant, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
+# POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
+ghscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                              Helper Script Overview\
+\nThis set of Linux scripts can install several Internet security features useful\
+\nin homeowner and enterprise systems alike.  The name \"POOFITEE\" is derived from\
+\nthe descriptive phrase \"Perfect Owner Only access linux Firewall - the system is\
+\nInvisible To Everyone Else\".  POOFITEE is not really a program as much as it is\
+\nsimply an Internet security scripting project that, in part, installs a set of\
+\nLinux iptables rules.  Nor is POOFITEE an iptables front-end; it simply installs\
+\nan iptables ruleset and a few scripts, then exits completely.  To be perfect in\
+\nInternet security as its name implies, POOFITEE obviously greets Internet\
+\ntraffic that seeks to establish communication to your server[s] with a different\
+\nattitude than other firewalling solutions do.  It is the attitude that your\
+\nintuition tells you to expect in a firewall: \"NO, you cannot communicate with\
+\nthis server in ANY way unless you first prove that you are supposed to\".  Gone\
+\nare the complex, buggy \"badguy detection\" algorithms of other firewalls.\
+\n\nThe advantages of using scripting over a compiled program are significant:\
+\n - most importantly - robust operation in indefinitely continuous duty\
+\n - less script complexity means less risk of programming bugs and mysterious,\
+\n      hard-to-troubleshoot resource limitations\
+\n - source code is simple and extremely easy for you to customize to your liking\
+\n - iptables rule changes are implemented instantly without any process restarts"
+fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                        FIREWALLING WITH THIS SCRIPT SET\
 \n( As you read, please realize the difference between this installation \"helper\
 \nscript\" that you are running now and the \"script set\" it helps you install )\
 \n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
 \nnetfilter-persistent are required if not already present.  These are standard\
 \nfor any Linux firewalling.  As far as manual control of iptables during run\
-\ntime, this script set is friendly.  It will simply configure iptables - an\
+\ntime, POOFITEE plays fair.  It will simply configure iptables - an\
 \ninitial configuration by the helper script, then periodic configurations of\
 \niptables throughout the course of normal operations by the installed script set.\
 \nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
@@ -175,7 +197,7 @@ fwscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
-rcscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+rcscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                  REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET\
 \n( As you read, please realize the difference between this installation \"helper\
 \nscript\" that you are running now and the \"script set\" it helps you install )\
@@ -195,7 +217,7 @@ rcscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nthe hackers of the world.  Logging probed ports (configured in the firewall\
 \nsection of this helper script) would be a handy reference here.\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
-dascreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+dascreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n          EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET\
 \n( As you read, please realize the difference between this installation \"helper\
 \nscript\" that you are running now and the \"script set\" it helps you install )\
@@ -215,7 +237,7 @@ dascreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
-pkscreen="\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                        PORT KNOCKING WITH THIS SCRIPT SET\
 \n( As you read, please realize the difference between this installation \"helper\
 \nscript\" that you are running now and the \"script set\" it helps you install )\
@@ -242,17 +264,110 @@ singinterf="\nBased on finding only one pluggable network interface, your intent
 \nfirewalling you'll set up next to apply only to this computer.  If instead you\
 \nwant this firewalling computer to protect other devices with its firewalling\
 \nservices, select"
+postfix_already_conf=""
+get_1_addr_from_bunch() {
+#one arg: a bunch of newline delimited email addresses
+          emailadds="$1"
+          scratchpad="${emailadds%%'\n'*}"
+          emailaddid=1 ;horizptr="${#scratchpad}"
+          printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
+          while true;do #this loop get a new email account or one chosen from bunch with password
+              while IFS= read  -s -n1 -r char;do
+                   if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
+                         char1="";char2="";char3=""
+                         read -r -s -t 0.001 -n1 char1
+                         read -r -s -t 0.001 -n1 char2
+                         read -r -s -t 0.001 -n1 char3
+                         if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
+                              if [[ "$char1$char2$char3" == "[A" ]];then
+                                   emailaddid=$(( $emailaddid - 1 ))
+                              else
+                                   emailaddid=$(( $emailaddid + 1 ))
+                              fi
+                              if [[ $(( $emailaddid )) -lt 1 ]];then
+                                    emailaddid=$(( $emailaddid + 1 ))
+                                    continue
+                              fi
+                              scratchpad="$emailadds"
+                              for i in `seq 2 $(( $emailaddid ))`;do
+                                   ! [[ -z "${scratchpad#*'\n'}" ]] \
+                                       && scratchpad="${scratchpad#*'\n'}" \
+                                       || emailaddid=$(( $emailaddid - 1 ))
+                              done
+                              scratchpad="${scratchpad%%'\n'*}"
+                              printf "\r${scratchpad}\033[K"
+                              horizptr="$(( ${#scratchpad} ))"
+                         elif [[ "$char1$char2$char3" == "[C" ]];then
+                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
+                                    horizptr="$(( ${horizptr} + 1 ))"
+                                    printf "\033[1C"
+                              fi
+                         elif [[ "$char1$char2$char3" == "[D" ]];then
+                              if [[ $(( ${horizptr} )) -gt 0 ]];then
+                                    horizptr="$(( ${horizptr} - 1 ))"
+                                    printf "\033[1D"
+                              fi
+                         elif [[ "$char1$char2$char3" == "OF" ]];then
+                              horizptr="$(( ${#scratchpad} ))"
+                              printf "\r\033[${#scratchpad}C"
+                         elif [[ "$char1$char2$char3" == "OH" ]];then
+                              horizptr="0"
+                              printf "\r"
+                         elif [[ "$char1$char2$char3" == "[3~" ]];then
+                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
+                                   scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the delete character
+                                   printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                              fi
+                         fi
+                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then # '
+                     if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
+                         horizptr="$(( ${horizptr} - 1 ))"
+                         scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
+                         printf "\033[1D${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                     fi
+                   elif [[ -z "$char" ]];then
+                         break
+                   else
+                        horizptr="$(( ${horizptr} + 1 ))"
+                        scratchpad="${scratchpad:0:horizptr-1}$char${scratchpad:horizptr-1}"
+                        printf "$char${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                   fi
+              done
+              emailadd="${scratchpad%%'\n'*}"
+# printf  "\n\nSelected address is $emailadd\n"
+              emailacct="${emailadd%@*}";emailprovider="${emailadd#*@}"
+              emaildomain="${emailprovider%.*}"
+              topdomain="${emailprovider##*.}"
+              if ! [[ "$emailadd" == "$emailacct"@"$emaildomain"."$topdomain" ]] || [[ -z $emaildomain ]] || [[ -z $topdomain ]];then
+                  printf "\nEmail address not in correct format.  Re-enter it...\033[1A\r$scratchpad";horizptr="${#scratchpad}"
+                  continue
+              fi
+              printf "\n\033[K"
+              emailpw1="";emailpw=""
+              until [[ "$emailpw1" == "$emailpw" ]] && ! [[ -z "$emailpw1""$emailpw" ]];do
+                  read -s -p "Password for account $emailadd: " emailpw1
+                  [[ -z "$emailpw1" ]] && exit || echo
+                  read -s -p "Re-type same password: " emailpw
+                  if ! [[ "$emailpw1" == "$emailpw" ]];then
+                      printf "\nPassword not entered consistently."
+                  else
+                      echo
+                  fi
+              done
+          ! [[ -z $emailadd ]] && ! [[ -z "$emailpw" ]] && break
+          done
+}
 
 until ! [ -z $answer ];do
     clear
-    echo -e "$startscreen"
+    printf "$startscreen"
 # exit
 ########### remove answer and char set line below and uncomment out next line
 #    while true;do answer="fdrp";char="";[[ -z "$char" ]] && break
      while IFS= read  -s -n1 char;do [[ -z "$char" ]] && break
         [[ "$answer$char" == "?" ]] && break
-        if [[ "$(printf "%d" "'$char")" == "27" ]];then # escape or extended key has been detected
-            read -r -s -t 1 -n2 # read & discard 2nd extended key field, timeout if real escape
+        if [[ "$(printf "%d" "'$char")" == "27" ]];then # ' escape or extended key has been detected
+            read -r -s -t 0.001 -n2 # read & discard 2nd extended key field, timeout if real escape
         elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
             char="${char,}"
             printf "$char"
@@ -261,19 +376,19 @@ until ! [ -z $answer ];do
             printf "$char "
             answer="$answer$char "
         else
-            [[ "$(printf "%d" "'$char")" == "127" ]] && ! [[ -z $answer ]] && answer="${answer:0: -1}" # handles the backspace character
+            [[ "$(printf "%d" "'$char")" == "127" ]] && ! [[ -z $answer ]] && answer="${answer:0: -1}" # ' handles the backspace character
             printf "\r$answer    \r$answer" # needed b/c when several keys are pressed simultaneously only first gets silented
         fi
     done
     if [ -z $answer$char ];then
         exit
     elif [[ $answer$char =~ \? ]];then
-        clear;printf "Selections: $answer$char";echo -e "  Since info is selected, no changes are to be made"
-        [[ $answer$char == "?" ]] && (echo -e "$ghscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (echo -e "$fwscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (echo -e "$rcscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (echo -e "$dascreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (echo -e "$pkscreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        clear;printf "Selections: $answer$char";printf "  Since info is selected, no changes are to be made"
+        [[ $answer$char == "?" ]] && (clear;printf "$ghscreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -n1 -s -p "                         Press a key to continue...";echo)
         answer=""
     else
         echo
@@ -297,6 +412,7 @@ until ! [ -z $answer ];do
              ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
              datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
              bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
+             wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
              atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
              nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
              mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}";if [ -z "$mailpath" ];then
@@ -357,9 +473,9 @@ until ! [ -z $answer ];do
                  [[ -z $postmappath ]] && notinstalled+="postmap\n"
              fi
              [[ -z $notinstalled ]] && break 2
-             notinstalled="$(echo -e "$notinstalled"|$sortpath|$uniqpath)"
+             notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
              if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
-                  echo -e "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
+                  printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
 \n\nThis helper script version is not advanced enough to install needed programs on\
 \nsystems such as yours that don't use a common installer to install programs.\
 \nFor this install script to serve its purpose for you, you'll need to install all\
@@ -378,9 +494,9 @@ until ! [ -z $answer ];do
         done # this loops here once when installer pgm not found
         clear
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-                  echo -e "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -n1 -s
+                  printf "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -n1 -s
 #                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
-                  echo -e "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo xargs sh -c 'exec "$installerpath $@" < /dev/tty' sh
+                  printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo xargs sh -c 'exec "$installerpath $@" < /dev/tty' sh
       fi
 
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
@@ -426,13 +542,6 @@ $iptablespath -wt nat -I POSTROUTING 1  -o eth0  -p all -j MASQUERADE
 $iptablespath -wP INPUT ACCEPT
 $iptablespath -wP FORWARD ACCEPT
 $iptablespath -wP OUTPUT ACCEPT
-$iptablespath -wN 3dot2not8081
-$iptablespath -wN GATE1
-$iptablespath -wN GATE2
-$iptablespath -wN GATE3
-$iptablespath -wN KNOCKED
-$iptablespath -wN KNOCKING
-$iptablespath -wN d_blacklist
 $iptablespath -wN d_privateIPs
 $iptablespath -wN d_static_trusted
 $iptablespath -wN d_whitelist
@@ -440,11 +549,6 @@ $iptablespath -wN s_blacklist
 $iptablespath -wN s_privateIPs
 $iptablespath -wN s_static_trusted
 $iptablespath -wN s_whitelist
-$iptablespath -wI INPUT 1  -p all -m comment --comment "this is a comment" -m recent --rcheck --seconds 10 --name AUTH2 -j LOG --log-level 4
-$iptablespath -wI INPUT 1  -p all -m comment --comment "this is a comment" -m recent --rcheck --seconds 10 --name AUTH2 -j GATE3
-$iptablespath -wI INPUT 1  -p all -j KNOCKING
-$iptablespath -wI INPUT 1  -i eth0  -d 127.0.0.0/8  -p all -m recent --set --name Knock1 -j DROP
-$iptablespath -wI INPUT 1  -p all -m recent --update --seconds 60 --name DEFAULT -j DROP
 $iptablespath -wI INPUT 1  -p all -j DROP
 $iptablespath -wI INPUT 1  -p all -j LOG --log-level 4
 $iptablespath -wI INPUT 1  -p all -j s_blacklist
@@ -481,21 +585,6 @@ $iptablespath -wI 3dot2not8081 1  -p all -j DROP
 $iptablespath -wI 3dot2not8081 1  -p all -j LOG --log-level 4
 $iptablespath -wI 3dot2not8081 1  -p tcp ! --dport 8081 -j ACCEPT
 $iptablespath -wI 3dot2not8081 1  -p all -j s_whitelist
-$iptablespath -wI GATE1 1  -p all -j DROP
-$iptablespath -wI GATE1 1  -p tcp --dport 4080 -m recent --set --name AUTH1 -j DROP
-$iptablespath -wI GATE2 1  -p all -j GATE1
-$iptablespath -wI GATE2 1  -p tcp --dport 5080 -m recent --set --name AUTH2 -j DROP
-$iptablespath -wI GATE2 1  -p all -m recent --remove --name AUTH1
-$iptablespath -wI GATE3 1  -p all -j GATE1
-$iptablespath -wI GATE3 1  -p tcp --dport 6080 -m recent --set --name AUTH3 -j DROP
-$iptablespath -wI GATE3 1  -p all -m recent --remove --name AUTH2
-$iptablespath -wI KNOCKED 1  -p all -j GATE1
-$iptablespath -wI KNOCKED 1  -i eth0  -p all -j ACCEPT
-$iptablespath -wI KNOCKED 1  -p all -m recent --remove --name AUTH3
-$iptablespath -wI KNOCKING 1  -p all -j GATE1
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH1 -j GATE2
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH2 -j GATE3
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH3 -j KNOCKED
 $iptablespath -wI d_privateIPs 1  -d 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI d_privateIPs 1  -d 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI d_privateIPs 1  -o eth0  -d 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
@@ -578,7 +667,7 @@ BUILDIPTABLES.SH_END
        install_cronentries () {
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (echo -e "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
@@ -599,41 +688,90 @@ $($crontabpath -l)\
 CRONTAB_ENTRIES_END
 ) |$crontabpath -
 [[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-  echo -e "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
+  printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
   eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
-echo -e "\ncrontab set up..."
+printf "\ncrontab set up..."
           }
 
 
        conf_postfix () {
-! [[ -z postfix_already_conf ]] && return
+# ! [[ -z postfix_already_conf ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
-line=""
 while true;do
-     clear;echo -e "Three emailing functions need email addresses.  Provide at least one email\
+     clear;printf "Three emailing functions need email addresses.  Provide at least one email\
 \naddress now.  The address[es] asked for now is/are the one or more that will\
 \nreceive the various notifications sent out by this system.  Commonly, this would\
 \nbe at least two addresses - one for a text message to a cell phone, the other an\
 \nemail account from which you'll read the FULL content of the notification, since\
 \ncell phone carriers often limit the length of email-to-texting conversion,\
 \ncutting short the longer texts."
-     echo -e "\nAddress[es] where to send notifications to:\n"
-     toemailadds="$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")"
-     while IFS= read  -s -n1 -r char;do # [[ -z "$char" ]] && break
-          if [[ "$(printf "%d" "'$char")" == "27" ]];then # escape or extended key has been detected, single quote important
-                     read -r -s -t 1 -n2 # read & discard 2nd extended key field, timeout if real escape
+     printf "\nAddress[es] where to send notifications to:\n"
+     [[ -f "$directoryforscripts/toemailadds" ]] && line="$(cat "$directoryforscripts/toemailadds")" || line=""
+     toemailaddsmaster="$line"
+     mstrlinenumber=1
+     mstrnumoflines=$( echo "$toemailaddsmaster"|$sedpath 's/,/\n/g'|$wcpath -l )
+     line="${line%%,*}"         # not real sure where the best place is for these lines.  Prior to while loop maybe?
+     ! [[ -z "$line" ]] && printf "$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")\n\033["$mstrnumoflines"A\r$line\033[K"
+     toemailadds=""
+
+     while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
+          if [[ "$(printf "%d" "'$char")" == "27" ]];then # 'escape or extended key has been detected, single quote is important
+                     # could write a more fancy line editor here instead of just wasting the cursor movement keys
+                     read -r -s -t 0.001 -n2 # read & discard 2nd extended key field, timeout if real escape
           elif [[ -z "$char" ]] || [[ "$char" == " " ]];then
-                      [[ -z $line ]] || [[ "${toemailadds: -1}" == "\n" ]] && break
-                      toemailacct="${line%@*}";
-                      toemailprovider="${line#*@}"
-                      toemaildomain="${toemailprovider%.*}"
-                      totopdomain="${toemailprovider##*.}"
-                      if ! [[ "$line" == "$toemailacct"@"$toemaildomain"."$totopdomain" ]] || [[ -z "$toemaildomain" ]] || [[ -z "$totopdomain" ]];then
-                          printf " checked bad, use backspace to correct\r$line"
+                      if [[ -z "$line" ]] && [[ $(( $mstrlinenumber )) -lt $(( $mstrnumoflines )) ]];then
+# Shift and display next from master on this line 
+                           linesfrommaster="$toemailaddsmaster"
+                           mstrlinenumber="$(( $mstrlinenumber + 1 ))"
+                           loopmstrptr=1
+                           until loopmstrptr="$(( $loopmstrptr  + 1 ))";linesfrommaster="${linesfrommaster#*,}";[[ -z "$linesfrommaster" ]] || [[ $(( $loopmstrptr  )) -gt $(( $mstrnumoflines )) ]];do
+                               [[ $(( $loopmstrptr  )) -lt $(( $mstrlinenumber )) ]] && continue
+                               entriesscratchpad="$(printf "$toemailadds"|awk 1 ORS=',')"
+                               while ! [[ -z "$entriesscratchpad" ]] && ! [[ -z "${linesfrommaster%%,*}" ]] && ! [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]];do
+                                   entriesscratchpad="${entriesscratchpad#*,}" # gets the next line from slave
+                               done
+                               [[ -z "$entriesscratchpad" ]] || [[ -z "${linesfrommaster%%,*}" ]] && break
+                               [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]] && ( linesfrommaster="${linesfrommaster#*,}";continue )
+                           done
+                           line="${linesfrommaster%%,*}" # set to next line in master that is not duplicated in slave var
+                           [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]] && line=""
+                           printf "\r$line\033[K"
+                      elif ! [[ -z "$line" ]];then
+                          toemailacct="${line%@*}";
+                          toemailprovider="${line#*@}"
+                          toemaildomain="${toemailprovider%.*}"
+                          totopdomain="${toemailprovider##*.}"
+                          if ! [[ "$line" == "$toemailacct"@"$toemaildomain"."$totopdomain" ]] || [[ -z "$toemaildomain" ]] || [[ -z "$totopdomain" ]];then
+                              printf " checked bad, use backspace to correct\r$line"
+                          else
+                              toemailadds+="$line\n"
+                              line=""
+                              echo
+                              linesfrommaster="$toemailaddsmaster"
+                              mstrlinenumber="$(( $mstrlinenumber + 1 ))"
+                              if ! [[ $(( $mstrlinenumber )) -gt $(( $mstrnumoflines )) ]];then
+                                  loopmstrptr=1
+                                  until loopmstrptr="$(( $loopmstrptr  + 1 ))";linesfrommaster="${linesfrommaster#*,}";[[ -z "$linesfrommaster" ]] || [[ $(( $loopmstrptr  )) -gt $(( $mstrnumoflines )) ]];do
+                                      [[ $(( $loopmstrptr  )) -lt $(( $mstrlinenumber )) ]] && continue
+                                      entriesscratchpad="$(printf "$toemailadds"|awk 1 ORS=',')"
+                                      while ! [[ -z "$entriesscratchpad" ]] && ! [[ -z "${linesfrommaster%%,*}" ]] && ! [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]];do
+                                          entriesscratchpad="${entriesscratchpad#*,}" # gets the next line from slave
+                                      done
+                                      [[ -z "$entriesscratchpad" ]] || [[ -z "${linesfrommaster%%,*}" ]] && break
+                                      [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]] && ( linesfrommaster="${linesfrommaster#*,}";continue )
+                                  done
+                                  line="${linesfrommaster%%,*}" # set to next line in master that is not duplicated in slave var
+                                  [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]] && line=""
+                                   printf "\r$line\033[K"
+                              else
+                                   printf "\033[K"
+                              fi
+                          fi
                       else
-                          echo;toemailadds+="$line\n";line=""
+#                          printf "\033[K"  # if ever needed
+                          break
                       fi
-          elif [[ "$(printf "%d" "'$char")" == "127" ]];then
+          elif [[ "$(printf "%d" "'$char")" == "127" ]];then # ' backspace pressed
                      if ! [[ -z "$line" ]];then
                          line="${line:0: -1}" # handles the backspace character
                          printf "\r$line\033[K" # needed b/c when several keys are pressed simultaneously only first gets silented
@@ -643,15 +781,15 @@ while true;do
                           line+="$char"
           fi
      done
-# echo;echo -e "Addresses are\n\n${toemailadds:: -2}"
-             if ! [[ -z $toemailadds ]];then
-                 directoryforscripts="$( cat directoryforscripts )"
-                 echo "$(echo "${toemailadds:: -2}"|$sedpath 's/\\n/,/g')" > "$directoryforscripts/toemailadds"
-                 break
-             fi
-exit
+     if ! [[ -z $toemailadds ]];then
+         directoryforscripts="$( cat directoryforscripts )"
+         toemailaddsforfiling="$(printf "$toemailadds"|awk 1 ORS=',')"
+         [[ "${toemailaddsforfiling: -1}" == "," ]] && toemailaddsforfiling="${toemailaddsforfiling:: -1}"
+         printf "$(printf "$toemailaddsforfiling\n")" > "$directoryforscripts/toemailadds"
+         break
+     fi
 done
-              echo -e "\nNow, a single email address with its password is needed for an outgoing email\
+              printf "\nNow, a single email address with its password is needed for an outgoing email\
 \nserver somewhere to authenticate the outgoing email traffic (it's come to this\
 \nbecause of spammers).  Enter now the email account name to use for an outgoing\
 \nemail server based on its ability to accept sign-on through this scripting\
@@ -666,12 +804,14 @@ done
 \nsame or different from the one that the notices get sent to.  We can test and\
 \ncompare suitability repeatedly, so you may select from all your accounts which\
 \none this scripting is most able to sign into (use up/down arrow keys, or enter a\
-\nnew name entirely).  SUGGESTION: If reading this has made you suspicious\
-\n(hopefully so!), create a NEW account with a provider that will allow logins\
-\nfrom \"less secure apps\" on a per-account basis (like Gmail) and set that\
-\ndedicated account to allow such logins, then resume here and enter that account\
-\nname and password.  That same account could also be dedicated for this scripting\
-\nto read commands emailed from you for it to be remote controlled:\n"
+\nnew name entirely).  SUGGESTION: If reading this has made you suspicious to give\
+\nyour real email password to this script ( hopefully so! ), create a NEW account\
+\nwith a provider such as gmail that will allow logins from \"less secure apps\" on\
+\na per-account basis (gmail works), set it up to allow such logins.  (You'll use\
+\nthat NEW account for this script's outgoing email authentication needs.)  Then\
+\nresume here and enter that account name and password.  That same account could\
+\nalso be dedicated for this scripting to read commands emailed from you for it to\
+\nbe remote controlled:/n"
 
 (cat <<EOF1
 #!/bin/bash
@@ -716,113 +856,27 @@ echo "\$@" >> "\$0"
 EOF1
 ) > "timeouttry.sh"
 chmod 700 "timeouttry.sh"
-while true;do  #this loop allows user to select an email account for outbound server & builds connect.txt file
-     while true; do #this loop goes through all connections found for a given address
-          scratchpad="${toemailadds%%'\n'*}"
-          toemailaddid=1 ;horizptr="${#scratchpad}"
-          printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
-          while true;do #this loop ensures an email account gets chosen
-              while IFS= read  -s -n1 -r char;do
-                   if [[ "$(printf "%d" "'$char")" == "27" ]];then
-                         char1="";char2="";char3=""
-                         read -r -s -t 0.001 -n1 char1
-                         read -r -s -t 0.001 -n1 char2
-                         read -r -s -t 0.001 -n1 char3
-                         if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
-                              if [[ "$char1$char2$char3" == "[A" ]];then
-                                   toemailaddid=$(( $toemailaddid - 1 ))
-                              else
-                                   toemailaddid=$(( $toemailaddid + 1 ))
-                              fi
-                              if [[ $(( $toemailaddid )) -lt 1 ]];then
-                                    toemailaddid=$(( $toemailaddid + 1 ))
-                                    continue
-                              fi
-                              scratchpad="$toemailadds"
-                              for i in `seq 2 $(( $toemailaddid ))`;do
-                                   ! [[ -z "${scratchpad#*'\n'}" ]] \
-                                       && scratchpad="${scratchpad#*'\n'}" \
-                                       || toemailaddid=$(( $toemailaddid - 1 ))
-                              done
-                              scratchpad="${scratchpad%%'\n'*}"
-                              printf "\r${scratchpad}\033[K"
-                              horizptr="$(( ${#scratchpad} ))"
-                         elif [[ "$char1$char2$char3" == "[C" ]];then
-                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
-                                    horizptr="$(( ${horizptr} + 1 ))"
-                                    printf "\033[1C"
-                              fi
-                         elif [[ "$char1$char2$char3" == "[D" ]];then
-                              if [[ $(( ${horizptr} )) -gt 0 ]];then
-                                    horizptr="$(( ${horizptr} - 1 ))"
-                                    printf "\033[1D"
-                              fi
-                         elif [[ "$char1$char2$char3" == "OF" ]];then
-                              horizptr="$(( ${#scratchpad} ))"
-                              printf "\r\033[${#scratchpad}C"
-                         elif [[ "$char1$char2$char3" == "OH" ]];then
-                              horizptr="0"
-                              printf "\r"
-                         elif [[ "$char1$char2$char3" == "[3~" ]];then
-                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
-                                   scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the delete character
-                                   printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                              fi
-                         fi
-                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then
-                     if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
-                         horizptr="$(( ${horizptr} - 1 ))"
-                         scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
-                         printf "\033[1D${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                     fi
-                   elif [[ -z "$char" ]];then
-                         break
-                   else
-                        horizptr="$(( ${horizptr} + 1 ))"
-                        scratchpad="${scratchpad:0:horizptr-1}$char${scratchpad:horizptr-1}"
-                        printf "$char${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                   fi
-              done
-              outemailadd="${scratchpad%%'\n'*}"
-# echo -e  "\n\nSelected address is $outemailadd\n"
-              outemailacct="${outemailadd%@*}";outemailprovider="${outemailadd#*@}"
-              outemaildomain="${outemailprovider%.*}"
-              outtopdomain="${outemailprovider##*.}"
-              if ! [[ "$outemailadd" == "$outemailacct"@"$outemaildomain"."$outtopdomain" ]] || [[ -z $outemaildomain ]] || [[ -z $outtopdomain ]];then
-                  printf "\nEmail address not in correct format.  Re-enter it...\033[1A\r$scratchpad";horizptr="${#scratchpad}"
-                  continue
-              fi
-              outemailsubdomain="smtp";printf "\n\033[K"
-              outemailpw1="";outemailpw=""
-              until [[ "$outemailpw1" == "$outemailpw" ]] && ! [[ -z "$outemailpw1""$outemailpw" ]];do
-                  read -s -p "Password for account $outemailadd: " outemailpw1
-                  [[ -z "$outemailpw1" ]] && exit || echo
-                  read -s -p "Re-type same password: " outemailpw
-                  if ! [[ "$outemailpw1" == "$outemailpw" ]];then
-                      echo -e "\nPassword not entered consistently."
-                  else
-                      echo
-                  fi
-              done
-          ! [[ -z $outemailadd ]] && ! [[ -z "$outemailpw" ]] && break
-          done
-          echo -e "determining best option for outgoing email server login.  You should be doing\
+while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
+     while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
+          get_1_addr_from_bunch $toemailadds
+          outemailadd="emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
+          printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
           [[ -f "$directoryforscripts/$outemailprovider.outconnects.txt" ]] \
              && rm "$directoryforscripts/$outemailprovider.outconnects.txt" 2>/dev/null
-          printf  "\rSelected address $outemailadd \033[K\n"
+          printf  "\rYou selected address $outemailadd \033[K\n"
           while ! [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                 printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
           done
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
                     printf "\rChecking $MAIL_PROT.$outemailprovider:$port\033[K";
-                    (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo -e \"$MAIL_PROT:$port\" >> \"$directoryforscripts/$outemailprovider.outconnects.txt\";echo -e \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                    (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$directoryforscripts/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                done  2> /dev/null
           done
           if [[ -f "$directoryforscripts/$outemailprovider.outconnects.txt" ]];then
-               echo -e "\rThe possibilities are\033[K\n$(<"$directoryforscripts/$outemailprovider.outconnects.txt")"
+               printf "\rThe possibilities are\033[K\n$(<"$directoryforscripts/$outemailprovider.outconnects.txt")"
                break
           else
                printf "\r\033[K\033[1ASelected email provider doesn't allow logins.  Enter a different account...\n"
@@ -831,36 +885,36 @@ while true;do  #this loop allows user to select an email account for outbound se
      while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a smtp connection for outgoing email
           chmod 744 /etc/postfix/main.cf
           [[ "$($greppath -c ^myhostname </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
+              && printf "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^myhostname.*/myhostname = '"$(hostname)"'/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^relayhost </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "relayhost = ["${line%:*}"."$outemailprovider"]:"${line#*:} >> /etc/postfix/main.cf \
+              && printf "relayhost = ["${line%:*}"."$outemailprovider"]:"${line#*:} >> /etc/postfix/main.cf \
               || $sedpath -i 's/^relayhost.*/relayhost = ['"${line%:*}.$outemailprovider]:${line#*:}"'/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^mech_list: cram-md5 </etc/postfix/sasl/smtpd.conf)" == "0" ]] \
-              && echo -e "mech_list: cram-md5" >> /etc/postfix/sasl/smtpd.conf
+              && printf "mech_list: cram-md5" >> /etc/postfix/sasl/smtpd.conf
           [[ "$($greppath -c ^smtp_sasl_auth_enable </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_sasl_auth_enable = yes" >> /etc/postfix/main.cf \
+              && printf "smtp_sasl_auth_enable = yes" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_auth_enable.*/smtp_sasl_auth_enable = yes/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_sasl_security_options </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_sasl_security_options = noanonymous" >> /etc/postfix/main.cf \
+              && printf "smtp_sasl_security_options = noanonymous" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_security_options.*/smtp_sasl_security_options = noanonymous/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_sasl_password_maps </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" >> /etc/postfix/main.cf \
+              && printf "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_password_maps.*/smtp_sasl_password_maps = hash:\/etc\/postfix\/sasl_passwd/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_tls_security_level </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_tls_security_level = encrypt" >> /etc/postfix/main.cf \
+              && printf "smtp_tls_security_level = encrypt" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_tls_security_level.*/smtp_tls_security_level = encrypt/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_tls_CAfile </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_tls_CAfile = /etc/postfix/cacert.pem" >> /etc/postfix/main.cf \
+              && printf "smtp_tls_CAfile = /etc/postfix/cacert.pem" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_tls_CAfile.*/smtp_tls_CAfile = \/etc\/postfix\/cacert.pem/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^[[]"${line%:*}"".""$outemailprovider""]:""${line#*:}" </etc/postfix/sasl_passwd)" == "0" ]] \
-              && echo -e "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd":"$outemailpw" >> /etc/postfix/sasl_passwd \
+              && printf "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd":"$outemailpw" >> /etc/postfix/sasl_passwd \
               || $sedpath -i 's/^[[]'"${line%:*}.$outemailprovider]:${line#*:}"'.*/'"[${line%:*}.$outemailprovider]:${line#*:}     $outemailadd:$outemailpw"'/g' /etc/postfix/sasl_passwd
           [[ "$($greppath -c ^smtp_generic_maps </etc/postfix/main.cf)" == "0" ]] \
-              && echo -e "smtp_generic_maps = hash:/etc/postfix/generic" >> /etc/postfix/main.cf \
+              && printf "smtp_generic_maps = hash:/etc/postfix/generic" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_generic_maps.*/smtp_generic_maps = hash:\/etc\/postfix\/generic/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^root@$(hostname) </etc/postfix/generic)" == "0" ]] \
-              && echo -e "root@$(hostname)           $outemailadd" >> /etc/postfix/generic \
+              && printf "root@$(hostname)           $outemailadd" >> /etc/postfix/generic \
               || $sedpath -i 's/^'"root@$(hostname)"'.*/'"root@$(hostname)           $outemailadd"'/g' /etc/postfix/generic
           chown postfix /etc/postfix
           chown postfix /etc/postfix/generic
@@ -875,13 +929,13 @@ while true;do  #this loop allows user to select an email account for outbound se
           chown postfix /etc/postfix/sasl_passwd*
           /etc/init.d/postfix reload
           if ! [[ "$( $postqueuepath -p )" == *is\ empty* ]];then
-               echo -e "For the next step, the mail queue needs to be flushed.  You will lose the\
+               printf "For the next step, the mail queue needs to be flushed.  You will lose the\
 \nfollowing emails that haven't been sent.  Press a key to acknowledge..."
-               echo -e "$( $postqueuepath -p )"
+               printf "$( $postqueuepath -p )"
                read -n1
-               echo -e "$( $postqueuepath -f )"
+               printf "$( $postqueuepath -f )"
           fi
-          echo -e "Next, suitability test notifications will be sent out to all email addresses you\
+          printf "Next, suitability test notifications will be sent out to all email addresses you\
 \nindicated should receive notifications.  Press a key to send them..."
           read -s -n1 -r
           notemsg=""
@@ -889,9 +943,9 @@ while true;do  #this loop allows user to select an email account for outbound se
           [[ $answer =~ r ]] && notemsg+="Email remote control\n"
           [[ $answer =~ d ]] && notemsg+="Dynamic IP address change notifier\n"
           [[ $answer =~ p ]] && notemsg+="Port knocking\n"
-          echo -e "Test using "${line%:*}"".""$outemailprovider"":""${line#*:}" \
+          printf "Test using "${line%:*}"".""$outemailprovider"":""${line#*:}" \
 \nas outgoing email server from firewall/dynamic IP notifier \
-\nItems being installed:\n$( echo -e "${notemsg:: -2}" )"|mail -s "Test notification from firewall install script" "$(echo "${toemailadds:: -2}"|$sedpath 's/\\n/,/g')"
+\nItems being installed:\n$( printf "${notemsg:: -2}" )"|mail -s "Test notification from firewall install script" "$(echo "${toemailadds:: -2}"|$sedpath 's/\\n/,/g')"
 #          cat \
 << See
 If error: “SASL authentication failed; server smtp.gmail.com”,
@@ -910,58 +964,45 @@ See
 \nremain in the sent folder of this email address, be sure to check for that\
 \nfeature before accepting this outgoing email server.  Press ENTER key to accept\
 \nthis outgoing email server, any other key to see if another one can be tested..."
-          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # I don't want to mess with IFS but do need to know diff between space and enter
-     done 3<"$directoryforscripts/$outemailprovider.outconnects.txt"  2> /dev/null
+          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # Didn't want to mess with IFS but had to know diff between space and enter
+     done 3<"$directoryforscripts/$outemailprovider.outconnects.txt"  2> /dev/null #if needed to for chosen email account, this loop iterates through lines in outconnects.txt 
 # user wants a to re-select an email address
-     echo -e "Select a different email address for its outgoing email server:"
+     printf "Select a different email address for its outgoing email server:"
 done #this loop goes through the email provider outbound servers & builds connect.txt files until user selects one
 echo "$outemailadd" > "$directoryforscripts/outemailadd"
 chmod 700 "$directoryforscripts/outemailadd"
 postfix_already_conf=True # set this to True or just anything non-empty
           }
+
           install_rc () {
 directoryforscripts="$( cat directoryforscripts )"
 # "$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")"
-line="$( [[ -f "$directoryforscripts/outemailadd" ]] && cat "$directoryforscripts/outemailadd" || [[ -f "$directoryforscripts/toemailadds" ]] && head -n 1 <($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds") )"
-inemailadd="";inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
-rm successlogins 2>/dev/null
+inemailadds=""
+inemailadds="$( [[ -f "$directoryforscripts/outemailadd" ]] && cat "$directoryforscripts/outemailadd" || [[ -f "$directoryforscripts/toemailadds" ]] && $sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds" )"
+#WORKING ON: nice selector from "$directoryforscripts/successlogins"
+
+inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
+# rm "$directoryforscripts/successlogins" 2>/dev/null
 clear
 while true;do
-     echo -e "Enter the email address now from which this system will retrieve instructions\
-\nthat you or others will send in:\n";printf "$line"
-     while IFS= read  -s -n1 -r char;do # [[ -z "$char" ]] && break
-          if [[ "$(printf "%d" "'$char")" == "27" ]];then # escape or extended key has been detected, single quote important
-                         read -r -s -t 0.001 -n1 char1
-                         read -r -s -t 0.001 -n1 char2
-                         read -r -s -t 0.001 -n1 char3
-          elif [[ -z "$char" ]] || [[ "$char" == " " ]];then
-                      [[ -z $line ]] && break
-                      inemailacct="${line%@*}";
-                      inemailprovider="${line#*@}"
-                      inemaildomain="${inemailprovider%.*}"
-                      intopdomain="${inemailprovider##*.}"
-                      if ! [[ "$line" == "$inemailacct"@"$inemaildomain"."$intopdomain" ]] || [[ -z $inemaildomain ]] || [[ -z $intopdomain ]];then
-                          printf " checked bad, use backspace to correct.\r$line"
-                      else
-                          echo;break
-                      fi
-          elif [[ "$(printf "%d" "'$char")" == "127" ]];then
-                     if ! [[ -z $line ]];then
-                         line="${line:0: -1}" # handles the backspace character
-                         printf "\r$line\033[K" # needed b/c when several keys are pressed simultaneously only first gets silented
-                     fi
-          else
-                          printf "$char";
-                          line+="$char"
-          fi
-     done
-             [[ -z $line ]] && break
-              echo -e "Configuring for that email account.  You should be doing\
+     printf "(Be advised - The next configuration will determine the optimal port of an email\
+\nserver to connect to when retrieving emailed instructions.  You should now\
+\nensure that your Internet connection is the same one that will be used in final\
+\noperation if your email account will be hosted by your local ISP.  The email\
+\naccount, that is, that this server will read instructions out of.)\
+\n\n  Enter the email address now from which this system will retrieve instructions\
+\nto itself that you or others will send:\n"
+
+
+#     printf "$line"
+     get_1_addr_from_bunch $inemailadds
+          inemailadd="emailadd";inemailacct="$emailacct";inemaildomain="$emaildomain";intopdomain="$topdomain";inemailprovider="$emailprovider";inemailpw="$emailpw"
+              printf "Configuring for that email account.  Remember, you should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for this...\n"
               [[ -f "$directoryforscripts/$inemailprovider.inconnects.txt" ]] \
                  && rm "$directoryforscripts/$inemailprovider.inconnects.txt" 2>/dev/null
-              printf  "\rSelected address $line \033[K\n"
+              printf  "\rYou selected address $inemailacct \033[K\n"
               while ! [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                   printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
               done
@@ -970,11 +1011,11 @@ while true;do
                   for MAIL_PROT in pop pop3 mail;do
                        for port in 465 995 110 993;do
                             printf "\rChecking $MAIL_PROT.$inemailprovider:$port\033[K";
-                            (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo -e \"$MAIL_PROT:$port\" >> \"$directoryforscripts/$inemailprovider.inconnects.txt\";echo -e \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                            (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$directoryforscripts/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                        done  2> /dev/null
                   done
                   if [[ -f "$directoryforscripts/$inemailprovider.inconnects.txt" ]];then
-                       echo -e "\rThe possibilities are\033[K\n$(<"$directoryforscripts/$inemailprovider.inconnects.txt")"
+                       printf "\rThe possibilities are\033[K\n$(<"$directoryforscripts/$inemailprovider.inconnects.txt")"
                   else
                        printf "\r\033[K\033[2ASelected email provider isn't allowing an initial connection right now, or maybe\
 \nthe Internet connection is faulty.  Press Ctrl-c to abort retries...\n"
@@ -982,7 +1023,7 @@ while true;do
                        continue
                   fi
               done
-# echo;echo -e "Address is\n\n$inemailacct"@"$inemaildomain"."$intopdomain"
+# echo;printf "Address is\n\n$inemailacct"@"$inemaildomain"."$intopdomain"
           rcpw="";rcpw1=""
           while printf "Password for that email account:";read -s rcpw;do # This loop is for when a password is under question
               printf "\n\033[KRe-type password:"
@@ -998,13 +1039,13 @@ while true;do
                       exec 5<>/dev/tcp/"${line%:*}.$inemailprovider/${line#*:}"
                       printf "\rExecuted the connect of ${line%:*}.$inemailprovider/${line#*:}, now communicating with it for user $inemailacct...\033[K"
                       read -t 2 -u 5 HELO 
-                      echo -e "$HELO" >> fifo 
+                      printf "$HELO" >> fifo 
 printf "\n$HELO"
                       msgnumber=0
                       for msg in "user $inemailacct\r" "pass $rcpw\r" stat list;do
                            msgnumber=$(( msgnumber+=1 ))
                            printf "\r\033[KSending $msg\n"
-                           echo -e "$msg" >&5
+                           printf "$msg" >&5
                          #  while true;do # this loop stores server responses for a configuration
 # using 'cat <&5' would probably timeout on most single-line reads
                            while (read -u 5 replyline
@@ -1027,15 +1068,15 @@ printf "\n$HELO"
                                 fi
                            done 2>/dev/null
                       done
-                      echo -e "quit\r" >&5 
+                      printf "quit\r" >&5 
                       read -t 2 -u 5 BYE
-#                      echo -e "$BYE" >> fifo 
+#                      printf "$BYE" >> fifo 
                       exec 5>&-
                       if ! [[ "$( replystart="$($tailpath -n 1 fifo)";echo "${replystart::1}")" == "+" ]];then # present this choice with every error
-                         echo -e "Unsuccessful sign-in of $inemailacct to ${line%:*}.$inemailprovider/${line#*:}" # with this error:\n$($tailpath -n 1 fifo)"
-                         echo -e "quit\r" >&5
+                         printf "Unsuccessful sign-in of $inemailacct to ${line%:*}.$inemailprovider/${line#*:}" # with this error:\n$($tailpath -n 1 fifo)"
+                         printf "quit\r" >&5
                          read -t 2 -u 5 BYE
-#                          echo -e "$BYE" >> fifo 
+#                          printf "$BYE" >> fifo 
                          exec 5>&-
                          printf "If you're sure about the password, and there are more port options for this\
 \nemail account, option 'N' would make the most sense.  Try a new email Address, a\
@@ -1046,7 +1087,7 @@ printf "\n$HELO"
                          echo
                          ! [[ "${loops::1}" == "0" ]] && continue "${loops::1}"
                       else
-                         echo -e "$inemailacct ${line%:*}.$inemailprovider/${line#*:}" >> "$directoryforscripts/successlogins"
+                         printf "$inemailacct ${line%:*}.$inemailprovider/${line#*:}" >> "$directoryforscripts/successlogins"
                          break
                       fi
                   done # This loop for exact settings retry
@@ -1056,7 +1097,7 @@ printf "\n$HELO"
           done # This loop is for when a password is under question
 done # This loop is to change the account
 toemailadds=$( cat "$directoryforscripts/toemailadds" )
-#     echo -e "\n\nLet's look at the results:\n"
+#     printf "\n\nLet's look at the results:\n"
 #     cat fifo
 #     rm fifo 2>/dev/null
            (cat <<EOF
@@ -1159,17 +1200,17 @@ exec 5>&-;wait
 exec 5<>/dev/tcp/\$MAIL_PROT"."\$domainname/\$port
 [[ \$- = *i* ]] && echo "Executed the connect, now trying to read..."
 read -t 2 -u 5 HELO # <&5
-[ x\$1 == "x-v" ] && echo -e "GOT: \\n\$HELO"
+[ x\$1 == "x-v" ] && printf "GOT: \\n\$HELO"
 [ x\$1 == "x-v" ] && echo "SENDING: username"
-echo -e "user $inemailacct\\r" >&5
+printf "user $inemailacct\\r" >&5
 read -t 2 -u 5 sendyourpassword
 [ x\$1 == "x-v" ] && echo "\$sendyourpassword"
 [ x\$1 == "x-v" ] && echo "SENDING: password"
-echo -e "pass $rcpw\\r" >&5
+printf "pass $rcpw\\r" >&5
 read -t 2 -u 5  maildroplockedandready
 [ x\$1 == "x-v" ] && echo "\$maildroplockedandready"
 [ x\$1 == "x-v" ] && echo "SENDING: list"
-echo -e "list\\r" >&5
+printf "list\\r" >&5
 [ -f "$directoryforscripts/mailcontent" ] && rm "$directoryforscripts/mailcontent"
 numofemails=-1
 while read  -t 2 -u 5 emailtitle; do
@@ -1184,7 +1225,7 @@ done
 if [ \$((numofemails)) -gt -1 ]; then
     [[ \$- = *i* ]] && echo "Retrieving \$numofemails email[s]..."
     for i in \`seq 0 \$((numofemails))\`;do
-         echo -e "RETR \${emailtitlenums[i]}\\r" >&5
+         printf "RETR \${emailtitlenums[i]}\\r" >&5
           boundary=""
           while read  -t 2 -u 5 mailcontentline;do
              [ \$(( \${#mailcontentline} )) -lt 2 ] && continue
@@ -1198,7 +1239,7 @@ if [ \$((numofemails)) -gt -1 ]; then
           done
     done
     for i in \`seq 0 \$((numofemails))\`;do
-         echo -e "dele \${emailtitlenums[i]}\\r" >&5
+         printf "dele \${emailtitlenums[i]}\\r" >&5
          while read -t 2 -u 5 deleteresponse;do [ \$(( \${#deleteresponse} )) -lt 1 ] && break;done
     done
      [ -f "$directoryforscripts/valid_instructions_from_email" ] && rm "$directoryforscripts/valid_instructions_from_email"
@@ -1232,7 +1273,7 @@ else
      [[ \$- = *i* ]] && echo "No emails were in the inbox"
 fi
 [[ \$- = *i* ]] && echo "SENDING: QUIT"
-echo -e "QUIT\\r" >&5
+printf "QUIT\\r" >&5
 wait
 exec 5>&-
 EOF
@@ -1312,7 +1353,7 @@ exit
     $($dhcpclientpath ${dhcpclientpkg#* } | $greppath -i renew ) # |$greppath  # since there could be several dhcp clients installed we know only one will be working, eliminate non-working ones
 done
 if [[ -z "$dhcpclientpath" ]];then
-    echo -e "Unable to verify that the Internet-pointing interface is a DHCP client.  If said\
+    printf "Unable to verify that the Internet-pointing interface is a DHCP client.  If said\
 \ninterface is not using DHCP as a DHCP client, there is no point in installing\
 \nthis feature.  If it IS a dhcp client, then the finding of this script is in\
 \nerror, and you'll have to modify this script to so it learns how to detect and\
@@ -1325,26 +1366,26 @@ if ! [[ -z "$toemailaddsIP" ]];then
      break
 fi
 # "$directoryforscripts/newdynip.sh"
-echo -e "The notification email you'd receive should refer to this computer by what name?"
+printf "The notification email you'd receive should refer to this computer by what name?"
 pcname=$(while read -e -r -i "$(hostname)" sysname;do if ! [[ -z "$sysname" ]];then echo "$sysname";break;fi;done)
 echo
 if [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then 
-     echo -e "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
+     printf "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
 default is shown below.  Press enter to keep it; otherwise, change it\nto suit you:"
 else 
-     echo -e "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
+     printf "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
 default is shown below, but is NOT WORKING now.  Change it to suit you:"
 fi
 resolver="$(while read -e -i "dig +short myip.opendns.com @resolver1.opendns.com" resolver;do 
      echo "$resolver";break;
 done)"
-echo -e "\nAddress[es] where to send IP change notifications to:\n"
+printf "\nAddress[es] where to send IP change notifications to:\n"
 toemailaddsIP="$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailaddsIP")"
 scratchpad="${toemailaddsIP##*'\n'}"
 line="${toemailaddsIP##*'\n'}";printf "$line"
 toemailaddsIPid=1
               while IFS= read  -s -n1 -r char;do
-                   if [[ "$(printf "%d" "'$char")" == "27" ]];then
+                   if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
                          char1="";char2="";char3=""
                          read -r -s -t 0.001 -n1 char1
                          read -r -s -t 0.001 -n1 char2
@@ -1390,7 +1431,7 @@ toemailaddsIPid=1
                                    printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
                               fi
                          fi
-                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then
+                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then # '
                      if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
                          horizptr="$(( ${horizptr} - 1 ))"
                          scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
@@ -1413,8 +1454,8 @@ toemailaddsIPid=1
                   continue
               fi
           ! [[ -z "$outemailadd" ]] && break
-# echo;echo -e "Addresses are\n\n${toemailadds:: -2}"
-echo -e "In the email that will inform those recipients who you specified of the new IP\
+# echo;printf "Addresses are\n\n${toemailadds:: -2}"
+printf "In the email that will inform those recipients who you specified of the new IP\
 \naddress listed as one or a series of link[s] formatted as any browser would\
 \naccept in the address bar, enter the protocol, subdirectories and options, and\
 \nport that the address will begin and end with, in as many combinations as you'd\
@@ -1461,7 +1502,7 @@ else
 echo "IP address is <\$ip_from_resolver> and not acceptable"
     exit
 fi
-echo -e "$webpageprotocol://$ip_from_resolver/zm\
+printf "$webpageprotocol://$ip_from_resolver/zm\
 \nhttp://\$ip_from_resolver:9080\
 \nhttp://\$ip_from_resolver:8080\
 \nhttp://\$ip_from_resolver:7080\
@@ -1487,7 +1528,7 @@ EOF
 
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (echo -e "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
@@ -1511,13 +1552,13 @@ $($crontabpath -l)\
 CRONTAB_ENTRIES_END
 ) |$crontabpath -
 [[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-  echo -e "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
+  printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
   eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
 echo "crontab set up..."
 }
 
 outemail_warnings () {
-         echo -e "This installation script is about to make changes to this computer that can\
+         printf "This installation script is about to make changes to this computer that can\
 \nprofoundly change the way it sends out email.  No accommodation will be given\
 \nfor any email sending capability that you might already have set up.  PLEASE do\
 \nNOT expect this scripting to give any outbound emailing consideration for email\
@@ -1528,7 +1569,7 @@ outemail_warnings () {
 }
 
 end_warnings () {
-         echo -e "Remember always this fact of life:  Email providers do make unpredictable\
+         printf "Remember always this fact of life:  Email providers do make unpredictable\
 \nchanges to their email service!  The same holds true for ISPs.  Blame that any\
 \nnumber of different reasons...technical, social, and otherwise.  Be aware that\
 \nthe settings you just created may need to be adjusted in the future in response\timeou
@@ -1541,22 +1582,24 @@ end_warnings () {
 directoryforscripts="${directoryforscripts%%/}"
         if [[ "$answer" =~ f ]];then
             echo "firewalling"
-             echo -e "iptables, including ruleset and crontab entries will be set up next.\
+             printf "iptables, including ruleset and crontab entries will be set up next.\
 \n   Press a key...";read -n1 -r
-             install_buildiptablessh
-             install_cronentries
-             outemail_warnings
-             echo -e "\nPress a key to acknowledge and continue, Ctrl-c to abort..."
-             read -n1
+
+######################          SDON'T FORGET TO UNCOMMENT THE FOLLOWING LINES!!!!!!!!!!
+#             install_buildiptablessh
+#             install_cronentries
+#             outemail_warnings
+#             printf "\nPress a key to acknowledge and continue, Ctrl-c to abort..."
+#             read -n1
              conf_postfix
 # if conf_postfix_not_already_completed=true;then
         fi
         if [[ "$answer" =~ r ]];then
-             echo -e "remote controlling"
+             printf "remote controlling"
              install_rc
         fi
         if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
-             echo -e "dynamic IP change notify"
+             printf "dynamic IP change notify"
              install_rc
              install_dynIPch
         fi
@@ -1611,9 +1654,8 @@ printf "\n  The OTP list is a non-encrypted text file: the first line is simply 
 \nlist specifies.\
 \n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
 \nthe labels, if you wish, to ensure your security.  Better yet for you, get\
-\njust the OTPs yourself for FREE from online sources that advertise themselves\
-\nas \"Ultra High Security Password Generator\"s, then add the labels, etc.\
-\nmanually.  Thank you...";\
+\nthem yourself for FREE from online sources that advertise themselves as \"Ultra\
+\nHigh Security Password Generator\"s.  Thank you...";\
                    read -s -n1 -p "   (Press key...)";\
 printf "\n\
 \n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
@@ -1671,6 +1713,7 @@ continue)\
                  echo "Setting loose rules here"
             else
                  echo "Setting strict rules here"
+
             fi
         fi
     fi
