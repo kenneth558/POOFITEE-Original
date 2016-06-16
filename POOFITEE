@@ -1992,7 +1992,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                                       src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
                                       if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
      #                                      echo "within range"
-                                           :# next step here is to note which line contains the first occurance and put the knock test rules just prior to it because we need the knock test rules being the first reference to the internal interface[[ ]] >>
+                                           : # next step here is to note which line contains the first occurance and put the knock test rules just prior to it because we need the knock test rules being the first reference to the internal interface[[ ]] >>
                                       fi
                                  done
                             done
