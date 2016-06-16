@@ -1,7 +1,8 @@
 #! /bin/bash
 # PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# TODO: accommodate different date, etc. format preferences in log files, directory listings, etc
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
-# TODO: Firewalling options this install script can alter from the script set defaults:
+# TODO: Firewalling options this install script should be able to alter from the script set defaults:
 # TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious - comment out the crontab entry and kill the process
 # TODO: -- Open specific ports to offer public services
 # TODO: -- Allow swap interfaces (default=public:eth0, private:eth1)
@@ -11,7 +12,17 @@
 # TODO: WARNING -- NEVER PIPE THE OUTPUT OF 'IPTABLES -L' INTO 'LESS' OR YOU MAY LOSE ENTIRE CHAINS IN IPTABLES!
 # TODO:  CRITICAL: Determine why iptables ruleset sometimes disappears and stays gone. no wifi, no nothing unless iptables stays working
 # TODO: check for sufficient resources prior to executing, like disk space
-# TODO: fix postfix log errs about badly named email account
+# TODO: fix postfix log errs about badly named email account if full install doesn't and make more secure with smtp_tls_per_site, 
+# TODO: convert from shell script restore to iptables-type restore.
+#/etc/postfix/main.cf
+#
+#. . .
+#mailbox_size_limit = 0
+#recipient_delimiter = +
+#inet_interfaces = all
+#. . .
+#
+#Change the line that reads inet_interfaces = all to inet_interfaces = loopback-only.
 # Options:
 # Email parser on/off
 #  --- email address, password
@@ -42,7 +53,7 @@
 #  accommodate reconfiguration of already installed system
 #
 echo "Sorry, POOFITEE is still under development ... press a key to continue"
-read -n1 -s
+read -rsn 1;read -rst 0.001 -n3
 usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
 D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
 until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[ ++counter -eq 64 ]] || [[ "$($whereispath $binaryflag whereis &> /dev/null;echo $?)" == "0" ]];do
@@ -65,7 +76,7 @@ sortpath="$($whereispath $binaryflag sort)"
 sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
 headpath="$($whereispath $binaryflag head)"
 headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
-exitmsg="Thank you for running this POOFITEE configuration script. God loves you pass it on"
+exitmsg="Thank you for running this POOFITEE configuration script...God loves you pass it on"
 min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && \
    trap "echo If you had run-time errors, your version of bash might be too old. $exitmsg" EXIT || \
    trap "echo $exitmsg" EXIT
@@ -74,7 +85,7 @@ if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then printf "
 if ! [ "$(whoami)" == "root" ];then printf "\nWithout being launched by su, this script\
  won't be able to do anything except\
 \ndisplay menus.  No control of this computer can be made by this script unless\
-\nre-launched by root.  Press a key to acknowledge, Ctrl-c to abort\n";read -n1 -s;fi
+\nre-launched by root.  Press a key to acknowledge, Ctrl-c to abort\n";read -rsn 1;read -rst 0.001 -n3;fi
 #  Beginning of copyright message
 printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \n\nThis work of authorship is made available to you under only one out of the\
@@ -90,7 +101,7 @@ printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \n\n2.  Arrangement for your freedom from copyright display obligation, or to\
 \ncontribute, see the comments within the source code of this script"
 printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
-read -n1 -r
+read -rsn 1;read -rst 0.001 -n3
 #    Arrangement for your freedom from copyright display obligation: Prior to
 #  distribution, email me the author: kenlovesjesus at gmail dot com to arrange USD payment.
 #  You'll insert name and details of party responsible for making the payment to the
@@ -130,51 +141,62 @@ pspath=$($whereispath $binaryflag ps);pspath="${pspath#*:}";pspath="${pspath# }"
 rhel="$($whereispath $binaryflag chkconfig)"
 rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
 eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -n1 -s" \
+    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -rsn 1;read -rst 0.001 -n3" \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
-inttogoogle="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
-# printf "\n\ninterface going to google=$inttogoogle"
-intsnottogoogle="$($ippath link show|$greppath -E "^[1-9][0-9]*:"|$greppath -v lo:\
-    |$greppath -v "$inttogoogle"\
+external_net_interface="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
+# printf "\n\ninterface going to google=$external_net_interface"
+internal_net_interface="$($ippath link show|$greppath -E "^[1-9][0-9]*:"|$greppath -v lo:\
+    |$greppath -v "$external_net_interface"\
     |$sedpath 's/://g'\
     |$awkpath '{print $2}')"
-# echo "$( [[ $(printf "$intsnottogoogle"|$wcpath -l) == "1" ]] \
-#    && echo "$(printf "$intsnottogoogle"|$wcpath -l) interface" \
-#    || echo "$(printf "$intsnottogoogle"|$wcpath -l) interfaces") not going to google=$intsnottogoogle"
+# echo "$( [[ $(printf "$internal_net_interface"|$wcpath -l) == "1" ]] \
+#    && echo "$(printf "$internal_net_interface"|$wcpath -l) interface" \
+#    || echo "$(printf "$internal_net_interface"|$wcpath -l) interfaces") not going to google=$internal_net_interface"
 # echo "Script-required items: whereis path=$whereispath, awk path=$awkpath, python path=$pythonpath, grep path=$greppath, ifconfig path=$ifconfigpath, uniq path=$uniqpath, sort path=$sortpath, head path=$headpath";exit
 #
 # Introduction and what we'll do
-startscreen="\n\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
+startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
 \n                SELECT DESIRED OPTIONS FOR THIS INSTALLATION\
 \n\n\n      (f) firewalling\
-\n\n      (r) email remote control\
+\n\n      (e) email remote control\
 \n\n      (d) dynamic IP address change notifier"
-if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $inttogoogle|$wcpath -l) -eq 0 ]];then
+if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
      startscreen+=" NOT for your configuration";notdhcp="notdhcp"
 fi
 startscreen+="\n\n      (p) port knocking\
+\n\n      (s) save configuration\
+\n\n      (r) restore the previously saved configuration\
 \n\n      (?) context helpful information\
 \n\n
-\nTyping the letters f, r, d, p, optionally followed by a question mark, or just\
-\nplain ? with no letters, select all of the five services listed above that you\
-\nwant, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
+\nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
+\njust plain ? with no letters, select all of the five services listed above that\
+\nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
 # POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
-ghscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                              Helper Script Overview\
 \nThis set of Linux scripts can install several Internet security features useful\
-\nin homeowner and enterprise systems alike.  The name \"POOFITEE\" is derived from\
-\nthe descriptive phrase \"Perfect Owner Only access linux Firewall - the system is\
-\nInvisible To Everyone Else\".  POOFITEE is not really a program as much as it is\
-\nsimply an Internet security scripting project that, in part, installs a set of\
-\nLinux iptables rules.  Nor is POOFITEE an iptables front-end; it simply installs\
-\nan iptables ruleset and a few scripts, then exits completely.  To be perfect in\
-\nInternet security as its name implies, POOFITEE obviously greets Internet\
-\ntraffic that seeks to establish communication to your server[s] with a different\
-\nattitude than other firewalling solutions do.  It is the attitude that your\
-\nintuition tells you to expect in a firewall: \"NO, you cannot communicate with\
-\nthis server in ANY way unless you first prove that you are supposed to\".  Gone\
-\nare the complex, buggy \"badguy detection\" algorithms of other firewalls.\
+\nin homeowner and enterprise systems alike.  For enterprise systems however,\
+\nnetwork traffic is typically not regarded by the firewall as malicious until\
+\npacket stream behavior proves it to be or packet construction violates rules of\
+\nInternet operation.  POOFITEE does not configure firewalling this way.  Rather,\
+\nit only regards traffic as NON-malicious if it originates from trusted sources.\
+\nOf course, those source addresses can be spoofed, but when spoofed, a two-way\
+\nconnection capable of stealing information is not really possible when the\
+\nlegitimate computer owning the spoofed address is non-cooperative with the\
+\nspoofer.  The name \"POOFITEE\" is derived from the descriptive phrase \"Perfect\
+\nOwner Only access linux Firewall - the system is Invisible To Everyone Else\".\
+\nPOOFITEE is not really a program as much as it is simply an Internet security\
+\nscripting project that, in part, installs a set of Linux iptables rules.  Nor is\
+\nPOOFITEE an iptables front-end; it simply installs an iptables ruleset and a few\
+\nscripts, then exits completely.  To be perfect in Internet security as its name\
+\nimplies, POOFITEE obviously greets Internet traffic that seeks to discover\
+\nyour server[s] with a different attitude than other firewalling solutions do.\
+\nIt is the attitude that your intuition tells you to expect in a firewall: \"NO,\
+\nyou'll not receive a response to give away my existence unless you first prove\
+\nthat you are supposed to\".  Gone are the complex, buggy \"badguy detection\"\
+\nalgorithms of other firewalls."
+ghscreen2="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n\nThe advantages of using scripting over a compiled program are significant:\
 \n - most importantly - robust operation in indefinitely continuous duty\
 \n - less script complexity means less risk of programming bugs and mysterious,\
@@ -261,6 +283,21 @@ pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
+savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                       SAVING YOUR INSTALLED CONFIGURATION\
+\nSelecting this is only meaningful if one or more of the above selections is also\
+\nselected or has previously been configured.  Saving the configuration with this\
+\nchoice is a convenient way for you to replicate the configuration on other\
+\nservers or prepare for an operating system upgrade on this one.  You'll be\
+\ngiven a choice where to store the saved configuration, whether locally or on\
+\nremoveable media or remotely."
+restorescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                   RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION\
+\nThis is a convenient way to replicate the configuration on other servers or on\
+\nthis one after an operating system upgrade without answering the setup questions\
+\nall over again.  This can be highly important when you don't know for sure that\
+\nthe person who needs to configure will know or remember the details of this\
+\nconfiguration."
 answer=""
 singinterf="\nBased on finding only one pluggable network interface, your intentions seem\
 \nto be to have this firewalling computer be a terminal (end) device rather than\
@@ -368,10 +405,10 @@ until ! [ -z $answer ];do
 # exit
 ########### remove answer and char set line below and uncomment out next line
 #    while true;do answer="fdrp";char="";[[ -z "$char" ]] && break
-     while IFS= read  -s -n1 char;do [[ -z "$char" ]] && break
+     while IFS= read  -sn1 char;do [[ -z "$char" ]] && break
         [[ "$answer$char" == "?" ]] && break
         if [[ "$(printf "%d" "'$char")" == "27" ]];then # ' escape or extended key has been detected
-            read -r -s -t 0.001 -n2 # read & discard 2nd extended key field, timeout if real escape
+            read -rst 0.001 -n3 # read & discard 2nd extended key field, timeout if real escape
         elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
             char="${char,}"
             printf "$char"
@@ -388,11 +425,23 @@ until ! [ -z $answer ];do
         exit
      elif [[ $answer$char =~ \? ]];then
         clear;printf "Selections: $answer$char";printf "  Since info is selected, no changes are to be made"
-        [[ $answer$char == "?" ]] && (clear;printf "$ghscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -n1 -s -p "                         Press a key to continue...";echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -n1 -s -p "                         Press a key to continue...";echo)
+        if [[ $answer$char == "?" ]];then
+             clear
+             printf "$ghscreen1"
+             read -sn1 -p "                         Press a key to continue..."
+             read -rst 0.001 -n3
+             clear
+             printf "$ghscreen2"
+             read -sn1 -p "   (Press key...)"
+             read -rst 0.001 -n3
+             echo
+        fi
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
         answer=""
      else
          echo
@@ -428,13 +477,14 @@ until ! [ -z $answer ];do
                   sendmail_works=""
                   if ! [[ -z $mailpath ]];then
                        mailadd=""
-                       mailcmd="echo $0 \"testing\"|$mailpath"
-                       printf "\nFor emailing alerts to you, specialized configuration is required so this\
-\ncomputer can send emails from the command line.  We'll send a test email now to\
-\nsee if it can send from the command line already if you'll please enter an email\
-\naddress to finish the following mail command, choosing an address that you can\
-\nimmediately receive a test email through and verify reception of it on a\
-\ndifferent computing device:"
+                       mailcmd="echo $0 \"test.  Press y\"|$mailpath"
+                       printf "\nOne aspect of an option you selected will be to send you alert notices to your\
+\nemail account.  For emailing alerts to you, specialized configuration is\
+\nrequired so this computer can send emails from the command line.  We'll send a\
+\ntest email now to see if it can send from the command line already if you'll\
+\nplease enter an email address to finish the following mail command, choosing an\
+\naddress that you can immediately receive a test email through and verify\
+\nreception of it on a different computing device:\n"
 newemailconfigwarning="Installing a new configuration is\
 \ndefinitely NOT what you want if this computer is already or will be in use in a\
 \nbusiness email service role, like MTA, MDA, email relay, or email server because\
@@ -442,7 +492,7 @@ newemailconfigwarning="Installing a new configuration is\
 \nincompatible with said role.  If you need to avoid installing the emailing\
 \nconfiguration, you should manually get the command line email sending to work\
 \nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
-\nthis scripting is finding on your system."
+\nthis scripting has found to currently exist on your system."
                        until false;do
                             ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
 \nthis test and install a full, new configuration on this computer\
@@ -463,6 +513,7 @@ newemailconfigwarning="Installing a new configuration is\
                                       read -r -n1
                                       if [[ $REPLY =~ y ]];then 
                                           sendmail_works=True
+                                          echo
                                           break
                                       elif [[ $REPLY =~ [at] ]];then
                                           continue
@@ -489,7 +540,7 @@ newemailconfigwarning="Installing a new configuration is\
                       [[ -z $nicepath ]] && notinstalled+="coreutils\n"
                       [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
                   fi
-                  if [[ $answer =~ r ]];then
+                  if [[ $answer =~ e ]];then
                       [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
                       [[ -z $iptablespath ]] && notinstalled+="iptables\n"
                       [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
@@ -543,21 +594,24 @@ newemailconfigwarning="Installing a new configuration is\
 \n\nYou may install them in another terminal and resume here, or press Ctrl-c to\
 \nterminate here, or press any other key to proceed as-is\
 \n\n     Acknowledge by keypress..."
-                  read -n1 -s;ackd="true"
+                  read -rsn 1;read -rst 0.001 -n3;ackd="true"
              else
                   goahead="true"
              fi
         done # this loops here once when installer pgm not found
         clear
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-                  printf "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -n1 -s
+                  printf "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -rsn 1;read -rst 0.001 -n3
 #                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
+#change the next line to a loop if need be
                   printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
       fi
 
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
        until false;do directoryforscripts="$( [[ -f directoryforscripts ]] && cat directoryforscripts )"
-            printf "\nSpecify the directory in which to install these scripts.  No deeper subdirectory\nwill be used than what you specify here, so include any final isolating or\ndescriptive subdirectory level you will want:\n"
+            printf "\nSpecify the directory in which to install these scripts.  No deeper subdirectory\
+\nwill be used than what you specify here, so include any final isolating or\
+\ndescriptive subdirectory level you will want:\n"
             read -e -r -i "$directoryforscripts" directoryforscripts
             if ! [[ -d "$directoryforscripts" ]];then
                  echo
@@ -753,7 +807,7 @@ $($crontabpath -l)\
  # @reboot $iptabperspath reload >/dev/null 2>&1
 @reboot $nicepath -n19 $inotifywaitpath --quiet --monitor --event modify /var/lib/dhcp/dhclient.eth0.leases|while read;do "$directoryforscripts/newip_no_mysql.sh";done >/dev/null 2>&1
 @reboot "$directoryforscripts/newip_no_mysql.sh\" >/dev/null 2>&1
-#@reboot if [ \$($iptablespath -w -L INPUT -n|$stdbufpath -o0 /bin/grep -m 1 -c ESTABLISHED) -eq "0" ]; then "$directoryforscripts/buildiptables.sh";fi >/dev/null 2>&1
+#@reboot if [ \$($iptablespath -w -L INPUT -n|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) -eq "0" ]; then "$directoryforscripts/buildiptables.sh";fi >/dev/null 2>&1
 @reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$directoryforscripts/blacklistme.sh"  >/dev/null 2>&1
 */3 * * * * echo "$iptablespath s_blacklist chain is \$($iptablespath -wnL s_blacklist --line-numbers|$tailpath -n-1|$awkpath '{print \$1}') lines long" >> "$directoryforscripts/modemcheck.lastran.log"; if [ \$($ifconfigpath|$headpath -n+2|$greppath -c "inet ") -eq 0 ] || [[ \$($greppath ^d1 <"$directoryforscripts/usbrelay.log"|$tailpath -n 1|$awkpath '{for (i=4;i>=0;i--) {printf \$(NF-i)" "}print ""}') < \$( $greppath -w waiting /var/log/syslog|$greppath '\:123'|$greppath -v grep|$tailpath -n 1|$awkpath '{print $1" "$2" "$3}' ) ]]; then "$directoryforscripts/usbrelay d1";$sleeppath 1;"$directoryforscripts/usbrelay a1";$ifdownpath eth0;$ifuppath eth0; fi >/dev/null 2>&1
 */3 * * * * if [ \$($pspath aux|$greppath "/usr/sbin/knockd \-d \-i eth0"|$greppath -vc grep) -lt 1 ] || [ \$($tailpath -n-1 /var/log/knockd.log|$greppath -c shutting) -gt 0 ] && [ \$($pspath aux|$greppath sshd:|$greppath -vc root) -eq 0 ]; then /etc/init.d/knockd stop;$sleeppath 1;/etc/init.d/knockd start;fi >/dev/null 2>&1
@@ -794,7 +848,7 @@ while true;do
      while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
           if [[ "$(printf "%d" "'$char")" == "27" ]];then # 'escape or extended key has been detected, single quote is important
                      # could write a more fancy line editor here instead of just wasting the cursor movement keys
-                     read -r -s -t 0.001 -n2 # read & discard 2nd extended key field, timeout if real escape
+                     read -rst 0.001 -n3 # read & discard 2nd extended key field, timeout if real escape
           elif [[ -z "$char" ]] || [[ "$char" == " " ]];then
                       if [[ -z "$line" ]] && [[ $(( $mstrlinenumber )) -lt $(( $mstrnumoflines )) ]];then
 # Shift and display next from master on this line 
@@ -803,7 +857,7 @@ while true;do
                            loopmstrptr=1
                            until loopmstrptr="$(( $loopmstrptr  + 1 ))";linesfrommaster="${linesfrommaster#*,}";[[ -z "$linesfrommaster" ]] || [[ $(( $loopmstrptr  )) -gt $(( $mstrnumoflines )) ]];do
                                [[ $(( $loopmstrptr  )) -lt $(( $mstrlinenumber )) ]] && continue
-                               entriesscratchpad="$(printf "$toemailadds"|awk 1 ORS=',')"
+                               entriesscratchpad="$(printf "$toemailadds"|$awkpath 1 ORS=',')"
                                while ! [[ -z "$entriesscratchpad" ]] && ! [[ -z "${linesfrommaster%%,*}" ]] && ! [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]];do
                                    entriesscratchpad="${entriesscratchpad#*,}" # gets the next line from slave
                                done
@@ -830,7 +884,7 @@ while true;do
                                   loopmstrptr=1
                                   until loopmstrptr="$(( $loopmstrptr  + 1 ))";linesfrommaster="${linesfrommaster#*,}";[[ -z "$linesfrommaster" ]] || [[ $(( $loopmstrptr  )) -gt $(( $mstrnumoflines )) ]];do
                                       [[ $(( $loopmstrptr  )) -lt $(( $mstrlinenumber )) ]] && continue
-                                      entriesscratchpad="$(printf "$toemailadds"|awk 1 ORS=',')"
+                                      entriesscratchpad="$(printf "$toemailadds"|$awkpath 1 ORS=',')"
                                       while ! [[ -z "$entriesscratchpad" ]] && ! [[ -z "${linesfrommaster%%,*}" ]] && ! [[ "${entriesscratchpad%%,*}" == "${linesfrommaster%%,*}" ]];do
                                           entriesscratchpad="${entriesscratchpad#*,}" # gets the next line from slave
                                       done
@@ -860,7 +914,7 @@ while true;do
      done
      if ! [[ -z $toemailadds ]];then
          directoryforscripts="$( cat directoryforscripts )"
-         toemailaddsforfiling="$(printf "$toemailadds"|awk 1 ORS=',')"
+         toemailaddsforfiling="$(printf "$toemailadds"|$awkpath 1 ORS=',')"
          [[ "${toemailaddsforfiling: -1}" == "," ]] && toemailaddsforfiling="${toemailaddsforfiling:: -1}"
          printf "$(printf "$toemailaddsforfiling\n")" > "$directoryforscripts/toemailadds"
          break
@@ -896,7 +950,7 @@ if [[ -z $sendmail_works ]];then
 lineshere="\$($greppath -E --line-number "^:$" < \$0)"
 (cat << EOF
 #!/bin/bash
-head -n "\${lineshere%::*}" \$0 > \$0.bak
+$headpath -n "\${lineshere%::*}" \$0 > \$0.bak
 mv \$0.bak \$0
 chmod 777 \$0
 EOF
@@ -945,7 +999,7 @@ while true;do  #this loop allows user to change the email account for outbound s
              && rm "$directoryforscripts/$outemailprovider.outconnects.txt" 2>/dev/null
           printf  "\rYou selected address $outemailadd \033[K\n"
           while ! [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
-                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
+                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
           done
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
@@ -1010,15 +1064,15 @@ while true;do  #this loop allows user to change the email account for outbound s
                printf "For the next step, the mail queue needs to be flushed.  You will lose the\
 \nfollowing emails that haven't been sent.  Press a key to acknowledge..."
                printf "$( $postqueuepath -p )"
-               read -n1
+               read -rsn 1;read -rst 0.001 -n3
                printf "$( $postqueuepath -f )"
           fi
           printf "Next, suitability test notifications will be sent out to all email addresses you\
 \nindicated should receive notifications.  Press a key to send them..."
-          read -s -n1 -r
+          read -rsn 1;read -rst 0.001 -n3
           notemsg=""
           [[ $answer =~ f ]] && notemsg+="Firewalling\n"
-          [[ $answer =~ r ]] && notemsg+="Email remote control\n"
+          [[ $answer =~ e ]] && notemsg+="Email remote control\n"
           [[ $answer =~ d ]] && notemsg+="Dynamic IP address change notifier\n"
           [[ $answer =~ p ]] && notemsg+="Port knocking\n"
           printf "Test using "${line%:*}"".""$outemailprovider"":""${line#*:}" \
@@ -1036,13 +1090,13 @@ See
 \nany were delayed, a different outgoing email server may do a better job." \
             || printf "Judging by the email queue not getting emptied quickly, a different outgoing\
 \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
-# \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|grep -m 1 \]:${line#*:}|sed 's/^.*status=//g')"
+# \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|sed 's/^.*status=//g')"
           printf "\nNote that not all email providers keep a record of your emails sent from this\
 \ntype of connection.  If it is meaningful to you that these notification emails\
 \nremain in the sent folder of this email address, be sure to check for that\
 \nfeature before accepting this outgoing email server.  Press ENTER key to accept\
 \nthis outgoing email server, any other key to see if another one can be tested..."
-          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # Didn't want to mess with IFS but had to know diff between space and enter
+          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # Didn't want to mess with IFS but had to to accept and know diff between space and enter
      done 3<"$directoryforscripts/$outemailprovider.outconnects.txt"  2> /dev/null #if needed to for chosen email account, this loop iterates through lines in outconnects.txt 
 # user wants a to re-select an email address
              printf "Select a different email address for its outgoing email server:"
@@ -1387,15 +1441,15 @@ install_dynIPch () {
 #read /etc/network/interfaces
 #OS X=/Library/Preferences/SystemConfiguration/preferences.plist
 # centos: 
-# udhcpc: /var/lib/misc/udhcpc-$inttogoogle.leases or /var/cache/udhcpc-$inttogoogle.lease, not really clear for embedded linux's.  This is an important one to get right
-# dhcpcd: /etc/dhcpc/dhcpcd-$inttogoogle.info
+# udhcpc: /var/lib/misc/udhcpc-$external_net_interface.leases or /var/cache/udhcpc-$external_net_interface.lease, not really clear for embedded linux's.  This is an important one to get right
+# dhcpcd: /etc/dhcpc/dhcpcd-$external_net_interface.info
 # pump: in memory alone, need to parse ps uax output
 # dhclient: /var/lib/NetworkManager/*.lease*, or /var/lib/dhcp/dhclient. or on FreeBSD /var/db/*lease*
 # /var/lib/dhcp3/dhclient.%iface%.leases
-#if [[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/lib/dhcpcd/*$inttogoogle* /var/db/*lease* 2>/dev/null|$greppath -w "$inttogoogle")|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l )) -eq 0 ]] && \
-#[[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/db/*lease* 2>/dev/null|$greppath -vw "$intsnottogoogle")|$greppath -wC 3 $($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l  )) -eq 0 ]];then
-#[[ $(( dhclient -v $inttogoogle|$wcpath -l 2>/dev/null )) -gt 0 ]]
-# get the ip address of $inttogoogle from ip route or ifconfig or ipconfig
+#if [[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/lib/dhcpcd/*$external_net_interface* /var/db/*lease* 2>/dev/null|$greppath -w "$external_net_interface")|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l )) -eq 0 ]] && \
+#[[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/db/*lease* 2>/dev/null|$greppath -vw "$internal_net_interface")|$greppath -wC 3 $($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l  )) -eq 0 ]];then
+#[[ $(( dhclient -v $external_net_interface|$wcpath -l 2>/dev/null )) -gt 0 ]]
+# get the ip address of $external_net_interface from ip route or ifconfig or ipconfig
 #   /etc/network/interfaces, grep for lines tno starting w/# and referencing googleinterface that say 'static' orf 'dhcp'
 # static int dhcp_up(interface_defn *ifd, execfn *exec) {
 # {
@@ -1421,7 +1475,7 @@ install_dynIPch () {
 # /sbin/dhclient -d -sf /usr/lib/NetworkManager/nm-dhcp-client.action -pf /run/sendsigs.omit.d/network-manager.dhclient-wlan0.pid -lf /var/lib/NetworkManager/dhclient-58a215d6-1342-4ce9-8da8-e75dab5b68c3-wlan0.lease -cf /var/lib/NetworkManager/dhclient-wlan0.conf wlan0
 directoryforscripts="$( cat directoryforscripts )"
 dhcpclientpath=""
-for dhcpclientpkg in "pump -i $inttogoogle --status" "udhcpc -i $inttogoogle" "dhcpcd $inttogoogle" "ipconfig getpacket $inttogoogle" "dhclient -v $inttogoogle";do
+for dhcpclientpkg in "pump -i $external_net_interface --status" "udhcpc -i $external_net_interface" "dhcpcd $external_net_interface" "ipconfig getpacket $external_net_interface" "dhclient -v $external_net_interface";do
     dhcpclientpath="$($whereispath $binaryflag ${dhcpclientpkg%% *})"
     dhcpclientpath="${dhcpclientpath##*:}"
     [[ -z "$dhcpclientpath" ]] && continue
@@ -1672,7 +1726,7 @@ directoryforscripts="${directoryforscripts%%/}"
              fi
              conf_postfix
         fi
-        if [[ "$answer" =~ r ]];then
+        if [[ "$answer" =~ e ]];then
 #             printf "remote controlling"
              install_rc
         fi
@@ -1759,7 +1813,7 @@ continue)\
                  )
             done
             until [[ "$REPLY" =~ [ls] ]]; do
-             read -e -r -i "l" -n1 -p "Use loose (l) or strict (s) port knocking rules? (? for help) "
+             printf "Use loose (l) or strict (s) port knocking rules? (? for help) ";read -e -r -n1
              REPLY="${REPLY,}"
              [[ "$REPLY" == \? ]] && ( printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
 \ndemanding be \"knocked\" by computers trying to establish communication to this\
@@ -1785,208 +1839,200 @@ continue)\
 \nin which to establish valid communication, and the knock sequence must be\
 \nrepeated for each future session.   Press a key...";read -n1 -s )
             done
-            echo "Setting up port knocking"
+            clear;printf "Setting up port knocking.\
+\nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
+\nspecify any knock packet or packets to be disguised as an established connection\
+\npacket rather than a knocking packet by replacing \"--syn\" with \"--tcp-flags ACK\
+\nACK\".  Ideally, it would carry data you would craft that appears to be part of\
+\nestablished-connection communication to help disguise it as a normal packet.\
+\nYou could go so far as to require that specific byte string to be required in\
+\nthat knock, but to generate such specialty knock packets will for sure require\
+\nthe knocking client to use a packet-crafting tool.  Exactly for that scenario,\
+\nthese rules will configure to reply to such a knock packet with a TCP RST packet\
+\nto make the obfuscation less obvious.  (If you intend for your server to be\
+\ninvisible, however, you probably don't want to require such a packet as the\
+\nfirst knock because not only can and will your system be visible, its first\
+\nknock port will also be giving itself away.)\
+\nTo specify the data you might require in a knock packet, include the following\
+\nin the protocol:\
+\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n"
+
 #write rules to iptables rule set
             if [[ $REPLY == "l" ]];then
                  echo "Setting loose rules here"
             else
                  echo "Setting strict rules here"
-# start making rules here
-                 [[ $($iptablespath -wN knockers) ]] || printf "Failed"
-                 [[ $($iptablespath -wN knockerreap) ]] || printf "Failed"
-                 [[ $($iptablespath -wN knockerstest) ]] || printf "Failed"
-                 [[ $($iptablespath -wN knockersort) ]] || printf "Failed"
-
+                 $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
-                 while printf "\n";knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
+                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
+                      ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] && continue
                       printf "${knockport[$i]}"
-                      while ! [[ "${knockproto[$i]}" =~ ("tcp") | ("udp") ]];do
-                           printf "\nKnock $i protocol (choose from \"all\" [means any protocol is acceptable] or those\
-\nlisted in /etc/protocols.  Include mask-flag spec or other iptables protocol-\
-\nmatching options, if required.  \"-p \" will precede in the actual iptables rule):\n";knockproto[$i]="tcp --syn";read -e -i "${knockproto[$i]}" knockproto[$i];printf "${knockproto[$i]}"
-# make the rule and check it exists (then remove it?) just to make sure it is a valid rule
-                      done
-                      printf "${knockproto[$i]}"
-                      [[ $($iptablespath -wN knockstage$i) ]] || printf "Failed"
+                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
+                         printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
+'{printf $2}')")")" because it will\
+\ninterfere with you testing your sequence through an ssh session.  Do you still\
+\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
+                      fi
+                      printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
+\nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
+\nyou don\'t care to get any fancier.  You may include mask-flag spec or other\
+\niptables matching options beyond this, if you know them, except the -j target,\
+\n-g chain, -m recent, and -m comment iptables modules/options):\n\
+\n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
+                      printf -- "\n${knockproto[$i]}\n"
+                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]];then
+printf "If you intend for your server to be invisible to the world, at least beyond the\
+\nnext router, the best way to disguise a TCP ACK packet on the first knock is for\
+\nthis server not to reply with the otherwise suggested tcp-reset rejection\
+\nresponse, mostly because your system will forever be visible on that port to the\
+\nworld, but also because its first knock port will be giving itself away.  Or you\
+\nmay turn off the disguising tcp-reset reject reply for this knock only.  Press\
+\n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
+\nadvised for minimum visibility), or any other key to turn off the reject response\
+\nto this knock: (r/k/...)"
+                           read -rn 1;read -rst 0.001 -n3
+                           [[ $REPLY =~ [Rr] ]] && continue
+                           [[ $REPLY =~ [Kk] ]] && (testtarget[$i]=" -j REJECT --reject-with tcp-reset") || testtarget[$i]=" -j DROP"
+                      else
+                           testtarget[$i]=" -j DROP"
+                      fi
+                      protovar="${knockproto[$i]}"
+                      protovar="${protovar:1}"
+                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}"
+#              echo $iptablespath" -wA ruletestchain""${knockproto[$i]}${testtarget[$i]}"
+                      if ! [[ $($iptablespath -wA ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
+                          printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
+                          continue
+                      fi
                       i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
                  done
+                 for (( j=1;j<=i;j++ )); do
+                      printf "$iptablespath -wA knockstage$j${knockproto[$j]}\n"
+                 done
+                 printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
+\nentries just made.  The following changes are about to be made:\
+\n\n  -- All INPUT chain rules will be removed that contain the letters \"knock\" in\
+\n        sequence in their comment\
+\n\n  -- INPUT chain will receive all new knock rules that belong there, being\
+\n        placed adjacent and prior to current non-knock rules referencing the\
+\n        respective interface\
+\n\n  -- Chains knockerreap, knockersort, knockers, and all knockstages will be\
+\n        flushed and reloaded new\
+\n\nOnly continue if you are sure about making the changes.  To keep your current\
+\niptables rules as they are, quit now by pressing ctl-c.  Otherwise, make the\
+\nqueued changes by pressing any other key....\n";read -rsn 1;read -rst 0.001 -n3
+                 [[ $($iptablespath -wN knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wF knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wN knockersort 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wF knockersort 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 j=1
+                 while ! [[ -z "${knockport[$j]}" ]];do
+                      [[ $($iptablespath -wN knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      [[ $($iptablespath -wF knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      if ! [[ "$j" == "1" ]];then
+                           [[ $($iptablespath -wA knockersort${knockproto[$i]} -m recent --name knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      fi
+                      [[ $($iptablespath -wI knockstage$j -j knockerreap) == "0" ]] || printf "Failed"
+                      [[ $($iptablespath -wI knockstage$j 2 -m recent --name knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires") == "0" ]] || printf "Failed"
+#Here we put the right DROP or REJECT target in the third rule under this chain
+                      [[ $($iptablespath -wA knockstage$j"${testtarget[$j]}") == "0" ]] || printf "Failed"
+                 done
+# start making rules here
+                 [[ $($iptablespath -wN knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wF knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 i=$(( $i-1 ))
+# for persistent whitelisting only
+#                 [[ $($iptablespath -wR knockstage$i 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wR knockstage$i 2 -m recent --name authorized --set --seconds 120 -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 inchainoffset=0
+                 if ! [[ -z "$internal_net_interface" ]];then
+                      [[ $($iptablespath -wN knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      [[ $($iptablespath -wF knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      printf "\n"
+                      printf "" > internal_interfaces_present # won't include any the default gateway
+# test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
+#TODO:  CHANGE THE PROCESS HERE TO SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
+
+
+                      echo "$internal_net_interface"|$awkpath '{print $1}'|while read interface; do
+                           $iptablespath -wnvL INPUT --line-number|$awkpath '{print $1" "$6}'|$greppath -m 1 $interface|while read intfc;do [[ $(($ippath route show|$greppath $intfc|$greppath -c default)) -eq 0 ]] && echo "$intfc" >> internal_interfaces_present;done
+                      done
+                      if [[ $(($wcpath -l < internal_interfaces_present)) -eq 0 ]];then #means no interface reference to any private, non-default interface found in chain, though a private interface exists. Verify no reference in chain to ip addresses routed to any non-default private interface, then Do it to it right before it.
+# determine address range[s] routed out that interface and check for input chain references to any of them 
+#   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
+#   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
+                            $iptablespath -wnvL INPUT --line-number 2>/dev/null|$awkpath 'NR>2 {print $9}' \
+                            |while read src_addr_in_input_chain;do
+                                 $ippath route show|$greppath -v default|$greppath -v $external_net_interface \
+                                 |while read line; do 
+                                      line="${line%% *}/32"
+                                      range_start="${line%%/*}"
+                                      [[ $(printf "$range_start\n$src_addr_in_input_chain"|$sortpath -V|$tailpath -n1) == "$src_addr_in_input_chain" ]] || break
+                                      cidr_bits="${line#*/}"
+                                      cidr_bits="${line%%/*}"
+                                      src_addr_in_input_chain_seg1="${src_addr_in_input_chain%%.*}"
+                                      range_start_seg1="${range_start%%.*}"
+                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                      range_start="${range_start#*.}"
+                                      src_addr_in_input_chain_seg2="${src_addr_in_input_chain%%.*}"
+                                      range_start_seg2="${range_start%%.*}"
+                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                      range_start="${range_start#*.}"
+                                      src_addr_in_input_chain_seg3="${src_addr_in_input_chain%%.*}"
+                                      range_start_seg3="${range_start%%.*}"
+                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                      range_start="${range_start#*.}"
+                                      src_addr_in_input_chain_seg4="${src_addr_in_input_chain%%.*}"
+                                      range_start_seg4="${range_start%%.*}"
+                                      doubler=1
+                                      for ((j=$((32 - $cidr_bits));j>0;j--)); do
+                                           doubler=$(( $doubler * 2 ))
+                                      done
+                                      range_end=$(( ($range_start_seg1 * 256 * 256 * 256) + ($range_start_seg2 * 256 * 256) + ($range_start_seg3 * 256) + $range_start_seg4 + $doubler -1 ))
+                                      src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
+                                      if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
+     #                                      echo "within range"
+                                           :# next step here is to note which line contains the first occurance and put the knock test rules just prior to it because we need the knock test rules being the first reference to the internal interface[[ ]] >>
+                                      fi
+                                 done
+                            done
+
+                            ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]] && ([[ $($iptablespath -wI INPUT -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed")
+                            [[ $($iptablespath -wI INPUT 2 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                            [[ $($iptablespath -wI INPUT 3 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                            [[ $($iptablespath -wI INPUT 4 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                            inchainoffset=4
+      #                      [[ $($iptablespath -wA knockers -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                      elif [[ $(($wcpath -l < internal_interface_wanted)) -eq 1 ]];then #means one private interface found in chain. Do it to it right at the beginning
+                            :
+                      else # more than 1 line means we have to ask operator which would be used for ssh knock testing
+                            :
+                      fi
+                 fi
+                 [[ $($iptablespath -wA INPUT $(($inchainoffset + 1)) -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA INPUT -m recent --name authorized --seconds 200 --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA INPUT -i $external_net_interface -m conntrack --ctstate NEW -p ${knockproto[1]} --dport ${knockport[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -m recent --name knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -j knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wA knockers -j DROP 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+
+                 [[ $($iptablespath -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --set  2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 done
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --rcheck  --reap --seconds 12 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 done
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 done
+
             fi
         fi
     fi
 done
 exit
-
-#
-#  setup knock rules script:
-#
-#! /bin/bash
-inttogoogle="eth0"
-intsnottogoogle="eth1"
-xargspath="/usr/bin/xargs"
-awkpath="/usr/bin/awk"
-knockproto[1]="tcp";knockport[1]="45411"
-knockproto[2]="tcp";knockport[2]="45411"
-knockproto[3]="tcp";knockport[3]="45411"
-knockproto[4]="tcp";knockport[4]="45411"
-knockproto[5]="tcp";knockport[5]="45411"
-knockproto[6]="tcp";knockport[6]="45411"
-knockproto[7]="tcp";knockport[7]="45411"
-knockproto[8]="tcp";knockport[8]="45411"
-knockproto[9]="tcp";knockport[9]="45411"
-knockproto[10]="tcp";knockport[10]="45411"
-knockproto[11]="tcp";knockport[11]="45411"
-knockproto[12]="tcp";knockport[12]="45411"
-knockproto[13]="tcp";knockport[13]="45411"
-knockproto[14]="tcp";knockport[14]="45411"
-knockproto[15]="tcp";knockport[15]="45411"
-knockproto[16]="tcp";knockport[16]="45411"
-iptables -wN knockers
-iptables -wN knockerreap
-iptables -wN knockstage1
-iptables -wN knockstage2
-iptables -wN knockstage3
-iptables -wN knockstage4
-iptables -wN knockstage5
-iptables -wN knockstage6
-iptables -wN knockstage7
-iptables -wN knockstage8
-iptables -wN knockstage9
-iptables -wN knockstage10
-iptables -wN knockstage11
-iptables -wN knockstage12
-iptables -wN knockstage13
-iptables -wN knockstage14
-iptables -wN knockstage15
-iptables -wN knockstage16
-iptables -wN knockerstest
-iptables -wN knockersort
-
-iptables -wA INPUT -i $inttogoogle -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability"
-iptables -wA INPUT -i $inttogoogle -m conntrack --ctstate NEW -p ${knockproto[1]} --dport ${knockport[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port"
-iptables -wA INPUT -i $(echo "$intsnottogoogle"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for port knock capability"
-iptables -wA INPUT -i $(echo "$intsnottogoogle"|$xargspath|$awkpath '{print $1}') -p ${knockproto[1]} --dport ${knockport[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port"
-iptables -wA knockerstest -j knockersort
-iptables -wA knockerstest -j LOG --log-prefix "pkt fail:knock, late, or ctstate "
-iptables -wA knockerstest -m recent --name knocker --rcheck --reap --seconds 200
-iptables -wA knockerstest -m recent --name knocker --remove
-iptables -wA knockerstest -j knockerreap
-iptables -wA knockerstest -j DROP
-iptables -wA knockers -m recent --name knocker --rcheck --reap --seconds 200
-iptables -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability"
-iptables -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability"
-iptables -wA knockers -j LOG --log-prefix "pkt fail:knock, late, or ctstate "
-iptables -wA knockers -m recent --name knocker --rcheck --reap --seconds 200
-iptables -wA knockers -m recent --name knocker --remove
-iptables -wA knockers -j knockerreap
-iptables -wA knockers -j DROP
-iptables -wA knockersort -p ${knockproto[2]} --dport ${knockport[2]} -m recent --name knockstage2 --seconds 12 --rcheck -j knockstage2 -m comment --comment "knock to stage 2 successful"
-iptables -wA knockersort -p ${knockproto[3]} --dport ${knockport[3]} -m recent --name knockstage3 --seconds 12 --rcheck -j knockstage3 -m comment --comment "knock to stage 3 successful"
-iptables -wA knockersort -p ${knockproto[4]} --dport ${knockport[4]} -m recent --name knockstage4 --seconds 12 --rcheck -j knockstage4 -m comment --comment "knock to stage 4 successful"
-iptables -wA knockersort -p ${knockproto[5]} --dport ${knockport[5]} -m recent --name knockstage5 --seconds 12 --rcheck -j knockstage5 -m comment --comment "knock to stage 5 successful"
-iptables -wA knockersort -p ${knockproto[6]} --dport ${knockport[6]} -m recent --name knockstage6 --seconds 12 --rcheck -j knockstage6 -m comment --comment "knock to stage 6 successful"
-iptables -wA knockersort -p ${knockproto[7]} --dport ${knockport[7]} -m recent --name knockstage7 --seconds 12 --rcheck -j knockstage7 -m comment --comment "knock to stage 7 successful"
-iptables -wA knockersort -p ${knockproto[8]} --dport ${knockport[8]} -m recent --name knockstage8 --seconds 12 --rcheck -j knockstage8 -m comment --comment "knock to stage 8 successful"
-iptables -wA knockersort -p ${knockproto[9]} --dport ${knockport[9]} -m recent --name knockstage9 --seconds 12 --rcheck -j knockstage9 -m comment --comment "knock to stage 9 successful"
-iptables -wA knockersort -p ${knockproto[10]} --dport ${knockport[10]} -m recent --name knockstage10 --seconds 12 --rcheck -j knockstage10 -m comment --comment "knock to stage 10 successful"
-iptables -wA knockersort -p ${knockproto[11]} --dport ${knockport[11]} -m recent --name knockstage11 --seconds 12 --rcheck -j knockstage11 -m comment --comment "knock to stage 11 successful"
-iptables -wA knockersort -p ${knockproto[12]} --dport ${knockport[12]} -m recent --name knockstage12 --seconds 12 --rcheck -j knockstage12 -m comment --comment "knock to stage 12 successful"
-iptables -wA knockersort -p ${knockproto[13]} --dport ${knockport[13]} -m recent --name knockstage13 --seconds 12 --rcheck -j knockstage13 -m comment --comment "knock to stage 13 successful"
-iptables -wA knockersort -p ${knockproto[14]} --dport ${knockport[14]} -m recent --name knockstage14 --seconds 12 --rcheck -j knockstage14 -m comment --comment "knock to stage 14 successful"
-iptables -wA knockersort -p ${knockproto[15]} --dport ${knockport[15]} -m recent --name knockstage15 --seconds 12 --rcheck -j knockstage15 -m comment --comment "knock to stage 15 successful"
-iptables -wA knockersort -p ${knockproto[16]} --dport ${knockport[16]} -m recent --name knockstage16 --seconds 12 --rcheck -j knockstage16 -m comment --comment "knock to stage 16 successful"
-iptables -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200
-iptables -wA knockerreap -m recent --name knockstage2 --set
-iptables -wA knockerreap -m recent --name knockstage3 --set
-iptables -wA knockerreap -m recent --name knockstage4 --set
-iptables -wA knockerreap -m recent --name knockstage5 --set
-iptables -wA knockerreap -m recent --name knockstage6 --set
-iptables -wA knockerreap -m recent --name knockstage7 --set
-iptables -wA knockerreap -m recent --name knockstage8 --set
-iptables -wA knockerreap -m recent --name knockstage9 --set
-iptables -wA knockerreap -m recent --name knockstage10 --set
-iptables -wA knockerreap -m recent --name knockstage11 --set
-iptables -wA knockerreap -m recent --name knockstage12 --set
-iptables -wA knockerreap -m recent --name knockstage13 --set
-iptables -wA knockerreap -m recent --name knockstage14 --set
-iptables -wA knockerreap -m recent --name knockstage15 --set
-iptables -wA knockerreap -m recent --name knockstage16 --set
-iptables -wA knockerreap -m recent --name knockstage2 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage3 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage4 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage5 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage6 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage7 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage8 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage9 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage10 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage11 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage12 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage13 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage14 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage15 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage16 --rcheck --reap --seconds 12
-iptables -wA knockerreap -m recent --name knockstage2 --remove
-iptables -wA knockerreap -m recent --name knockstage3 --remove
-iptables -wA knockerreap -m recent --name knockstage4 --remove
-iptables -wA knockerreap -m recent --name knockstage5 --remove
-iptables -wA knockerreap -m recent --name knockstage6 --remove
-iptables -wA knockerreap -m recent --name knockstage7 --remove
-iptables -wA knockerreap -m recent --name knockstage8 --remove
-iptables -wA knockerreap -m recent --name knockstage9 --remove
-iptables -wA knockerreap -m recent --name knockstage10 --remove
-iptables -wA knockerreap -m recent --name knockstage11 --remove
-iptables -wA knockerreap -m recent --name knockstage12 --remove
-iptables -wA knockerreap -m recent --name knockstage13 --remove
-iptables -wA knockerreap -m recent --name knockstage14 --remove
-iptables -wA knockerreap -m recent --name knockstage15 --remove
-iptables -wA knockerreap -m recent --name knockstage16 --remove
-
-iptables -wA knockstage1 -j knockerreap
-iptables -wA knockstage1 -m recent --name knockstage2 --set -j LOG --log-prefix "knocked: Stage1 " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires"
-iptables -wA knockstage1 -j DROP
-iptables -wA knockstage2 -j knockerreap
-iptables -wA knockstage2 -m recent --name knockstage3 --set -j LOG --log-prefix "knocked: Stage2 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage2 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage3 -j knockerreap
-iptables -wA knockstage3 -m recent --name knockstage4 --set -j LOG --log-prefix "knocked: Stage3 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage3 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage4 -j knockerreap
-iptables -wA knockstage4 -m recent --name knockstage5 --set -j LOG --log-prefix "knocked: Stage4 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage4 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage5 -j knockerreap
-iptables -wA knockstage5 -m recent --name knocker --remove -j LOG --log-prefix "whitelist" -m comment --comment "causes scripts to run that will whitelist this knocker";iptables -wA knockstage5 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage5 -m recent --name knockstage6 --set -j LOG --log-prefix "knocked: Stage5 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage5 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage6 -j knockerreap
-iptables -wA knockstage6 -m recent --name knockstage7 --set -j LOG --log-prefix "knocked: Stage6 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage6 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage7 -j knockerreap
-iptables -wA knockstage7 -m recent --name knockstage8 --set -j LOG --log-prefix "knocked: Stage7 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage7 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage8 -j knockerreap
-iptables -wA knockstage8 -m recent --name knockstage9 --set -j LOG --log-prefix "knocked: Stage8 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage8 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage9 -j knockerreap
-iptables -wA knockstage9 -m recent --name knockstage10 --set -j LOG --log-prefix "knocked: Stage9 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage9 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage10 -j knockerreap
-iptables -wA knockstage10 -m recent --name knockstage11 --set -j LOG --log-prefix "knocked: Stage10 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage10 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage11 -j knockerreap
-iptables -wA knockstage11 -m recent --name knockstage12 --set -j LOG --log-prefix "knocked: Stage11 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage11 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage12 -j knockerreap
-iptables -wA knockstage12 -m recent --name knockstage13 --set -j LOG --log-prefix "knocked: Stage12 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage12 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage13 -j knockerreap
-iptables -wA knockstage13 -m recent --name knockstage14 --set -j LOG --log-prefix "knocked: Stage13 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage13 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage14 -j knockerreap
-iptables -wA knockstage14 -m recent --name knockstage15 --set -j LOG --log-prefix "knocked: Stage14 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage14 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage15 -j knockerreap
-iptables -wA knockstage15 -m recent --name knockstage16 --set -j LOG --log-prefix "knocked: Stage15 " -m comment --comment "Needed to delay blacklisting until knocking time window is expired"
-iptables -wA knockstage15 -j DROP  -m comment --comment "port knock rule"
-iptables -wA knockstage16 -j knockerreap
-iptables -wA knockstage16 -m recent --name knocker --remove -j LOG --log-prefix "start encryption negotiation for OTP" -m comment --comment "Needed to launch the OTP script process"
-iptables -wA knockstage16 -j DROP  -m comment --comment "port knock rule"
