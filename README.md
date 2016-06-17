@@ -30,7 +30,7 @@ INTENDED AUDIENCE
 
  -- You may have discovered that Fail2Ban, UFW and the like iptables front-ends are too complicated, not persistent enough, not intuitive, or otherwise too wimpy to be secure firewalls for owner-access-only systems.  This firewalling solution is NOT a front-end at all.  You still have direct control of iptables via scripting or CLI.  These are helper scriptings to give you some very useful remote or unattended iptables rules control securely
  
- -- You may have used knockd for port knocking and found it to be limited in knock port sequence and horrifyingly tends to stop running for no apparent reason.
+ -- You may have used knockd for port knocking and found it to be limited in knock port sequence, and horrifyingly it tends to stop running for no apparent reason.
 
  -- You understand the advantages of having your system TOTALLY invisible to anyone but you, your friends, and allies.  (IPv6 visibility MIGHT be required)  
 
@@ -40,7 +40,7 @@ INTENDED AUDIENCE
  
  -- You are knowledgeable, willing, and able enough to lightly modify one or two of the short scripts presented here to suit your environment.  Modifications to these scripts will be necessary for the system to use your ISP-provided email account to send system-generated email/texts from and to know the email addresses you want to receive those IP address changes and iptables-relaxing changes alerts in.  You should also expect a certain amount of script troubleshooting to be needed during installation, Muphy's Law.  This 'feature' helps me get this published sooner.
 
- -- You can spare a dedicated email account not requiring access via SSL, for back- or front-door communications to your system via the Internet.  In my case, my local ISP allows non-SSL access to the email accounts they provide their customers.  Perfect for me, because I would have absolutely no use otherwise for an ISP-provided email account, given how often I seem to change or drop ISPs due to oft-changing circumstances. NOTE - I'VE NOT INCLUDED A PORT KNOCKING IMPLEMENTATION YET.  I USE knockd MYSELF.  IF YOU WANT AN iptables-ONLY IMPLEMENTATION, SEE THESE TWO WEB SITES:  https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwj-loelhvnKAhVBxGMKHTebBskQFggdMAA&url=http%3A%2F%2Fwww.microhowto.info%2Fhowto%2Fimplement_port_knocking_using_iptables.html&usg=AFQjCNHsxT8RS_LP1msujbdpnKvJK8z6yg&sig2=zA7piC7R1jB6JNhrnHrWVQ OR https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=2&cad=rja&uact=8&ved=0ahUKEwj-loelhvnKAhVBxGMKHTebBskQFggjMAE&url=https%3A%2F%2Fwww.digitalocean.com%2Fcommunity%2Ftutorials%2Fhow-to-configure-port-knocking-using-only-iptables-on-an-ubuntu-vps&usg=AFQjCNHIx585V_swhfX7PHDmxKhYAIlCew&sig2=eDqhl3HFXVUEq5yKxCuNaw
+ -- You can spare a dedicated email account not requiring access via SSL, for back- or front-door communications to your system via the Internet.  In my case, my local ISP allows non-SSL access to the email accounts they provide their customers.  Perfect for me, because I would have absolutely no use otherwise for an ISP-provided email account, given how often I seem to change or drop ISPs due to oft-changing circumstances.
 
  -- You understand the advantages of this set up not using or having to configure any sort of polling to check for email messages or IP address changes.  When you send an email to the email account dedicated to communicating to your system, just knock a port afterwards to cause your system to read that email
 
