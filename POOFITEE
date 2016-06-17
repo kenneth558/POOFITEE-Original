@@ -7,12 +7,14 @@
 # TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious - comment out the crontab entry and kill the process
 # TODO: -- Open specific ports to offer public services
 # TODO: -- Force single-interface firewalling even though two interfaces exist
+# TODO: -- Alter the IP address of the private-side interface from 192.168.3.1
 # TODO: Testing using DHCP client and server on the private interface
 # TODO: WARNING -- NEVER PIPE THE OUTPUT OF 'IPTABLES -L' INTO 'LESS' OR YOU MAY LOSE ENTIRE CHAINS IN IPTABLES!
 # TODO:  CRITICAL: Determine why iptables ruleset sometimes disappears and stays gone. no wifi, no nothing unless iptables stays working
 # TODO: check for sufficient resources prior to executing, like disk space
 # TODO: fix postfix log errs about badly named email account if full install doesn't and make more secure with smtp_tls_per_site, 
 # TODO: convert from shell script restore to iptables-type restore.
+# replace initd with systemd when referencing iptables-persistent and postfix
 #/etc/postfix/main.cf
 #
 #. . .
@@ -193,6 +195,7 @@ continue)\
             else
                  echo "Setting strict rules here"
                  $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 $iptablespath -wF ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
                  while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
                       ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] && continue
@@ -228,7 +231,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       fi
                       protovar="${knockproto[$i]}"
                       protovar="${protovar:1}"
-                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}"
+                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}" #combines both never again to need port kept separate for rule-making
 #              echo $iptablespath" -wA ruletestchain""${knockproto[$i]}${testtarget[$i]}"
                       if ! [[ $($iptablespath -wA ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
                           printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
@@ -259,6 +262,11 @@ printf "If you intend for your server to be invisible to the world, at least bey
                  for ((;j>0;j--)); do
                       [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ \/\*\ .*knock.*\*\/ ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete installation"|| printf "Failed 5")
                  done
+                 j=16  # here is the limit on number of knocks we can handle, just won't clear old ones above this
+                 while [[ -z "${knockport[$j]}" ]];do
+                      $iptablespath -wF knockstage$j 2>/dev/null
+                      j=$(( $j-1 ))
+                 done
                  j=0
                  while ! [[ -z "${knockport[$(($j + 1))]}" ]];do
                       j=$(( $j+1 ))
@@ -271,6 +279,10 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       [[ $($iptablespath -wI knockstage$j 2 -m recent --name knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires";echo "$?") == "0" ]] || printf "Failed 10"
 #Here we put the right DROP or REJECT target in the third rule under this chain
                       [[ $($iptablespath -wA knockstage$j ${testtarget[$j]} ;echo "$?") == "0" ]] || printf "Failed 11"
+                 done
+                 i=$(( $j + 1 ))
+                 while [[ $($iptablespath -wF knockstage$i 2>/dev/null;echo "$?") == "0" ]];do
+                      i=$(( $i+1 ))
                  done
 # start making rules here
                  $iptablespath -wN knockers 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
@@ -341,18 +353,19 @@ printf "If you intend for your server to be invisible to the world, at least bey
                             done
                       done
                       linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
+                      [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
                       if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-                           ([[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14")
+                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
                       fi
-                      [[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
-#                      [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
 #                           linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 ))
       #                [[ $($iptablespath -wA knockers -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
                  fi
-                 [[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
-                 [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -m recent --name authorized --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
-                 [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -m recent --name authorized --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
                  [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
                  [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
                  [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
@@ -387,16 +400,7 @@ $iptablespath -wt nat -P PREROUTING ACCEPT
 $iptablespath -wt nat -P INPUT ACCEPT
 $iptablespath -wt nat -P OUTPUT ACCEPT
 $iptablespath -wt nat -P POSTROUTING ACCEPT
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 80,443 -j DNAT --to-destination 192.168.3.3
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp --dport 1026 -m comment --comment "remote router management" -j DNAT --to-destination 192.168.3.2:8081
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 4554,4080,8004 -j DNAT --to-destination 192.168.3.4
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 5554,5080,8005 -j DNAT --to-destination 192.168.3.5
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 6554,6080,8006 -j DNAT --to-destination 192.168.3.6
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 7554,7080,8007 -j DNAT --to-destination 192.168.3.7
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 8554,8080,8008 -j DNAT --to-destination 192.168.3.8
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 9554,9080,8009 -j DNAT --to-destination 192.168.3.9
-$iptablespath -wt nat -I PREROUTING 1  -i eth0  -p tcp -m multiport --dports 80,443 -j DNAT --to-destination 192.168.3.3
-$iptablespath -wt nat -I POSTROUTING 1  -o eth0  -p all -j MASQUERADE
+$iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE
 $iptablespath -wP INPUT ACCEPT
 $iptablespath -wP FORWARD ACCEPT
 $iptablespath -wP OUTPUT ACCEPT
@@ -407,19 +411,14 @@ $iptablespath -wN s_blacklist
 $iptablespath -wN s_privateIPs
 $iptablespath -wN s_static_trusted
 $iptablespath -wN s_whitelist
-$iptablespath -wI INPUT 1  -p all -m comment --comment "this is a comment" -m recent --rcheck --seconds 10 --name AUTH2 -j LOG --log-level 4
-$iptablespath -wI INPUT 1  -p all -m comment --comment "this is a comment" -m recent --rcheck --seconds 10 --name AUTH2 -j GATE3
-$iptablespath -wI INPUT 1  -p all -j KNOCKING
-$iptablespath -wI INPUT 1  -i eth0  -d 127.0.0.0/8  -p all -m recent --set --name Knock1 -j DROP
-$iptablespath -wI INPUT 1  -p all -m recent --update --seconds 60 --name DEFAULT -j DROP
 $iptablespath -wI INPUT 1  -p all -j DROP
 $iptablespath -wI INPUT 1  -p all -j LOG --log-level 4
 $iptablespath -wI INPUT 1  -p all -j s_blacklist
-$iptablespath -wI INPUT 1  -i eth0  -p all -j s_privateIPs
+$iptablespath -wI INPUT 1  -i $external_net_interface  -p all -j s_privateIPs
 $iptablespath -wI INPUT 1  -p all -j s_whitelist
-$iptablespath -wI INPUT 1  -i eth0  -p tcp --dport 1958 -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-level 4
+$iptablespath -wI INPUT 1  -i $external_net_interface  -p tcp --dport 1958 -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-level 4
 $iptablespath -wI INPUT 1  -p all -j s_static_trusted
-$iptablespath -wI INPUT 1  -i eth1  -p all -j ACCEPT
+$iptablespath -wI INPUT 1  -i $internal_net_interface  -p all -j ACCEPT
 $iptablespath -wI INPUT 1  -d 192.168.3.2  -p all -j ACCEPT
 $iptablespath -wI INPUT 1  -p all -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 $iptablespath -wI FORWARD 1  ! -s 192.133.1.2  -p all -j ACCEPT
@@ -429,114 +428,26 @@ $iptablespath -wI FORWARD 1  -p all -j s_blacklist
 $iptablespath -wI FORWARD 1  -p all -j d_privateIPs
 $iptablespath -wI FORWARD 1  -p all -j s_privateIPs
 $iptablespath -wI FORWARD 1  -p all -j d_blacklist
-$iptablespath -wI FORWARD 1  -d 167.142.232.0/24  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -d 74.125.0.0/16  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -d 173.194.0.0/16  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -s 173.194.0.0/16  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -s 74.125.0.0/16  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -s 167.142.232.0/24  -p all -j ACCEPT
 $iptablespath -wI FORWARD 1  -p all -j d_whitelist
 $iptablespath -wI FORWARD 1  -p all -j s_whitelist
 $iptablespath -wI FORWARD 1  -p all -j s_static_trusted
 $iptablespath -wI FORWARD 1  -p all -j d_static_trusted
-$iptablespath -wI FORWARD 1  -o eth0  -p all -j ACCEPT
+$iptablespath -wI FORWARD 1  -o $external_net_interface  -p all -j ACCEPT
 $iptablespath -wI OUTPUT 1  -p all -j d_blacklist
 $iptablespath -wI OUTPUT 1  -p all -j d_whitelist
 $iptablespath -wI OUTPUT 1  -p all -j d_static_trusted
-$iptablespath -wI OUTPUT 1  -d 207.177.27.130  -p all -j ACCEPT
-$iptablespath -wI 3dot2not8081 1  -p all -j DROP
-$iptablespath -wI 3dot2not8081 1  -p all -j LOG --log-level 4
-$iptablespath -wI 3dot2not8081 1  -p tcp ! --dport 8081 -j ACCEPT
-$iptablespath -wI 3dot2not8081 1  -p all -j s_whitelist
-$iptablespath -wI GATE1 1  -p all -j DROP
-$iptablespath -wI GATE1 1  -p tcp --dport 4080 -m recent --set --name AUTH1 -j DROP
-$iptablespath -wI GATE2 1  -p all -j GATE1
-$iptablespath -wI GATE2 1  -p tcp --dport 5080 -m recent --set --name AUTH2 -j DROP
-$iptablespath -wI GATE2 1  -p all -m recent --remove --name AUTH1
-$iptablespath -wI GATE3 1  -p all -j GATE1
-$iptablespath -wI GATE3 1  -p tcp --dport 6080 -m recent --set --name AUTH3 -j DROP
-$iptablespath -wI GATE3 1  -p all -m recent --remove --name AUTH2
-$iptablespath -wI KNOCKED 1  -p all -j GATE1
-$iptablespath -wI KNOCKED 1  -i eth0  -p all -j ACCEPT
-$iptablespath -wI KNOCKED 1  -p all -m recent --remove --name AUTH3
-$iptablespath -wI KNOCKING 1  -p all -j GATE1
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH1 -j GATE2
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH2 -j GATE3
-$iptablespath -wI KNOCKING 1  -p all -m recent --rcheck --seconds 90 --name AUTH3 -j KNOCKED
 $iptablespath -wI d_privateIPs 1  -d 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI d_privateIPs 1  -d 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_privateIPs 1  -o eth0  -d 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI d_privateIPs 1  -o $external_net_interface  -d 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI d_static_trusted 1  -d 199.102.46.70  -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 208.67.222.222  -p all -m comment --comment "OpenDNS" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.89.199  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.91.13  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.94.4  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.91.15  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.91.24  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.91.23  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.88.149  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.91.14  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 91.189.92.201  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -p all -m comment --comment "established connections are assumed to be OK" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 167.142.225.5  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_static_trusted 1  -d 207.32.31.196  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 216.58.192.0/19  -p all -m comment --comment "google direct allocation" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 216.58.192.0/19  -p all -m comment --comment "google direct allo
-cation" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 209.85.147.26  -p all -m comment --comment "gmail server" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 209.85.147.26  -p all -m comment --comment "gmail server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 74.125.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 74.125.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 173.194.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 173.194.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 207.32.31.204  -p all -m comment --comment "isp mail server" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 207.32.31.204  -p all -m comment --comment "isp mail server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 207.32.31.196  -p all -m comment --comment "isp mail server" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 207.32.31.196  -p all -m comment --comment "isp mail server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 167.142.225.5  -p all -m comment --comment "name server NS1.NETINS.NET" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 167.142.225.5  -p all -m comment --comment "name server NS1.NETI
-NS.NET" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 207.32.31.198  -p all -m comment --comment "pop3.walnutel.net:pop3 [207.32.31.198/110]" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 207.32.31.198  -p all -m comment --comment "pop3
-.walnutel.net:pop3 [207.32.31.198/110]" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 208.80.200.0/21  -p all -m comment --comment "redcondor for walnutel.net support servers-mx, etc Sat Dec 19 20:12:02 CST 2015" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 208.80.20
-0.0/21  -p all -m comment --comment "redcondor for walnutel.net support servers-mx, etc Sat Dec 19 20:12:02 CST 2015" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 208.80.206.63  -p all -m comment --comment "isp mail server Sat Jan  9 08:32:13 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 208.80.206.63  -p all -m comment --comment "is
-p mail server Sat Jan  9 08:32:13 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 208.80.204.253  -p all -m comment --comment "isp mail server Sat Jan  9 08:34:48 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 208.80.204.253  -p all -m comment --comment "
-isp mail server Sat Jan  9 08:34:48 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 98.179.31.188  -p all -m comment --comment "knocked Sat Jan 16 12:26:40 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 98.179.31.188  -p all -m comment --comment "knocked Sa
+$iptablespath -wI d_whitelist 1  -o $external_net_interface  -d 98.179.31.188  -p all -m comment --comment "knocked Sat Jan 16 12:26:40 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i $external_net_interface  -s 98.179.31.188  -p all -m comment --comment "knocked Sa
 t Jan 16 12:26:40 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 207.177.27.131  -p all -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 207.177.27.131  -p all
+$iptablespath -wI d_whitelist 1  -o $external_net_interface  -d 207.177.27.131  -p all -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i $external_net_interface  -s 207.177.27.131  -p all
  -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 68.15.224.232  -p all -m comment --comment "via email Sun Jan 17 18:42:53 CST 2016 Sun Jan 17 18:42:53 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 68.15.224.232  -p all -
-m comment --comment "via email Sun Jan 17 18:42:53 CST 2016 Sun Jan 17 18:42:53 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 97.107.199.77  -p all -m comment --comment "via email Mon Jan 18 10:22:01 CST 2016 Mon Jan 18 10:22:01 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 97.107.199.77  -p all -
-m comment --comment "via email Mon Jan 18 10:22:01 CST 2016 Mon Jan 18 10:22:01 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 166.175.63.191  -p all -m comment --comment "via email Sat Jan 30 20:22:53 CST 2016 Sat Jan 30 20:22:53 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 166.175.63.191  -p all
- -m comment --comment "via email Sat Jan 30 20:22:53 CST 2016 Sat Jan 30 20:22:53 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 70.198.33.1  -p all -m comment --comment "via email Fri Feb  5 19:05:20 CST 2016 Fri Feb  5 19:05:20 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 70.198.33.1  -p all -m co
-mment --comment "via email Fri Feb  5 19:05:20 CST 2016 Fri Feb  5 19:05:20 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o eth0  -d 184.187.14.228  -p all -m comment --comment "via email Fri Feb 12 12:46:37 CST 2016 Fri Feb 12 12:46:37 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i eth0  -s 184.187.14.228  -p all
- -m comment --comment "via email Fri Feb 12 12:46:37 CST 2016 Fri Feb 12 12:46:37 CST 2016" -j ACCEPT
-$iptablespath -wI s_privateIPs 1  -i eth0  -s 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI s_privateIPs 1  -i $external_net_interface  -s 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI s_privateIPs 1  -s 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI s_privateIPs 1  -s 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
 $iptablespath -wI s_static_trusted 1  -s 91.189.92.201  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.91.14  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.88.149  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.91.23  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.91.24  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.91.15  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.94.4  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.91.13  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 91.189.89.199  -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 208.67.222.222  -p all -m comment --comment "OpenDNS" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 199.102.46.70  -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -i lo  -p all -m comment --comment "allow all from 127.0.0.1" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -p all -m comment --comment "established connections are assumed to be OK" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 167.142.225.5  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI s_static_trusted 1  -s 207.32.31.196  -p all -m comment --comment "isp server" -j ACCEPT
-$iptablespath -wI s_whitelist 1 -i eth0 -s 174.74.1.69  -m comment --comment "via email Sun Feb 28 16:48:56 CST 2016 Sun Feb 28 16:48:56 CST 2016" -j ACCEPT;$iptablespath -wI d_whitelist 1 -o eth0 -d 174.74.1.69 -m comment --comment "vi
-a email Sun Feb 28 16:48:56 CST 2016 Sun Feb 28 16:48:56 CST 2016" -j ACCEPT
 BUILDIPTABLES.SH_END
 ) > "$directoryforscripts/preparedness/buildiptables.sh"
           chmod 700 "$directoryforscripts/preparedness/buildiptables.sh"
@@ -552,12 +463,11 @@ BUILDIPTABLES.SH_END
 $($crontabpath -l)\
 */30 * * * * $iptabperspath save >/dev/null 2>&1
  # @reboot $iptabperspath reload >/dev/null 2>&1
-@reboot $nicepath -n19 $inotifywaitpath --quiet --monitor --event modify /var/lib/dhcp/dhclient.eth0.leases|while read;do "$directoryforscripts/newip_no_mysql.sh";done >/dev/null 2>&1
+@reboot $nicepath -n19 $inotifywaitpath --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read;do "$directoryforscripts/newip_no_mysql.sh";done >/dev/null 2>&1
 @reboot "$directoryforscripts/newip_no_mysql.sh\" >/dev/null 2>&1
 #@reboot if [ \$($iptablespath -w -L INPUT -n|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) -eq "0" ]; then "$directoryforscripts/buildiptables.sh";fi >/dev/null 2>&1
 @reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$directoryforscripts/blacklistme.sh"  >/dev/null 2>&1
-*/3 * * * * echo "$iptablespath s_blacklist chain is \$($iptablespath -wnL s_blacklist --line-numbers|$tailpath -n-1|$awkpath '{print \$1}') lines long" >> "$directoryforscripts/modemcheck.lastran.log"; if [ \$($ifconfigpath|$headpath -n+2|$greppath -c "inet ") -eq 0 ] || [[ \$($greppath ^d1 <"$directoryforscripts/usbrelay.log"|$tailpath -n 1|$awkpath '{for (i=4;i>=0;i--) {printf \$(NF-i)" "}print ""}') < \$( $greppath -w waiting /var/log/syslog|$greppath '\:123'|$greppath -v grep|$tailpath -n 1|$awkpath '{print $1" "$2" "$3}' ) ]]; then "$directoryforscripts/usbrelay d1";$sleeppath 1;"$directoryforscripts/usbrelay a1";$ifdownpath eth0;$ifuppath eth0; fi >/dev/null 2>&1
-*/3 * * * * if [ \$($pspath aux|$greppath "/usr/sbin/knockd \-d \-i eth0"|$greppath -vc grep) -lt 1 ] || [ \$($tailpath -n-1 /var/log/knockd.log|$greppath -c shutting) -gt 0 ] && [ \$($pspath aux|$greppath sshd:|$greppath -vc root) -eq 0 ]; then /etc/init.d/knockd stop;$sleeppath 1;/etc/init.d/knockd start;fi >/dev/null 2>&1
+*/3 * * * * echo "$iptablespath s_blacklist chain is \$($iptablespath -wnL s_blacklist --line-numbers|$tailpath -n-1|$awkpath '{print \$1}') lines long" >> "$directoryforscripts/modemcheck.lastran.log"; if [ \$($ifconfigpath|$headpath -n+2|$greppath -c "inet ") -eq 0 ] || [[ \$($greppath ^d1 <"$directoryforscripts/usbrelay.log"|$tailpath -n 1|$awkpath '{for (i=4;i>=0;i--) {printf \$(NF-i)" "}print ""}') < \$( $greppath -w waiting /var/log/syslog|$greppath '\:123'|$greppath -v grep|$tailpath -n 1|$awkpath '{print $1" "$2" "$3}' ) ]]; then "$directoryforscripts/usbrelay d1";$sleeppath 1;"$directoryforscripts/usbrelay a1";$ifdownpath $external_net_interface;$ifuppath $external_net_interface; fi >/dev/null 2>&1
 0 3 * * * echo "$directoryforscripts/usbrelay d8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "\$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today + 20 minutes" +\%H\%M)
 0 3 * * * echo "$directoryforscripts/usbrelay a8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "1 + \$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today - 10 minutes" +\%H\%M)
 @reboot timerise=\$($awkpath '{timerise=('\$($bcpath <<< "\$($datepath +\%m) * 2")');printf \$timerise}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timerise=\$($bcpath <<< "\${timerise:0:2} + 1")\${timerise:2};fi;timeset=\$($awkpath '{timeset=('\$($bcpath <<< "1 + \$($datepath +\%m) * 2")');printf \$timeset}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timeset=\$($bcpath <<< "\${timeset:0:2} + 1")\${timeset:2};fi;if [ \$($bcpath <<< "\$($datepath +\%H\%M) - \$timerise") -ge 0 ] && [ \$($bcpath <<< "\$timeset - \$($datepath +\%H\%M)") -ge 0 ];then "$directoryforscripts/usbrelay d8";else "$directoryforscripts/usbrelay a8";fi
@@ -804,7 +714,9 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/master.cf
           cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
           chown postfix /etc/postfix/sasl_passwd*
-          /etc/init.d/postfix reload
+
+          [[ $(/etc/init.d/postfix reload >/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
+
           if ! [[ "$( $postqueuepath -p )" == *is\ empty* ]];then
                printf "For the next step, the mail queue needs to be flushed.  You will lose the\
 \nfollowing emails that haven't been sent.  Press a key to acknowledge..."
@@ -1168,16 +1080,16 @@ install_dynIPch () {
 #domain_name_server (ip_mult): {116.1.12.4, 116.1.12.5}
 #end (none): 
 #dhclient:
-#Listening on LPF/eth0:avahi/00:26:b9:ef:57:dd
-#Sending on   LPF/eth0:avahi/00:26:b9:ef:57:dd
+#Listening on LPF/$external_net_interface:avahi/00:26:b9:ef:57:dd
+#Sending on   LPF/$external_net_interface:avahi/00:26:b9:ef:57:dd
 #Listening on LPF/wlan0/5c:ac:4c:29:53:d0
 #Sending on   LPF/wlan0/5c:ac:4c:29:53:d0
-#Listening on LPF/eth0/00:26:b9:ef:57:dd
-#Sending on   LPF/eth0/00:26:b9:ef:57:dd
+#Listening on LPF/$external_net_interface/00:26:b9:ef:57:dd
+#Sending on   LPF/$external_net_interface/00:26:b9:ef:57:dd
 #Sending on   Socket/fallback
-#DHCPDISCOVER on eth0:avahi to 255.255.255.255 port 67 interval 3 (xid=0xde511649)
+#DHCPDISCOVER on $external_net_interface:avahi to 255.255.255.255 port 67 interval 3 (xid=0xde511649)
 #DHCPREQUEST of 10.100.100.173 on wlan0 to 255.255.255.255 port 67 (xid=0x275b221c)
-#DHCPDISCOVER on eth0 to 255.255.255.255 port 67 interval 3 (xid=0x2727213c)
+#DHCPDISCOVER on $external_net_interface to 255.255.255.255 port 67 interval 3 (xid=0x2727213c)
 #DHCPACK of 10.100.100.173 from 172.22.0.5
 #RTNETLINK answers: File exists
 #bound to 10.100.100.173 -- renewal in 9225 seconds.
@@ -1412,7 +1324,7 @@ EOF
 $($crontabpath -l)\
 @reboot "$directoryforscripts/newdynip.sh" >/dev/null 2>&1
 ##The following lines are intentionally redundant to allow system admin to change dhcp client package and still get notified of dhcp change
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.eth0.leases|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1
+@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpcd*.info        DO MONITOR, make separate entry for each file found
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$directoryforscripts/newdynip.sh";done >/dev/null 2>&1 # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/db/|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *lease*
@@ -1704,7 +1616,6 @@ fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
@@ -1744,7 +1655,6 @@ dascreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
@@ -1764,7 +1674,6 @@ pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
@@ -1849,6 +1758,7 @@ until ! [ -z $answer ];do
 #  packages required to install everything
                   inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
                   iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
+# TODO: the next line is very, very version dependent
                   iptabperspath=$($findpath / -maxdepth 3 -name *persistent|$greppath -vw doc|$greppath -vw src|$greppath -vw sys|$greppath -e iptables -e netfilter|$greppath -m 1 -e init.d 2> /dev/null)
                   stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
                   crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
