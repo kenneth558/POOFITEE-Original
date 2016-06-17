@@ -675,7 +675,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           fi
      done
      while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a smtp connection for outgoing email
-          chmod 744 /etc/postfix/main.cf
+          chmod 644 /etc/postfix/main.cf
           [[ "$($greppath -c ^myhostname </etc/postfix/main.cf)" == "0" ]] \
               && printf "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^myhostname.*/myhostname = '"$(hostname)"'/g' /etc/postfix/main.cf
@@ -764,7 +764,7 @@ See
              printf "Select a different email address for its outgoing email server:"
 done #this loop goes through the email provider outbound servers & builds connect.txt files until user selects one
 echo "$outemailadd" > "$directoryforscripts/outemailadd"
-chmod 700 "$directoryforscripts/outemailadd"
+chmod 600 "$directoryforscripts/outemailadd"
 fi
 postfix_already_conf=True # set this to True or just anything non-empty
           }
@@ -1933,7 +1933,7 @@ newemailconfigwarning="Installing a new configuration is\
             fi
        done
        echo "$directoryforscripts" > directoryforscripts # handy with subsequent runs of this script, will know where everything is
-       chmod 700 directoryforscripts
+       chmod 600 directoryforscripts
        directoryforscripts="${directoryforscripts%%/}"
        printf "Please wait while your current iptables ruleset is backed up..."
        current_time="$(date)"
