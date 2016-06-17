@@ -18,6 +18,8 @@ All this PLUS the simplicity and robustness inherent in a bare iptables and scri
 
 INTENDED AUDIENCE
 
+ -- Owners/admins of Internet-connected systems who want to protect them from hackers and reclaim the bandwidth hackers steal.  Surveillance, automation, and normal Internet access systems are otherwise subject to hacking attacks trying to break in from Russia, China, you name it.  
+
  -- Non-BSD LINUX server Command Line Interface (CLI) users connected with IPv4 (IPv6 maybe later).  IPv6 access INTO your system will always work fine because the IPv6 address will get converted into IPv4 before arrival. This setup can co-exist with your favorite Linux GUI and will also run on Linux workstation.   NOT COMPATIBLE WITH BSD NOR MAC SYSTEMS
 
  -- Plus anyone who doesn't even care about the firewalling aspect but just wants the ability to email commands to their Linux-based automation or other purpose server.  Examine the file "email_fetch_parse" to see the default set of keywords and what actions each keyword will perform.  Some examples from that file are: "allow (IP address)" to whitelist a specific IP address, "end blacklist (IP address)" to remove from blacklist a specific IP address, "report" to have the tail of /var/log/kern.log emailed to you, "log" to insert an iptables rule that starts logging every IP packet that makes it down in the iptables INPUT chain ruleset to the rule that sends it to s_privateIPs chain (for if ever the default level of logging didn't log your first attempt), "undo logging" to undo that high level of logging, and a few more.  Make up more for your own use or for automation via usb (echo someword > /dev/[automation's usb channel]).
@@ -27,6 +29,8 @@ INTENDED AUDIENCE
  -- You've discovered innumerable security-flaw seekers and other type opportunistic thrill-seekers worldwide are hammering YOUR system, stealing YOUR bandwidth, and you take offense to that, never knowing when they might succeed
 
  -- You may have discovered that Fail2Ban, UFW and the like iptables front-ends are too complicated, not persistent enough, not intuitive, or otherwise too wimpy to be secure firewalls for owner-access-only systems.  This firewalling solution is NOT a front-end at all.  You still have direct control of iptables via scripting or CLI.  These are helper scriptings to give you some very useful remote or unattended iptables rules control securely
+ 
+ -- You may have used knockd for port knocking and found it to be limited in knock port sequence and horrifyingly tends to stop running for no apparent reason.
 
  -- You understand the advantages of having your system TOTALLY invisible to anyone but you, your friends, and allies.  (IPv6 visibility MIGHT be required)  
 
@@ -124,13 +128,11 @@ SHELL=/bin/bash
 
 @reboot nice -n15 /usr/bin/tail -F -n 0 /var/log/kern.log|/bin/grep --line-buffered ' SRC='|stdbuf -o0 /bin/grep -v 'SRC=10\.'|stdbuf -o0 grep -v 'SRC=0\.0\.0\.0'|stdbuf -o0 grep -v 'SRC=127.0\.0\.1'|stdbuf -o0 /bin/grep -v 'SRC=192\.168\.'|stdbuf -o0 awk '{for (i=4;i<=NF;i++) {if ($i ~ "^SRC=") {{gsub("SRC=","",$i); printf $i" \""} printf "kern.log "$1" "$2" "$3; for (i=i;i<=NF;i++) {if ($i ~ "^PROTO=" || $i ~ "^SPT=" || $i ~ "^DPT") {printf " "$i}} print "\""}}}'|xargs -l1 /home/homeowner/blacklistme.sh >/dev/null 2>&1
 
- # */3 * * * * if [ $(/bin/ps aux|/bin/grep "/usr/sbin/knockd \-d \-i eth0"|/bin/grep -vc grep) -lt 1 ] || [ $(/usr/bin/tail -n-1 /var/log/knockd.log|/bin/grep -c shutting) -gt 0 ] && [ $(/bin/ps aux|/bin/grep sshd:|/bin/grep -vc root) -eq 0 ]; then /etc/init.d/knockd stop;/bin/sleep 1;/etc/init.d/knockd start;fi >/dev/null 2>&1
-
  # 10 * * * * nice -n19 /home/homeowner/email_fetch_parse >/dev/null 2>&1
 
 Explaining the crontab entries
 
-iptables-persistent: used to best keep iptables rules between reboots of the system.  If this would ever fail to execute, the entire firewall functionality vaporizes permanently into nothingness, which I have had happen on very rare occasion.  Therefore, I strongly recommend you familiarize yourself with the backup aspect of this scripting called “buildiptables”.  It is a script in the home directory which is real-time updated from iptables rules changes.  
+iptables-persistent: used to best keep iptables rules between reboots of the system.  If this would ever fail to execute, the entire firewall functionality vaporizes permanently into nothingness, which I have had happen on very rare occasion.  Therefore, I strongly recommend you familiarize yourself with the backup aspect of this scripting called “buildiptables”.  It is a script in the home directory which is real-time updated from iptables rules changes.  Systemd compatibility coming soon.
 
 
 reboot nice -n19 inotifywait...  … /var/lib/dhcp/dhclient.eth0.leases... For dynamic IP systems: Did I promise something for DHCP client systems?  This is one way to “trap” an IP address change of the system.  NOTE: I DON'T FULLY UNDERSTAND IF/HOW/WHEN/WHY ALL THE DIFFERENT ISPs/MODEMS PASS THE NEW IP ADDRESS DIFFERENTLY THROUGH THEIR CABLE MODEMS TO YOUR SYSTEM!  My DOCSIS 3 cable modems pass the routable/public IP address to my systems, but I don't know if that will be the case with everyone or all modem/ISP combinations.  If you really want the feature of being alerted when your system's routable IP address changes but don't have the public IP address coming coming all the way down to your system, you'll probably have to figure out a polling method using “dig +short myip.opendns.com @resolver1.opendns.com” or “echo -en '\x00\x01\x00\x08\xc0\x0c\xee\x42\x7c\x20\x25\xa3\x3f\x0f\xa1\x7f\xfd\x7f\x00\x00\x00\x03\x00\x04\x00\x00\x00\x00' |nc -u -w 2 stun.services.mozilla.com 3478 |dd bs=1 count=4 skip=28 2>/dev/null |hexdump -e '1/1 "%u."' |sed 's/\.$/\n/'” or something.  Maybe your ISP offers static IPs – you could ask about that.  Don't forget to adjust the “eth0” in this line as needed with the name of your ethernet interface that faces the internet.
@@ -140,9 +142,6 @@ reboot nice -n19 inotifywait...  … /var/lib/dhcp/dhclient.eth0.leases... For d
 
 
 @reboot nice -n15 /usr/bin/tail -F…..This line is THE heartbeat of both the dynamic building of the optional blacklist and the detection of the port knock that triggers the email reading.  You might find it very useful to know the port numbers that probers are hitting, especially if you decide to craft a port-knocking sequence and want to avoid the popularly-hit ports, so you would allow blacklistme.sh to create a running blacklist in iptables.  However, if you decide against using the dynamically-built blacklist, make that change in blacklistme.sh so that the email-reader knocks still get detected in blacklistme.sh when this command sends the log entry there.  IF YOU HATE ZOMBIES, YOU'LL BE ANNOYED THAT THIS LINE PRODUCES ONE.  I have tried very hard to stop this line from producing a zombie but to no avail.  Thankfully, it will only produce one, not adding any more on subsequent runs.  It happens the first time after each reboot and then this `tail -F` command getting caught up, so to speak.  The zombie will appear then the next probe that comes in when this line launches the blacklistme.sh script.  Even developing a workaround (to make the zombies go away after their creation) was hardly worth my time.  I am very interested in any scripting technique you could suggest that would be a true solution here, not just a workaround nor just your guess.  You might check if the answer lies somewhere in my use of `stdbuf -o0`, but if you remove that, this line stops running in the background.  Zombies in low quantities aren't harmful.
-
-
- # */3 * * * * if [ $(/bin/ps aux|/bin/grep "/usr/sbin/knockd….  After experiencing knockd quitting unpredictably, several times, I had to put this line in.  It was the most sensible way I could detect a knockd quit and then to restart it.  Whether knockd updates will some day remove the need for this line or ruin its function is something to deal with when/if it happens, as far as I'm concerned right now.  If you want to use knockd, uncomment this line.
 
 
  # 10 * * * * nice -n19 /home/homeowner/email_fetch_parse…  In case port knocking is totally unsuccessful including the knock to get your email fetched and parsed, you'll still know the system will read its emails every hour:10.  By default this is not enabled, but you might want it to be if you travel.
@@ -172,166 +171,6 @@ blacklistme.sh script -- too large for inclusion in readme.  What this file does
 FINALLY:
 See the wiki.
 
-"seed" your iptables ruleset manually--I suggest just running some of these commands from CLI: The first ones wipe clean all iptables, many later ones are only applicable if your system is on my same ISP (Walnut Communications).  The order they are in is how remakebuildiptablesfromiptables puts them when you run that script -- backwards because you use the insert (I) instead of append (A) option.
-
-/sbin/iptables -wF
-
-/sbin/iptables -wX
-
-/sbin/iptables -wt nat -F
-
-/sbin/iptables -wt nat -X
-
-/sbin/iptables -wt mangle -F
-
-/sbin/iptables -wt mangle -X
-
-/sbin/iptables -wt nat -P INPUT ACCEPT
-
-/sbin/iptables -wt nat -P OUTPUT ACCEPT
-
-/sbin/iptables -wP INPUT ACCEPT
-
-/sbin/iptables -wP FORWARD ACCEPT
-
-/sbin/iptables -wP OUTPUT ACCEPT
-
-/sbin/iptables -wI INPUT 1  -p all -j DROP
-
-/sbin/iptables -wI INPUT 1  -p all -j LOG --log-level 4
-
-/sbin/iptables -wI INPUT 1  -p all -j s_blacklist
-
-/sbin/iptables -wI INPUT 1  -i eth0  -p all -j s_privateIPs
-
-/sbin/iptables -wI INPUT 1  -p all -j s_whitelist
-
-/sbin/iptables -wI INPUT 1  -i eth0  -p tcp --dport 1958 -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-level 4
-
-/sbin/iptables -wI INPUT 1  -p all -j s_static_trusted
-
-/sbin/iptables -wI INPUT 1  -p all -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-/sbin/iptables -wI OUTPUT 1  -p all -j d_blacklist
-
-/sbin/iptables -wI d_privateIPs 1  -d 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI d_privateIPs 1  -d 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI d_privateIPs 1  -o eth0  -d 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI d_static_trusted 1  -d 199.102.46.70  -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 208.67.222.222  -p all -m comment --comment "OpenDNS" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.89.199  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.91.13  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.94.4  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.91.15  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.91.24  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.91.23  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.88.149  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.91.14  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 91.189.92.201  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -p all -m comment --comment "established connections are assumed to be OK" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 167.142.225.5  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_static_trusted 1  -d 207.32.31.196  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 216.58.192.0/19  -p all -m comment --comment "google direct allocation" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 216.58.192.0/19  -p all -m comment --comment "google direct allocation" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 209.85.147.26  -p all -m comment --comment "gmail server" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 209.85.147.26  -p all -m comment --comment "gmail server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 74.125.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 74.125.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 173.194.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 173.194.0.0/16  -p all -m comment --comment "Google's range" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 207.32.31.204  -p all -m comment --comment "isp mail server" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 207.32.31.204  -p all -m comment --comment "isp mail server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 207.32.31.196  -p all -m comment --comment "isp mail server" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 207.32.31.196  -p all -m comment --comment "isp mail server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 167.142.225.5  -p all -m comment --comment "name server NS1.NETINS.NET" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 167.142.225.5  -p all -m comment --comment "name server NS1.NETINS.NET" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 207.32.31.198  -p all -m comment --comment "pop3.walnutel.net:pop3 [207.32.31.198/110]" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 207.32.31.198  -p all -m comment --comment "pop3.walnutel.net:pop3 [207.32.31.198/110]" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 208.80.200.0/21  -p all -m comment --comment "redcondor for walnutel.net support servers-mx, etc Sat Dec 19 20:12:02 CST 2015" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 208.80.200.0/21  -p all -m comment --comment "redcondor for walnutel.net support servers-mx, etc Sat Dec 19 20:12:02 CST 2015" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 208.80.206.63  -p all -m comment --comment "isp mail server Sat Jan  9 08:32:13 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 208.80.206.63  -p all -m comment --comment "isp mail server Sat Jan  9 08:32:13 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 208.80.204.253  -p all -m comment --comment "isp mail server Sat Jan  9 08:34:48 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 208.80.204.253  -p all -m comment --comment "isp mail server Sat Jan  9 08:34:48 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 98.179.31.188  -p all -m comment --comment "knocked Sat Jan 16 12:26:40 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 98.179.31.188  -p all -m comment --comment "knocked Sat Jan 16 12:26:40 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 207.177.27.131  -p all -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 207.177.27.131  -p all -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 68.15.224.232  -p all -m comment --comment "via email Sun Jan 17 18:42:53 CST 2016 Sun Jan 17 18:42:53 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 68.15.224.232  -p all -m comment --comment "via email Sun Jan 17 18:42:53 CST 2016 Sun Jan 17 18:42:53 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 97.107.199.77  -p all -m comment --comment "via email Mon Jan 18 10:22:01 CST 2016 Mon Jan 18 10:22:01 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 97.107.199.77  -p all -m comment --comment "via email Mon Jan 18 10:22:01 CST 2016 Mon Jan 18 10:22:01 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 166.175.63.191  -p all -m comment --comment "via email Sat Jan 30 20:22:53 CST 2016 Sat Jan 30 20:22:53 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 166.175.63.191  -p all -m comment --comment "via email Sat Jan 30 20:22:53 CST 2016 Sat Jan 30 20:22:53 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 70.198.33.1  -p all -m comment --comment "via email Fri Feb  5 19:05:20 CST 2016 Fri Feb  5 19:05:20 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 70.198.33.1  -p all -m comment --comment "via email Fri Feb  5 19:05:20 CST 2016 Fri Feb  5 19:05:20 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI d_whitelist 1  -o eth0  -d 184.187.14.228  -p all -m comment --comment "via email Fri Feb 12 12:46:37 CST 2016 Fri Feb 12 12:46:37 CST 2016" -j ACCEPT;/sbin/iptables -wI s_whitelist 1  -i eth0  -s 184.187.14.228  -p all -m comment --comment "via email Fri Feb 12 12:46:37 CST 2016 Fri Feb 12 12:46:37 CST 2016" -j ACCEPT
-
-/sbin/iptables -wI s_privateIPs 1  -i eth0  -s 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI s_privateIPs 1  -s 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI s_privateIPs 1  -s 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.92.201  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.91.14  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.88.149  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.91.23  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.91.24  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.91.15  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.94.4  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.91.13  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 91.189.89.199  -p all -m comment --comment "Canonical" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 208.67.222.222  -p all -m comment --comment "OpenDNS" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 199.102.46.70  -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -i lo  -p all -m comment --comment "allow all from 127.0.0.1" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -p all -m comment --comment "established connections are assumed to be OK" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 206.72.26.254  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 207.32.31.195  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 167.142.225.5  -p all -m comment --comment "isp server" -j ACCEPT
-
-/sbin/iptables -wI s_static_trusted 1  -s 207.32.31.196  -p all -m comment --comment "isp server" -j ACCEPT
-
 
 In Conclusion...
 
@@ -343,8 +182,6 @@ If you end up seeking an alternative from what I presented to you here, I would 
 Still TODO:
 
 – Do a better job on this documentation.
-
-– Develop an installation script to reduce the skill level requirement of installers.
 
 --  Integrate with fwknop capability
  
