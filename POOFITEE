@@ -1940,7 +1940,9 @@ newemailconfigwarning="Installing a new configuration is\
        $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" && printf "\nA copy of your current iptables ruleset is backed up in\
 \n\n$directoryforscripts/iptables_ruleset.$current_time\
 \n\nIf you feel the changes that this script makes to your iptables ruleset are not what you wanted, restore the current ruleset by running\
-\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n"
+\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n" || printf "\nYour current iptables ruleset did not back up as expected.  You should press\
+\nctl-c now and fix that, or you could be in a frustrating situation if something\
+\ngoes awry with this install.\n"
         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
