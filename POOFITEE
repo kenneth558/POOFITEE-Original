@@ -68,6 +68,7 @@
 ################  FUNCTIONS FIRST, THEN MAIN:
 
 install_port_knocking () {
+            REPLY=""
             until [[ "$REPLY" =~ [yn] ]]; do
                read -e -r -n1 -p "Use OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
                REPLY="${REPLY,}"
