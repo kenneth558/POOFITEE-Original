@@ -141,6 +141,8 @@ continue)\
                || ( [[ "$REPLY" =~ y ]] && (
 #                      echo "Selected OTPs"
 # Set up alert emails if not done already TODO: Make function, integrate better for answer scenarios
+                   echo "Sorry, this feature is not yet finished...Press a key"
+                   continue
                    conf_postfix
                      )
                  )
