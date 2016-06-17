@@ -191,7 +191,7 @@ continue)\
 
 #write rules to iptables rule set
             if [[ $REPLY == "l" ]];then
-                 echo "Setting loose rules here"
+                 echo "Setting loose rules here...not yet developed.  Sorry"
             else
                  echo "Setting strict rules here"
                  $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
