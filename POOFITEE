@@ -1,4 +1,5 @@
 #! /bin/bash
+# Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: accommodate different date, etc. format preferences in log files, directory listings, etc
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
@@ -52,56 +53,6 @@
 #
 #  accommodate reconfiguration of already installed system
 #
-echo "Sorry, POOFITEE is still under development ... press a key to continue"
-read -rsn 1;read -rst 0.001 -n3
-usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
-D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
-until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[ ++counter -eq 64 ]] || [[ "$($whereispath $binaryflag whereis &> /dev/null;echo $?)" == "0" ]];do
-    ! [[ -z "$binaryflag" ]] && binaryflag="" && continue
-    binaryflag="-b"
-    dirsign="/"
-    usrdir="";localdir="";sharedir="";bindir="";sbindir=""
-    cntr="${D2b[counter]}"
-    [[ "$cntr" =~ ^1 ]] && usrdir="/usr"
-    [[ "$cntr" =~ ^.1 ]] && localdir="/local"
-    [[ "$cntr" =~ ^..1 ]] && sharedir="/share"
-    [[ "$cntr" =~ ^...1 ]] && bindir="/bin"
-    [[ "$cntr" =~ ^....1 ]] && sbindir="/sbin"
-done
-if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
-whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
-unamepath="$($whereispath $binaryflag uname)"
-unamepath="${unamepath#*:}";unamepath="${unamepath# }";unamepath="${unamepath%% *}"
-sortpath="$($whereispath $binaryflag sort)"
-sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
-headpath="$($whereispath $binaryflag head)"
-headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
-exitmsg="Thank you for running this POOFITEE configuration script...God loves you pass it on"
-min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && \
-   trap "echo If you had run-time errors, your version of bash might be too old. $exitmsg" EXIT || \
-   trap "echo $exitmsg" EXIT
-if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then printf "This firewalling solution does not accommodate Mac nor BSD due to"\
-"\niptables and crontab dysfunction in those *NIXes";exit;fi
-if ! [ "$(whoami)" == "root" ];then printf "\nWithout being launched by su, this script\
- won't be able to do anything except\
-\ndisplay menus.  No control of this computer can be made by this script unless\
-\nre-launched by root.  Press a key to acknowledge, Ctrl-c to abort\n";read -rsn 1;read -rst 0.001 -n3;fi
-#  Beginning of copyright message
-printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
-\n\nThis work of authorship is made available to you under only one out of the\
-\nfollowing two arrangements.  In both arrangements, this copyright message must\
-\nremain with this work of authorship and any and all of its derivatives.\
-\n\n1.  Arrangement for your freedom from monetary obligation to the author:\
-\n - This copyright message must continue to be displayed at launch time\
-\n - This copyright message includes the statement\
-\n\n\"       Jesus Christ is Lord of all  ... press a key to acknowledge\"\
-\n\ndisplayed on its own line with blank lines adjacently both above and below\
-\nsaid nstatement and rendered statically without attempt made to render said\
-\nstatement transiently.\
-\n\n2.  Arrangement for your freedom from copyright display obligation, or to\
-\ncontribute, see the comments within the source code of this script"
-printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
-read -rsn 1;read -rst 0.001 -n3
 #    Arrangement for your freedom from copyright display obligation: Prior to
 #  distribution, email me the author: kenlovesjesus at gmail dot com to arrange USD payment.
 #  You'll insert name and details of party responsible for making the payment to the
@@ -113,520 +64,318 @@ read -rsn 1;read -rst 0.001 -n3
 #
 # POOFITEE firewall install helper script layout
 #
-awkpath="$($whereispath $binaryflag awk)" # some occurances removed due to inconsistencies with macs
-awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
-pythonpath="$($whereispath $binaryflag python)"
-pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
-greppath="$($whereispath $binaryflag grep)"
-greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
-ifconfigpath="$($whereispath $binaryflag ifconfig)"
-ifconfigpath="${ifconfigpath#*:}";ifconfigpath="${ifconfigpath# }";ifconfigpath="${ifconfigpath%% *}"
-pumppath="$($whereispath $binaryflag pump)"
-pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
-uniqpath="$($whereispath $binaryflag uniq)"
-uniqpath="${uniqpath#*:}";uniqpath="${uniqpath# }";uniqpath="${uniqpath%% *}"
-findpath="$($whereispath $binaryflag find)"
-findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}";
-tailpath="$($whereispath $binaryflag tail)"
-tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
-xargspath="$($whereispath $binaryflag xargs)"
-xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
-sedpath="$($whereispath $binaryflag sed)"
-sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
-wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-ippath="$($whereispath $binaryflag ip)" # Macs don't have the ip command at this time
-ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
-pspath=$($whereispath $binaryflag ps);pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
-# dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
-rhel="$($whereispath $binaryflag chkconfig)"
-rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
-eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -rsn 1;read -rst 0.001 -n3" \
-    || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
-# eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
-external_net_interface="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
-# printf "\n\ninterface going to google=$external_net_interface"
-internal_net_interface="$($ippath link show|$greppath -E "^[1-9][0-9]*:"|$greppath -v lo:\
-    |$greppath -v "$external_net_interface"\
-    |$sedpath 's/://g'\
-    |$awkpath '{print $2}')"
-# echo "$( [[ $(printf "$internal_net_interface"|$wcpath -l) == "1" ]] \
-#    && echo "$(printf "$internal_net_interface"|$wcpath -l) interface" \
-#    || echo "$(printf "$internal_net_interface"|$wcpath -l) interfaces") not going to google=$internal_net_interface"
-# echo "Script-required items: whereis path=$whereispath, awk path=$awkpath, python path=$pythonpath, grep path=$greppath, ifconfig path=$ifconfigpath, uniq path=$uniqpath, sort path=$sortpath, head path=$headpath";exit
-#
-# Introduction and what we'll do
-startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
-\n                SELECT DESIRED OPTIONS FOR THIS INSTALLATION\
-\n\n\n      (f) firewalling\
-\n\n      (e) email remote control\
-\n\n      (d) dynamic IP address change notifier"
-if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
-     startscreen+=" NOT for your configuration";notdhcp="notdhcp"
-fi
-startscreen+="\n\n      (p) port knocking\
-\n\n      (s) save configuration\
-\n\n      (r) restore the previously saved configuration\
-\n\n      (?) context helpful information\
-\n\n
-\nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
-\njust plain ? with no letters, select all of the five services listed above that\
-\nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
-# POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
-ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                              Helper Script Overview\
-\nThis set of Linux scripts can install several Internet security features useful\
-\nin homeowner and enterprise systems alike.  For enterprise systems however,\
-\nnetwork traffic is typically not regarded by the firewall as malicious until\
-\npacket stream behavior proves it to be or packet construction violates rules of\
-\nInternet operation.  POOFITEE does not configure firewalling this way.  Rather,\
-\nit only regards traffic as NON-malicious if it originates from trusted sources.\
-\nOf course, those source addresses can be spoofed, but when spoofed, a two-way\
-\nconnection capable of stealing information is not really possible when the\
-\nlegitimate computer owning the spoofed address is non-cooperative with the\
-\nspoofer.  The name \"POOFITEE\" is derived from the descriptive phrase \"Perfect\
-\nOwner Only access linux Firewall - the system is Invisible To Everyone Else\".\
-\nPOOFITEE is not really a program as much as it is simply an Internet security\
-\nscripting project that, in part, installs a set of Linux iptables rules.  Nor is\
-\nPOOFITEE an iptables front-end; it simply installs an iptables ruleset and a few\
-\nscripts, then exits completely.  To be perfect in Internet security as its name\
-\nimplies, POOFITEE obviously greets Internet traffic that seeks to discover\
-\nyour server[s] with a different attitude than other firewalling solutions do.\
-\nIt is the attitude that your intuition tells you to expect in a firewall: \"NO,\
-\nyou'll not receive a response to give away my existence unless you first prove\
-\nthat you are supposed to\".  Gone are the complex, buggy \"badguy detection\"\
-\nalgorithms of other firewalls."
-ghscreen2="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n\nThe advantages of using scripting over a compiled program are significant:\
-\n - most importantly - robust operation in indefinitely continuous duty\
-\n - less script complexity means less risk of programming bugs and mysterious,\
-\n      hard-to-troubleshoot resource limitations\
-\n - source code is simple and extremely easy for you to customize to your liking\
-\n - iptables rule changes are implemented instantly without any process restarts"
-fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                        FIREWALLING WITH THIS SCRIPT SET\
-\n( As you read, please realize the difference between this installation \"helper\
-\nscript\" that you are running now and the \"script set\" it helps you install )\
-\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
-\nnetfilter-persistent are required if not already present.  These are standard\
-\nfor any Linux firewalling.  As far as manual control of iptables during run\
-\ntime, POOFITEE plays fair.  It will simply configure iptables - an\
-\ninitial configuration by the helper script, then periodic configurations of\
-\niptables throughout the course of normal operations by the installed script set.\
-\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
-\nwith iptables will exist to interfere at any time with direct user adjustment of\
-\nthe iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
-\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
-\n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
-\n  -- Force single-interface firewalling even though two interfaces exist\
-\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
-\n\n* No testing has been done using DHCP client nor server on the private interface"
-rcscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                  REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET\
-\n( As you read, please realize the difference between this installation \"helper\
-\nscript\" that you are running now and the \"script set\" it helps you install )\
-\n\nWhat we mean by Remote Control Via Email:  You find yourself travelling far away\
-\nfrom home, and thus, far away from this computer you are configuring.  You\
-\ndecide you need this computer to do a few things for you now before you return.\
-\nOne is to turn on and off one of the electrical outlets that it controls through\
-\na USB-connected Arduino board.  You also remember that there is an old iptables\
-\nrule whitelisting an IP address that belongs no longer belongs to you, so you\
-\nneed your home system to remove it from the iptables whitelist.  This and more\
-\nis possible if you just connect that Arduino you've built and run this script.\
-\nThis helper script will need from you name and password of the email account\
-\nthat this computer will retrieve the emails from that you send to it.  This\
-\nhelper script will test its functionality and give you a choice of which port\
-\nnumber you want to use (knock) to trigger your system to read and parse emails.\
-\nIdeally, you would want to choose a port number that never gets probed by\
-\nthe hackers of the world.  Logging probed ports (configured in the firewall\
-\nsection of this helper script) would be a handy reference here.\
-\n\n* No testing has been done using DHCP client nor server on the private interface"
-dascreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n          EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET\
-\n( As you read, please realize the difference between this installation \"helper\
-\nscript\" that you are running now and the \"script set\" it helps you install )\
-\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
-\nnetfilter-persistent are required if not already present.  These are standard\
-\nfor any Linux firewalling.  As far as manual control of iptables during run\
-\ntime, this script set is friendly.  It will simply configure iptables - an\
-\ninitial configuration by the helper script, then periodic configurations of\
-\niptables throughout the course of normal operations by the installed script set.\
-\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
-\nwith iptables will exist to interfere at any time with direct user adjustment of\
-\nthe iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
-\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
-\n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
-\n  -- Force single-interface firewalling even though two interfaces exist\
-\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
-\n\n* No testing has been done using DHCP client nor server on the private interface"
-pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                        PORT KNOCKING WITH THIS SCRIPT SET\
-\n( As you read, please realize the difference between this installation \"helper\
-\nscript\" that you are running now and the \"script set\" it helps you install )\
-\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
-\nnetfilter-persistent are required if not already present.  These are standard\
-\nfor any Linux firewalling.  As far as manual control of iptables during run\
-\ntime, this script set is friendly.  It will simply configure iptables - an\
-\ninitial configuration by the helper script, then periodic configurations of\
-\niptables throughout the course of normal operations by the installed script set.\
-\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
-\nwith iptables will exist to interfere at any time with direct user adjustment of\
-\nthe iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
-\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
-\n  -- Open specific ports to offer public services\
-\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
-\n  -- Force single-interface firewalling even though two interfaces exist\
-\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
-\n\n* No testing has been done using DHCP client nor server on the private interface"
-savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                       SAVING YOUR INSTALLED CONFIGURATION\
-\nSelecting this is only meaningful if one or more of the above selections is also\
-\nselected or has previously been configured.  Saving the configuration with this\
-\nchoice is a convenient way for you to replicate the configuration on other\
-\nservers or prepare for an operating system upgrade on this one.  You'll be\
-\ngiven a choice where to store the saved configuration, whether locally or on\
-\nremoveable media or remotely."
-restorescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                   RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION\
-\nThis is a convenient way to replicate the configuration on other servers or on\
-\nthis one after an operating system upgrade without answering the setup questions\
-\nall over again.  This can be highly important when you don't know for sure that\
-\nthe person who needs to configure will know or remember the details of this\
-\nconfiguration."
-answer=""
-singinterf="\nBased on finding only one pluggable network interface, your intentions seem\
-\nto be to have this firewalling computer be a terminal (end) device rather than\
-\nan inline (passthrough) device.  That would result in any protective\
-\nfirewalling you'll set up next to apply only to this computer.  If instead you\
-\nwant this firewalling computer to protect other devices with its firewalling\
-\nservices, select"
-postfix_already_conf=""
-get_1_addr_from_bunch() {
-#one arg: a bunch of newline delimited email addresses
-          emailadds="$1"
-          scratchpad="${emailadds%%'\n'*}"
-          emailaddid=1 ;horizptr="${#scratchpad}"
-          printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
-          while true;do #this loop get a new email account or one chosen from bunch with password
-              while IFS= read  -s -n1 -r char;do
-                   if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
-                         char1="";char2="";char3=""
-                         read -r -s -t 0.001 -n1 char1
-                         read -r -s -t 0.001 -n1 char2
-                         read -r -s -t 0.001 -n1 char3
-                         if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
-                              if [[ "$char1$char2$char3" == "[A" ]];then
-                                   emailaddid=$(( $emailaddid - 1 ))
-                              else
-                                   emailaddid=$(( $emailaddid + 1 ))
-                              fi
-                              if [[ $(( $emailaddid )) -lt 1 ]];then
-                                    emailaddid=$(( $emailaddid + 1 ))
-                                    continue
-                              fi
-                              scratchpad="$emailadds"
-                              for i in `seq 2 $(( $emailaddid ))`;do
-                                   ! [[ -z "${scratchpad#*'\n'}" ]] \
-                                       && scratchpad="${scratchpad#*'\n'}" \
-                                       || emailaddid=$(( $emailaddid - 1 ))
-                              done
-                              scratchpad="${scratchpad%%'\n'*}"
-                              printf "\r${scratchpad}\033[K"
-                              horizptr="$(( ${#scratchpad} ))"
-                         elif [[ "$char1$char2$char3" == "[C" ]];then
-                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
-                                    horizptr="$(( ${horizptr} + 1 ))"
-                                    printf "\033[1C"
-                              fi
-                         elif [[ "$char1$char2$char3" == "[D" ]];then
-                              if [[ $(( ${horizptr} )) -gt 0 ]];then
-                                    horizptr="$(( ${horizptr} - 1 ))"
-                                    printf "\033[1D"
-                              fi
-                         elif [[ "$char1$char2$char3" == "OF" ]];then
-                              horizptr="$(( ${#scratchpad} ))"
-                              printf "\r\033[${#scratchpad}C"
-                         elif [[ "$char1$char2$char3" == "OH" ]];then
-                              horizptr="0"
-                              printf "\r"
-                         elif [[ "$char1$char2$char3" == "[3~" ]];then
-                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
-                                   scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the delete character
-                                   printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                              fi
-                         fi
-                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then # '
-                     if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
-                         horizptr="$(( ${horizptr} - 1 ))"
-                         scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
-                         printf "\033[1D${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                     fi
-                   elif [[ -z "$char" ]];then
-                         break
-                   else
-                        horizptr="$(( ${horizptr} + 1 ))"
-                        scratchpad="${scratchpad:0:horizptr-1}$char${scratchpad:horizptr-1}"
-                        printf "$char${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                   fi
-              done
-              emailadd="${scratchpad%%'\n'*}"
-# printf  "\n\nSelected address is $emailadd\n"
-              emailacct="${emailadd%@*}";emailprovider="${emailadd#*@}"
-              emaildomain="${emailprovider%.*}"
-              topdomain="${emailprovider##*.}"
-              if ! [[ "$emailadd" == "$emailacct"@"$emaildomain"."$topdomain" ]] || [[ -z $emaildomain ]] || [[ -z $topdomain ]];then
-                  printf "\nEmail address not in correct format.  Re-enter it...\033[1A\r$scratchpad";horizptr="${#scratchpad}"
-                  continue
-              fi
-              printf "\n\033[K"
-              emailpw1="";emailpw=""
-              until [[ "$emailpw1" == "$emailpw" ]] && ! [[ -z "$emailpw1""$emailpw" ]];do
-                  read -s -p "Password for account $emailadd: " emailpw1
-                  [[ -z "$emailpw1" ]] && exit || echo
-                  read -s -p "Re-type same password: " emailpw
-                  if ! [[ "$emailpw1" == "$emailpw" ]];then
-                      printf "\nPassword not entered consistently."
-                  else
-                      echo
-                  fi
-              done
-          ! [[ -z $emailadd ]] && ! [[ -z "$emailpw" ]] && break
-          done
-}
 
-until ! [ -z $answer ];do
-    clear
-    printf "$startscreen"
-# exit
-########### remove answer and char set line below and uncomment out next line
-#    while true;do answer="fdrp";char="";[[ -z "$char" ]] && break
-     while IFS= read  -sn1 char;do [[ -z "$char" ]] && break
-        [[ "$answer$char" == "?" ]] && break
-        if [[ "$(printf "%d" "'$char")" == "27" ]];then # ' escape or extended key has been detected
-            read -rst 0.001 -n3 # read & discard 2nd extended key field, timeout if real escape
-        elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
-            char="${char,}"
-            printf "$char"
-            answer="$answer$char"
-        elif [ "$char" == "?" ] && ! [ "${answer: -1}" == " " ];then
-            printf "$char "
-            answer="$answer$char "
-        else
-            [[ "$(printf "%d" "'$char")" == "127" ]] && ! [[ -z $answer ]] && answer="${answer:0: -1}" # ' handles the backspace character
-            printf "\r$answer    \r$answer" # needed b/c when several keys are pressed simultaneously only first gets silented
-        fi
-     done
-     if [ -z $answer$char ];then
-        exit
-     elif [[ $answer$char =~ \? ]];then
-        clear;printf "Selections: $answer$char";printf "  Since info is selected, no changes are to be made"
-        if [[ $answer$char == "?" ]];then
-             clear
-             printf "$ghscreen1"
-             read -sn1 -p "                         Press a key to continue..."
-             read -rst 0.001 -n3
-             clear
-             printf "$ghscreen2"
-             read -sn1 -p "   (Press key...)"
-             read -rst 0.001 -n3
-             echo
-        fi
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        answer=""
-     else
-         echo
-         until false;do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-            until [ "$goahead" == "true" ];do
-                  installers=(apt-get "install --fix-missing" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
-                  for installer in {0..10};do
-                      installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}"
-                      [[ -z "$installerpath" ]] && continue
-                      installerpath+="  ${installers[$(($installer * 2 + 1))]}"
-                      break
-                  done
-#  packages required to install everything
-                  inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
-                  iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
-                  iptabperspath=$($findpath / -maxdepth 3 -name *persistent|$greppath -vw doc|$greppath -vw src|$greppath -vw sys|$greppath -e iptables -e netfilter|$greppath -m 1 -e init.d 2> /dev/null)
-                  stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
-                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
-                  sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
-                  ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
-                  ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
-                  datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
-                  bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
-                  wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-                  atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
-                  nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-                  mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
-                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
-                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
-                  mailpath="${mailpath# }";mailpath="${mailpath%% *}"
-                  postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
-                  postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
-                  sendmail_works=""
-                  if ! [[ -z $mailpath ]];then
-                       mailadd=""
-                       mailcmd="echo $0 \"test.  Press y\"|$mailpath"
-                       printf "\nOne aspect of an option you selected will be to send you alert notices to your\
-\nemail account.  For emailing alerts to you, specialized configuration is\
-\nrequired so this computer can send emails from the command line.  We'll send a\
-\ntest email now to see if it can send from the command line already if you'll\
-\nplease enter an email address to finish the following mail command, choosing an\
-\naddress that you can immediately receive a test email through and verify\
-\nreception of it on a different computing device:\n"
-newemailconfigwarning="Installing a new configuration is\
-\ndefinitely NOT what you want if this computer is already or will be in use in a\
-\nbusiness email service role, like MTA, MDA, email relay, or email server because\
-\nthe settings this installation script will change will most certainly be\
-\nincompatible with said role.  If you need to avoid installing the emailing\
-\nconfiguration, you should manually get the command line email sending to work\
-\nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
-\nthis scripting has found to currently exist on your system."
-                       until false;do
-                            ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
-\nthis test and install a full, new configuration on this computer\
-\nfor sending emails from the command line.  $newemailconfigwarning"
-                            echo
-                            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
-                            if [[ -z "$mailadd" ]]; then break;fi
-                            if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
+################  FUNCTIONS FIRST, THEN MAIN:
 
-                                 continue
-                            fi
-                            if ! [[ -z "$mailadd" ]];then
-                                 printf "\nSending a test email to $mailadd..."
-                                 eval "$mailcmd $mailadd"
-                                 wait
-                                 if [[ "$?" == "0" ]];then
-                                      printf "\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
-                                      read -r -n1
-                                      if [[ $REPLY =~ y ]];then 
-                                          sendmail_works=True
-                                          echo
-                                          break
-                                      elif [[ $REPLY =~ [at] ]];then
-                                          continue
-                                      fi
-                                 fi
-                                 printf "\nThe email command appears to have failed.  This means a full, new email sending\
-\nconfiguration will be set up on this computer. $newemailconfigwarning"
-                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing"
-                                 sleep 2
-                            fi
-                       done
-                  fi
-                  notinstalled=""
-                  if [[ $answer =~ f ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
-                  fi
-                  if [[ $answer =~ e ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
-                  fi
-                  if [[ $answer =~ d ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
-                  fi
-                  if [[ $answer =~ p ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                 [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                 [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                 [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                 [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                 [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                 [[ -z $bcpath ]] && notinstalled+="bc\n"
-                 [[ -z $atpath ]] && notinstalled+="at\n"
-                 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
-             fi
-             [[ -z $notinstalled ]] && break 2
-             notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
-             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
-                  printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
-\n\nThis helper script version is not advanced enough to install needed programs on\
-\nsystems such as yours that don't use a common installer to install programs.\
-\nFor this install script to serve its purpose for you, you'll need to install all\
-\nnecessary programs yourself before anything referenced hereafter can succeed.\
-\nConsider yourself lucky if this script does anything at all for you beyond this\
-\npoint, but do understand that the programs most certainly won't get installed.\
-\n\nThe necessary programs that won't get installed until you install them are:\
-\n$notinstalled\
-\n\nYou may install them in another terminal and resume here, or press Ctrl-c to\
-\nterminate here, or press any other key to proceed as-is\
-\n\n     Acknowledge by keypress..."
-                  read -rsn 1;read -rst 0.001 -n3;ackd="true"
-             else
-                  goahead="true"
-             fi
-        done # this loops here once when installer pgm not found
-        clear
-        if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-                  printf "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -rsn 1;read -rst 0.001 -n3
-#                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
-#change the next line to a loop if need be
-                  printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
-      fi
+install_port_knocking () {
+            until [[ "$REPLY" =~ [yn] ]]; do
+               read -e -r -n1 -p "Use OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
+               REPLY="${REPLY,}"
+               [[ "$REPLY" =~ \? ]] && ( \
+printf "\n  Client configuration is available under different licensing terms if you need\
+\nus to do it for you.  Thank you...\
+\n  Using One-Time-Passwords (OTPs) thwarts record-and-replay security attacks.\
+\nIf hackers record your port knocks, their attempts to replay the knock sequence\
+\nwith a previously used password (or wrong one or none at all) will, instead of\
+\ngiving them access to your system, broadcast an email &/or SMS alert for you. An\
+\ninvalid OTP submitted after successful port knocking positively identifies\
+\npurposeful targeted contact.  Non-knocking firewall configurations, such as\
+\nsimple SPA, lack this definity and may also be more vulnerable to memory\
+\nexhaustion under DoS attack.  Your peace of mind from knowing if hacking at that\
+\nlevel of sophistication is ever even attempted is priceless & worth the packets.\
+\n  You create an OTP list of single-use passwords and supply it to the trusting\
+\ndevice (this server) and to trusted devices and/or persons using some form of\
+\nout-of-band communication (private connection, email, thumbdrive, etc.).  The\
+\nOTP list can have not just one, but multiple OTPs for each label, so the trusted\
+\nknockers can choose or be assigned unique and different security access levels.\
+\nWhen the list of OTPs gets used up or nearly so, a notification email is sent to\
+\nremind you to distribute a new OTP list.  The old OTP list just recirculates\
+\nuntil replaced...used OTPs will get used again until you get time to generate a\
+\nnew OTP list and give everyone a copy of it. Thus, it will be YOUR\
+\nresponsibility to enforce a single-use-only policy on OTPs if you really need\
+\nthat extreme level of security.  With the encryption depth and options allowed,\
+\nyou may elect to let an OTP list be used more than once without serious risk of\
+\ncompromise, especially with unrecognizable OTPs.";read -s -n1 -p "   (Press key...)";\
+printf "\n  The OTP list is a non-encrypted text file: the first line is simply the month-\
+\nyear number pair the OTP list is created, a <comma> or <comma><space>, followed\
+\nby a <comma> or <comma><space> delimited list of encryption methods and keys to\
+\nrotate through, one line per month.  TCP and UDP encryptions are allowed, as are\
+\nmultiple encryptions.\
+\n  The template for each line after line 1 is:\
+\n\nlabel<space>class n password<space>class n+1 password, etc.\
+\n\n  Over- or under-encrypted OTPs are suggested to mask actual encryption level,\
+\nor just use randomized character strings.\
+\n  The server will initiate encryption handshaking only with a successful\
+\nclient knocker.  Handshaking is as follows:  The server tells each successful\
+\nknocker (client) what month-year their communication is taking place in.  Both\
+\nends then negotiate the \"encryption of the month\".  The server then challenges\
+\nthe client with a packet containing a label it chooses from the OTP list.  The\
+\nclient must reply with the OTP associated with both that label and the access\
+\nlevel they expect.  Sharing the set of OTPs between multiple devices is thus\
+\naccommodated, as is security level assignment.\
+\n  To make under-encrypted OTPs, run decryption on each non-encrypted OTP.  To\
+\nover-encrypt, use OTPs that you've encrypted extra times beyond what your OTP\
+\nlist specifies.\
+\n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
+\nthe labels, if you wish, to ensure your security.  Better yet for you, get\
+\nthem yourself for FREE from online sources that advertise themselves as \"Ultra\
+\nHigh Security Password Generator\"s.  Thank you...";\
+                   read -s -n1 -p "   (Press key...)";\
+printf "\n\
+\n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
+\nMac), programs (Linux/Mac/MS Windows/Android/iPhone), and OTP lists via email:\
+\n\n                       kenlovesjesus at gmail dot com\
+\n\n  Please allow for the possibility of some coding being done to order rather\
+\nthan being ready made.  Most common payment forms welcome, and we will work\
+\nwithin any reasonable purchasing protocol you need us to.  We try hard to speak\
+\nto you on your level, novice to expert.\
+\n  Developers: we encourage you to to create your own OTPs or client scripts and\
+\nprograms.  We have tried to provide you with enough information to enable you to\
+\ndo so, but if you need more, just ask us.  Be aware that actual client-side code\
+\nis otherwise licensed and is charged for.\
+\n  Homeowners: this project is being done with your Internet access, automation,\
+\nsurveillance, and remote access needs in mind, so we welcome you! \n";\
+continue)\
+               || [[ "$REPLY" =~ n ]] \
+               || ( [[ "$REPLY" =~ y ]] && (
+#                      echo "Selected OTPs"
+# Set up alert emails if not done already TODO: Make function, integrate better for answer scenarios
+                   conf_postfix
+                     )
+                 )
+            done
+            until [[ "$REPLY" =~ [ls] ]]; do
+             printf "Use loose (l) or strict (s) port knocking rules? (? for help) ";read -e -r -n1
+             REPLY="${REPLY,}"
+             [[ "$REPLY" == \? ]] && ( printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
+\ndemanding be \"knocked\" by computers trying to establish communication to this\
+\none through the Internet-facing interface that will prove their\
+\nauthorization to connect.\n   l) loose knock rules are when you are permitting knocks to arrive here out of\
+\nsequence (this is bound to happen sometimes) and even not arrive at all as long\
+\nas at least 4 valid port-protocol knocks do succeed.  Of course, to select this,\
+\nyou'll have to specify a minimum of 4 port-protocol combinations.  This option\
+\ncan reduce frustrations for you if you consider yourself a low-value target for\
+\nhackers and are taking all the other reasonable security measures anyway.  The\
+\norder which you specify the port-protocol knocks in the sequence will be\
+\nirrelevant, and the 4 knocks must arrive in a total time frame of 12 seconds\
+\nmultiplied by the total number of port-protocol combinations you specify.\
+\nKnocks on other ports during the knocking authentication period WILL BE ALLOWED.\
+\nThe source IP address sending the knocks will be permanently authenticated until\
+\nit is removed from the iptables whitelist via separate, independent iptables\
+\nrule manipulation.\
+\n   s) strict knock rules are conventional port knock rules where every port-\
+\nprotocol knock must arrive in sequence with none missed.  NO OTHER PORT-PROTOCOL\
+\nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS.\
+\nSeven seconds maximum is allowed between each knock.  After the knock sequence\
+\nis completed successfully, the knocking computer will be given only 17 seconds\
+\nin which to establish valid communication, and the knock sequence must be\
+\nrepeated for each future session.   Press a key...";read -n1 -s )
+            done
+            clear;printf "Setting up port knocking.\
+\nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
+\nspecify any knock packet or packets to be disguised as an established connection\
+\npacket rather than a knocking packet by replacing \"--syn\" with \"--tcp-flags ACK\
+\nACK\".  Ideally, it would carry data you would craft that appears to be part of\
+\nestablished-connection communication to help disguise it as a normal packet.\
+\nYou could go so far as to require that specific byte string to be required in\
+\nthat knock, but to generate such specialty knock packets will for sure require\
+\nthe knocking client to use a packet-crafting tool.  Exactly for that scenario,\
+\nthese rules will configure to reply to such a knock packet with a TCP RST packet\
+\nto make the obfuscation less obvious.  (If you intend for your server to be\
+\ninvisible, however, you probably don't want to require such a packet as the\
+\nfirst knock because not only can and will your system be visible, its first\
+\nknock port will also be giving itself away.)\
+\nTo specify the data you might require in a knock packet, include the following\
+\nin the protocol:\
+\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n"
 
-        done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-       until false;do directoryforscripts="$( [[ -f directoryforscripts ]] && cat directoryforscripts )"
-            printf "\nSpecify the directory in which to install these scripts.  No deeper subdirectory\
-\nwill be used than what you specify here, so include any final isolating or\
-\ndescriptive subdirectory level you will want:\n"
-            read -e -r -i "$directoryforscripts" directoryforscripts
-            if ! [[ -d "$directoryforscripts" ]];then
-                 echo
-                 if [[ "$( read -n1 -p "Directory does not exist.  Create it? (y/n): " ans;echo "$ans" )" =~ [Yy] ]];then
-                      mkdir -p "$directoryforscripts" && chmod 700 "$directoryforscripts"
-                      mkdir -p "$directoryforscripts/preparedness" && chmod 700 "$directoryforscripts/preparedness"
-                      [[ "$?" == "0" ]] && break
-                      echo "Unable to use that path"
-                 fi
+#write rules to iptables rule set
+            if [[ $REPLY == "l" ]];then
+                 echo "Setting loose rules here"
             else
-                 break
+                 echo "Setting strict rules here"
+                 $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 i=1
+                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
+                      ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] && continue
+#                      printf "${knockport[$i]}"
+                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
+                         printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
+'{printf $2}')")")" because it will\
+\ninterfere with you testing your sequence through an ssh session.  Do you still\
+\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
+                      fi
+                      printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
+\nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
+\nyou don\'t care to get any fancier.  You may include mask-flag spec or other\
+\niptables matching options beyond this, if you know them, except the -j target,\
+\n-g chain, -m recent, and -m comment iptables modules/options):\n\
+\n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
+#                      printf -- "\n${knockproto[$i]}\n"
+                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]];then
+printf "If you intend for your server to be invisible to the world, at least beyond the\
+\nnext router, the best way to disguise a TCP ACK packet on the first knock is for\
+\nthis server not to reply with the otherwise suggested tcp-reset rejection\
+\nresponse, mostly because your system will forever be visible on that port to the\
+\nworld, but also because its first knock port will be giving itself away.  Or you\
+\nmay turn off the disguising tcp-reset reject reply for this knock only.  Press\
+\n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
+\nadvised for minimum visibility), or any other key to turn off the reject response\
+\nto this knock: (r/k/...)"
+                           read -rn 1;read -rst 0.001 -n3
+                           [[ $REPLY =~ [Rr] ]] && continue
+                           [[ $REPLY =~ [Kk] ]] && (testtarget[$i]=" -j REJECT --reject-with tcp-reset") || testtarget[$i]=" -j DROP"
+                      else
+                           testtarget[$i]=" -j DROP"
+                      fi
+                      protovar="${knockproto[$i]}"
+                      protovar="${protovar:1}"
+                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}"
+#              echo $iptablespath" -wA ruletestchain""${knockproto[$i]}${testtarget[$i]}"
+                      if ! [[ $($iptablespath -wA ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
+                          printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
+                          continue
+                      fi
+                      i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
+                 done
+                 for (( j=1;j<i;j++ )); do
+                      printf "$iptablespath -wA knockstage$j${knockproto[$j]}\n"
+                 done
+                 printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
+\nentries just made.  The following changes are about to be made:\
+\n\n  -- All INPUT chain rules will be removed that contain the letters \"knock\" in\
+\n        sequence in their comment\
+\n\n  -- INPUT chain will receive all new knock rules that belong there, being\
+\n        placed adjacent and prior to current non-knock rules referencing the\
+\n        respective interface\
+\n\n  -- Chains knockerreap, knockersort, knockers, and all knockstages will be\
+\n        flushed and reloaded new\
+\n\nOnly continue if you are sure about making the changes.  To keep your current\
+\niptables rules as they are, quit now by pressing ctl-c.  Otherwise, make the\
+\nqueued changes by pressing any other key....\n";read -rsn 1;read -rst 0.001 -n3
+                 $iptablespath -wN knockerreap 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 1"
+                 [[ $($iptablespath -wF knockerreap 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush knockerreap chain rules";break)
+                 $iptablespath -wN knockersort 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 3"
+                 [[ $($iptablespath -wF knockersort 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush knockersort chain rules";break)
+                 j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
+                 for ((;j>0;j--)); do
+                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ \/\*\ .*knock.*\*\/ ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete installation"|| printf "Failed 5")
+                 done
+                 j=0
+                 while ! [[ -z "${knockport[$(($j + 1))]}" ]];do
+                      j=$(( $j+1 ))
+                      $iptablespath -wN knockstage$j 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 6"
+                      [[ $($iptablespath -wF knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7"
+                      if ! [[ "$j" == "1" ]];then
+                           [[ $($iptablespath -wA knockersort ${knockproto[$j]} -m recent --name knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7.5"
+                      fi
+                      [[ $($iptablespath -wI knockstage$j -j knockerreap;echo "$?") == "0" ]] || printf "Failed 9"
+                      [[ $($iptablespath -wI knockstage$j 2 -m recent --name knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires";echo "$?") == "0" ]] || printf "Failed 10"
+#Here we put the right DROP or REJECT target in the third rule under this chain
+                      [[ $($iptablespath -wA knockstage$j ${testtarget[$j]} ;echo "$?") == "0" ]] || printf "Failed 11"
+                 done
+# start making rules here
+                 $iptablespath -wN knockers 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wF knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
+# for persistent whitelisting only
+#                 [[ $($iptablespath -wR knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wR knockstage$j 2 -m recent --name authorized --set -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
+                 inchainoffset=0
+                 if ! [[ -z "$internal_net_interface" ]];then
+                      $iptablespath -wN knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
+                      [[ $($iptablespath -wF knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
+                      printf "\n"
+                      printf "" > internal_interfaces_referenced # won't include the default gateway
+# test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
+#SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
+                      echo "$internal_net_interface"|$awkpath '{print $1}' \
+                      |while read interface; do
+                           $iptablespath -wnvL INPUT --line-number \
+                           |$awkpath 'NR>2 {print $1" "$7" "$9}' \
+                           |while read linenum_intfc_src_addr_in_input_chain
+                             do 
+                                 linenum_in_input_chain="${linenum_intfc_src_addr_in_input_chain%% *}"
+                                 intfc_src_addr_in_input_chain="${linenum_intfc_src_addr_in_input_chain#* }"
+                                 intfc_in_input_chain="${intfc_src_addr_in_input_chain% *}"   # echo "$src_addr_in_input_chain | $linenum_in_input_chain | $intfc_in_input_chain";
+                                 src_addr_in_input_chain="${intfc_src_addr_in_input_chain#* }"; src_addr_in_input_chain="${src_addr_in_input_chain%/*}"
+            # the next search is to locate references of the internal interface under scrutiny in each line of chain in route table
+                                 if [[ $(($($ippath route show|$greppath $intfc_in_input_chain|$greppath -c default))) -eq 0 ]];
+                                 then echo "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
+                                 elif ! [[ "$src_addr_in_input_chain" == "0.0.0.0" ]];then # we assume if finding by address, route tables are already set up
+# determine address range[s] routed out that interface and check for input chain references to any of them 
+#   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
+#   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
+#                                 $iptablespath -wnvL INPUT --line-number 2>/dev/null|$awkpath 'NR>2 {print $9}' \
+#                                 |while read src_addr_in_input_chain;do
+                                      $ippath route show|$greppath -v default|$greppath $interface \
+                                      |while read line; do 
+                                           line="${line%% *}/32"
+                                           range_start="${line%%/*}"
+                                           [[ $(printf "$range_start\n$src_addr_in_input_chain"|$sortpath -V|$tailpath -n1) == "$src_addr_in_input_chain" ]] || break
+                                           cidr_bits="${line#*/}"
+                                           cidr_bits="${line%%/*}"
+                                           src_addr_in_input_chain_seg1="${src_addr_in_input_chain%%.*}"
+                                           range_start_seg1="${range_start%%.*}"
+                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                           range_start="${range_start#*.}"
+                                           src_addr_in_input_chain_seg2="${src_addr_in_input_chain%%.*}"
+                                           range_start_seg2="${range_start%%.*}"
+                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                           range_start="${range_start#*.}"
+                                           src_addr_in_input_chain_seg3="${src_addr_in_input_chain%%.*}"
+                                           range_start_seg3="${range_start%%.*}"
+                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                                           range_start="${range_start#*.}"
+                                           src_addr_in_input_chain_seg4="${src_addr_in_input_chain%%.*}"
+                                           range_start_seg4="${range_start%%.*}"
+                                           doubler=1
+                                           for ((j=$((32 - $cidr_bits));j>0;j--)); do
+                                                doubler=$(( $doubler * 2 ))
+                                           done
+                                           range_end=$(( ($range_start_seg1 * 256 * 256 * 256) + ($range_start_seg2 * 256 * 256) + ($range_start_seg3 * 256) + $range_start_seg4 + $doubler -1 ))
+                                           src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
+                                           if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
+  #                                              echo "within range"
+                                                "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
+                                           fi
+                                      done
+                                 fi
+                            done
+                      done
+                      linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
+                      if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
+                           ([[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14")
+                      fi
+                      [[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+#                      [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
+#                           linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 ))
+      #                [[ $($iptablespath -wA knockers -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 fi
+                 [[ $($iptablespath -wI INPUT $( [[ $(( $linenumber_for_inserting_before )) -ne 0 ]] && printf $linenumber_for_inserting_before) -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
+                 [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -m recent --name authorized --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $(( $linenumber_for_inserting_before )) -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+                 [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
+                 [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+                 [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
+                 [[ $($iptablespath -wA knockers -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 24"
+                 [[ $($iptablespath -wA knockers -m recent --name knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 25"
+                 [[ $($iptablespath -wA knockers -j knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 26"
+                 [[ $($iptablespath -wA knockers -j DROP 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 27"
+
+                 [[ $($iptablespath -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 28"
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --set  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 29"
+                 done
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --rcheck  --reap --seconds 12 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 30"
+                 done
+                 for ((j=1;j<=i;j++));do
+                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 31"
+                 done
+
             fi
-       done
-       echo "$directoryforscripts" > directoryforscripts # handy with subsequent runs of this script, will know where everything is
-       chmod 700 directoryforscripts
+}
        install_buildiptablessh () {
             (cat <<BUILDIPTABLES.SH_END
 echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -823,8 +572,6 @@ CRONTAB_ENTRIES_END
   eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
 printf "\ncrontab set up..."
           }
-
-
        conf_postfix () {
 ! [[ -z postfix_already_conf ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
@@ -1106,7 +853,6 @@ chmod 700 "$directoryforscripts/outemailadd"
 fi
 postfix_already_conf=True # set this to True or just anything non-empty
           }
-
           install_rc () {
 directoryforscripts="$( cat directoryforscripts )"
 # "$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")"
@@ -1173,7 +919,7 @@ while true;do
                       printf "\rExecuted the connect of ${line%:*}.$inemailprovider/${line#*:}, now communicating with it for user $inemailacct...\033[K"
                       read -t 2 -u 5 HELO 
                       printf "$HELO" >> fifo 
-printf "\n$HELO"
+# printf "\n$HELO"
                       msgnumber=0
                       for msg in "user $inemailacct\r" "pass $rcpw\r" stat list;do
                            msgnumber=$(( msgnumber+=1 ))
@@ -1711,8 +1457,577 @@ end_warnings () {
 \nyou've made to your Internet connectivity!  Though let's hope they'll have\
 \nbetter reason for doing so than that."
 }
+get_1_addr_from_bunch() {
+#one arg: a bunch of newline delimited email addresses
+          emailadds="$1"
+          scratchpad="${emailadds%%'\n'*}"
+          emailaddid=1 ;horizptr="${#scratchpad}"
+          printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
+          while true;do #this loop get a new email account or one chosen from bunch with password
+              while IFS= read  -s -n1 -r char;do
+                   if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
+                         char1="";char2="";char3=""
+                         read -r -s -t 0.001 -n1 char1
+                         read -r -s -t 0.001 -n1 char2
+                         read -r -s -t 0.001 -n1 char3
+                         if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
+                              if [[ "$char1$char2$char3" == "[A" ]];then
+                                   emailaddid=$(( $emailaddid - 1 ))
+                              else
+                                   emailaddid=$(( $emailaddid + 1 ))
+                              fi
+                              if [[ $(( $emailaddid )) -lt 1 ]];then
+                                    emailaddid=$(( $emailaddid + 1 ))
+                                    continue
+                              fi
+                              scratchpad="$emailadds"
+                              for i in `seq 2 $(( $emailaddid ))`;do
+                                   ! [[ -z "${scratchpad#*'\n'}" ]] \
+                                       && scratchpad="${scratchpad#*'\n'}" \
+                                       || emailaddid=$(( $emailaddid - 1 ))
+                              done
+                              scratchpad="${scratchpad%%'\n'*}"
+                              printf "\r${scratchpad}\033[K"
+                              horizptr="$(( ${#scratchpad} ))"
+                         elif [[ "$char1$char2$char3" == "[C" ]];then
+                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
+                                    horizptr="$(( ${horizptr} + 1 ))"
+                                    printf "\033[1C"
+                              fi
+                         elif [[ "$char1$char2$char3" == "[D" ]];then
+                              if [[ $(( ${horizptr} )) -gt 0 ]];then
+                                    horizptr="$(( ${horizptr} - 1 ))"
+                                    printf "\033[1D"
+                              fi
+                         elif [[ "$char1$char2$char3" == "OF" ]];then
+                              horizptr="$(( ${#scratchpad} ))"
+                              printf "\r\033[${#scratchpad}C"
+                         elif [[ "$char1$char2$char3" == "OH" ]];then
+                              horizptr="0"
+                              printf "\r"
+                         elif [[ "$char1$char2$char3" == "[3~" ]];then
+                              if [[ $(( ${horizptr} )) -lt $(( ${#scratchpad} )) ]];then
+                                   scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the delete character
+                                   printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                              fi
+                         fi
+                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then # '
+                     if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
+                         horizptr="$(( ${horizptr} - 1 ))"
+                         scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
+                         printf "\033[1D${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                     fi
+                   elif [[ -z "$char" ]];then
+                         break
+                   else
+                        horizptr="$(( ${horizptr} + 1 ))"
+                        scratchpad="${scratchpad:0:horizptr-1}$char${scratchpad:horizptr-1}"
+                        printf "$char${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
+                   fi
+              done
+              emailadd="${scratchpad%%'\n'*}"
+# printf  "\n\nSelected address is $emailadd\n"
+              emailacct="${emailadd%@*}";emailprovider="${emailadd#*@}"
+              emaildomain="${emailprovider%.*}"
+              topdomain="${emailprovider##*.}"
+              if ! [[ "$emailadd" == "$emailacct"@"$emaildomain"."$topdomain" ]] || [[ -z $emaildomain ]] || [[ -z $topdomain ]];then
+                  printf "\nEmail address not in correct format.  Re-enter it...\033[1A\r$scratchpad";horizptr="${#scratchpad}"
+                  continue
+              fi
+              printf "\n\033[K"
+              emailpw1="";emailpw=""
+              until [[ "$emailpw1" == "$emailpw" ]] && ! [[ -z "$emailpw1""$emailpw" ]];do
+                  read -s -p "Password for account $emailadd: " emailpw1
+                  [[ -z "$emailpw1" ]] && exit || echo
+                  read -s -p "Re-type same password: " emailpw
+                  if ! [[ "$emailpw1" == "$emailpw" ]];then
+                      printf "\nPassword not entered consistently."
+                  else
+                      echo
+                  fi
+              done
+          ! [[ -z $emailadd ]] && ! [[ -z "$emailpw" ]] && break
+          done
+}
 
-directoryforscripts="${directoryforscripts%%/}"
+echo "Sorry, POOFITEE is still under development ... press a key to continue"
+read -rsn 1;read -rst 0.001 -n3
+usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
+D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
+until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[ ++counter -eq 64 ]] || [[ "$($whereispath $binaryflag whereis &> /dev/null;echo $?)" == "0" ]];do
+    ! [[ -z "$binaryflag" ]] && binaryflag="" && continue
+    binaryflag="-b"
+    dirsign="/"
+    usrdir="";localdir="";sharedir="";bindir="";sbindir=""
+    cntr="${D2b[counter]}"
+    [[ "$cntr" =~ ^1 ]] && usrdir="/usr"
+    [[ "$cntr" =~ ^.1 ]] && localdir="/local"
+    [[ "$cntr" =~ ^..1 ]] && sharedir="/share"
+    [[ "$cntr" =~ ^...1 ]] && bindir="/bin"
+    [[ "$cntr" =~ ^....1 ]] && sbindir="/sbin"
+done
+if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
+whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
+unamepath="$($whereispath $binaryflag uname)"
+unamepath="${unamepath#*:}";unamepath="${unamepath# }";unamepath="${unamepath%% *}"
+sortpath="$($whereispath $binaryflag sort)"
+sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
+headpath="$($whereispath $binaryflag head)"
+headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
+exitmsg="Thank you for running this POOFITEE configuration script...God loves you pass it on"
+min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && \
+   trap "echo If you had run-time errors, your version of bash might be too old. $exitmsg" EXIT || \
+   trap "echo $exitmsg" EXIT
+if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then printf "This firewalling solution does not accommodate Mac nor BSD due to"\
+"\niptables and crontab dysfunction in those *NIXes";exit;fi
+if ! [ "$(whoami)" == "root" ];then printf "\nWithout being launched by su, this script\
+ won't be able to do anything except\
+\ndisplay menus.  No control of this computer can be made by this script unless\
+\nre-launched by root.  Press a key to acknowledge, Ctrl-c to abort\n";read -rsn 1;read -rst 0.001 -n3;fi
+#  Beginning of copyright message
+printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
+\n\nThis work of authorship is made available to you under only one out of the\
+\nfollowing two arrangements.  In both arrangements, this copyright message must\
+\nremain with this work of authorship and any and all of its derivatives.\
+\n\n1.  Arrangement for your freedom from monetary obligation to the author:\
+\n - This copyright message must continue to be displayed at launch time\
+\n - This copyright message includes the statement\
+\n\n\"       Jesus Christ is Lord of all  ... press a key to acknowledge\"\
+\n\ndisplayed on its own line with blank lines adjacently both above and below\
+\nsaid nstatement and rendered statically without attempt made to render said\
+\nstatement transiently.\
+\n\n2.  Arrangement for your freedom from copyright display obligation, or to\
+\ncontribute, see the comments within the source code of this script"
+printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
+read -rsn 1;read -rst 0.001 -n3
+awkpath="$($whereispath $binaryflag awk)" # some occurances removed due to inconsistencies with macs
+awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+pythonpath="$($whereispath $binaryflag python)"
+pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
+greppath="$($whereispath $binaryflag grep)"
+greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
+ifconfigpath="$($whereispath $binaryflag ifconfig)"
+ifconfigpath="${ifconfigpath#*:}";ifconfigpath="${ifconfigpath# }";ifconfigpath="${ifconfigpath%% *}"
+pumppath="$($whereispath $binaryflag pump)"
+pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
+uniqpath="$($whereispath $binaryflag uniq)"
+uniqpath="${uniqpath#*:}";uniqpath="${uniqpath# }";uniqpath="${uniqpath%% *}"
+findpath="$($whereispath $binaryflag find)"
+findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}";
+tailpath="$($whereispath $binaryflag tail)"
+tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
+xargspath="$($whereispath $binaryflag xargs)"
+xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
+sedpath="$($whereispath $binaryflag sed)"
+sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
+wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
+ippath="$($whereispath $binaryflag ip)" # Macs don't have the ip command at this time
+ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
+pspath=$($whereispath $binaryflag ps);pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
+# dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
+rhel="$($whereispath $binaryflag chkconfig)"
+rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
+eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
+    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -rsn 1;read -rst 0.001 -n3" \
+    || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
+# eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
+external_net_interface="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
+# printf "\n\ninterface going to google=$external_net_interface"
+internal_net_interface="$($ippath link show|$greppath -E "^[1-9][0-9]*:"|$greppath -v lo:\
+    |$greppath -v "$external_net_interface"\
+    |$sedpath 's/://g'\
+    |$awkpath '{print $2}')"
+# echo "$( [[ $(printf "$internal_net_interface"|$wcpath -l) == "1" ]] \
+#    && echo "$(printf "$internal_net_interface"|$wcpath -l) interface" \
+#    || echo "$(printf "$internal_net_interface"|$wcpath -l) interfaces") not going to google=$internal_net_interface"
+# echo "Script-required items: whereis path=$whereispath, awk path=$awkpath, python path=$pythonpath, grep path=$greppath, ifconfig path=$ifconfigpath, uniq path=$uniqpath, sort path=$sortpath, head path=$headpath";exit
+#
+# Introduction and what we'll do
+startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
+\n                SELECT DESIRED OPTIONS FOR THIS INSTALLATION\
+\n\n\n      (f) firewalling\
+\n\n      (e) email remote control\
+\n\n      (d) dynamic IP address change notifier"
+if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
+     startscreen+=" NOT for your configuration";notdhcp="notdhcp"
+fi
+startscreen+="\n\n      (p) port knocking\
+\n\n      (s) save configuration\
+\n\n      (r) restore the previously saved configuration\
+\n\n      (?) context helpful information\
+\n\n
+\nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
+\njust plain ? with no letters, select all of the five services listed above that\
+\nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
+# POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
+ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                              Helper Script Overview\
+\nThis set of Linux scripts can install several Internet security features useful\
+\nin homeowner and enterprise systems alike.  For enterprise systems however,\
+\nnetwork traffic is typically not regarded by the firewall as malicious until\
+\npacket stream behavior proves it to be or packet construction violates rules of\
+\nInternet operation.  POOFITEE does not configure firewalling this way.  Rather,\
+\nit only regards traffic as NON-malicious if it originates from trusted sources.\
+\nOf course, those source addresses can be spoofed, but when spoofed, a two-way\
+\nconnection capable of stealing information is not really possible when the\
+\nlegitimate computer owning the spoofed address is non-cooperative with the\
+\nspoofer.  The name \"POOFITEE\" is derived from the descriptive phrase \"Perfect\
+\nOwner Only access linux Firewall - the system is Invisible To Everyone Else\".\
+\nPOOFITEE is not really a program as much as it is simply an Internet security\
+\nscripting project that, in part, installs a set of Linux iptables rules.  Nor is\
+\nPOOFITEE an iptables front-end; it simply installs an iptables ruleset and a few\
+\nscripts, then exits completely.  To be perfect in Internet security as its name\
+\nimplies, POOFITEE obviously greets Internet traffic that seeks to discover\
+\nyour server[s] with a different attitude than other firewalling solutions do.\
+\nIt is the attitude that your intuition tells you to expect in a firewall: \"NO,\
+\nyou'll not receive a response to give away my existence unless you first prove\
+\nthat you are supposed to\".  Gone are the complex, buggy \"badguy detection\"\
+\nalgorithms of other firewalls."
+ghscreen2="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n\nThe advantages of using scripting over a compiled program are significant:\
+\n - most importantly - robust operation in indefinitely continuous duty\
+\n - less script complexity means less risk of programming bugs and mysterious,\
+\n      hard-to-troubleshoot resource limitations\
+\n - source code is simple and extremely easy for you to customize to your liking\
+\n - iptables rule changes are implemented instantly without any process restarts"
+fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                        FIREWALLING WITH THIS SCRIPT SET\
+\n( As you read, please realize the difference between this installation \"helper\
+\nscript\" that you are running now and the \"script set\" it helps you install )\
+\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
+\nnetfilter-persistent are required if not already present.  These are standard\
+\nfor any Linux firewalling.  As far as manual control of iptables during run\
+\ntime, POOFITEE plays fair.  It will simply configure iptables - an\
+\ninitial configuration by the helper script, then periodic configurations of\
+\niptables throughout the course of normal operations by the installed script set.\
+\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
+\nwith iptables will exist to interfere at any time with direct user adjustment of\
+\nthe iptables ruleset.\
+\nFirewalling options this install script can alter from the script set defaults:\
+\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
+\n  -- Open specific ports to offer public services\
+\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
+\n  -- Force single-interface firewalling even though two interfaces exist\
+\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
+\n\n* No testing has been done using DHCP client nor server on the private interface"
+rcscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                  REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET\
+\n( As you read, please realize the difference between this installation \"helper\
+\nscript\" that you are running now and the \"script set\" it helps you install )\
+\n\nWhat we mean by Remote Control Via Email:  You find yourself travelling far away\
+\nfrom home, and thus, far away from this computer you are configuring.  You\
+\ndecide you need this computer to do a few things for you now before you return.\
+\nOne is to turn on and off one of the electrical outlets that it controls through\
+\na USB-connected Arduino board.  You also remember that there is an old iptables\
+\nrule whitelisting an IP address that belongs no longer belongs to you, so you\
+\nneed your home system to remove it from the iptables whitelist.  This and more\
+\nis possible if you just connect that Arduino you've built and run this script.\
+\nThis helper script will need from you name and password of the email account\
+\nthat this computer will retrieve the emails from that you send to it.  This\
+\nhelper script will test its functionality and give you a choice of which port\
+\nnumber you want to use (knock) to trigger your system to read and parse emails.\
+\nIdeally, you would want to choose a port number that never gets probed by\
+\nthe hackers of the world.  Logging probed ports (configured in the firewall\
+\nsection of this helper script) would be a handy reference here.\
+\n\n* No testing has been done using DHCP client nor server on the private interface"
+dascreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n          EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET\
+\n( As you read, please realize the difference between this installation \"helper\
+\nscript\" that you are running now and the \"script set\" it helps you install )\
+\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
+\nnetfilter-persistent are required if not already present.  These are standard\
+\nfor any Linux firewalling.  As far as manual control of iptables during run\
+\ntime, this script set is friendly.  It will simply configure iptables - an\
+\ninitial configuration by the helper script, then periodic configurations of\
+\niptables throughout the course of normal operations by the installed script set.\
+\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
+\nwith iptables will exist to interfere at any time with direct user adjustment of\
+\nthe iptables ruleset.\
+\nFirewalling options this install script can alter from the script set defaults:\
+\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
+\n  -- Open specific ports to offer public services\
+\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
+\n  -- Force single-interface firewalling even though two interfaces exist\
+\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
+\n\n* No testing has been done using DHCP client nor server on the private interface"
+pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                        PORT KNOCKING WITH THIS SCRIPT SET\
+\n( As you read, please realize the difference between this installation \"helper\
+\nscript\" that you are running now and the \"script set\" it helps you install )\
+\n\nTo configure firewalling, port-knocking, or email remote control, iptables &\
+\nnetfilter-persistent are required if not already present.  These are standard\
+\nfor any Linux firewalling.  As far as manual control of iptables during run\
+\ntime, this script set is friendly.  It will simply configure iptables - an\
+\ninitial configuration by the helper script, then periodic configurations of\
+\niptables throughout the course of normal operations by the installed script set.\
+\nUnlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
+\nwith iptables will exist to interfere at any time with direct user adjustment of\
+\nthe iptables ruleset.\
+\nFirewalling options this install script can alter from the script set defaults:\
+\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
+\n  -- Open specific ports to offer public services\
+\n  -- Allow swap interfaces (default=public:eth0, private:eth1)\
+\n  -- Force single-interface firewalling even though two interfaces exist\
+\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
+\n\n* No testing has been done using DHCP client nor server on the private interface"
+savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                       SAVING YOUR INSTALLED CONFIGURATION\
+\nSelecting this is only meaningful if one or more of the above selections is also\
+\nselected or has previously been configured.  Saving the configuration with this\
+\nchoice is a convenient way for you to replicate the configuration on other\
+\nservers or prepare for an operating system upgrade on this one.  You'll be\
+\ngiven a choice where to store the saved configuration, whether locally or on\
+\nremoveable media or remotely."
+restorescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                   RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION\
+\nThis is a convenient way to replicate the configuration on other servers or on\
+\nthis one after an operating system upgrade without answering the setup questions\
+\nall over again.  This can be highly important when you don't know for sure that\
+\nthe person who needs to configure will know or remember the details of this\
+\nconfiguration."
+answer=""
+singinterf="\nBased on finding only one pluggable network interface, your intentions seem\
+\nto be to have this firewalling computer be a terminal (end) device rather than\
+\nan inline (passthrough) device.  That would result in any protective\
+\nfirewalling you'll set up next to apply only to this computer.  If instead you\
+\nwant this firewalling computer to protect other devices with its firewalling\
+\nservices, select"
+postfix_already_conf=""
+until ! [ -z $answer ];do
+     clear
+     printf "$startscreen"
+# exit
+########### remove answer and char set line below and uncomment out next line
+#    while true;do answer="fdrp";char="";[[ -z "$char" ]] && break
+     while IFS= read  -sn1 char;do [[ -z "$char" ]] && break
+        [[ "$answer$char" == "?" ]] && break
+        if [[ "$(printf "%d" "'$char")" == "27" ]];then # ' escape or extended key has been detected
+            read -rst 0.001 -n3 # read & discard 2nd extended key field, timeout if real escape
+        elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
+            char="${char,}"
+            printf "$char"
+            answer="$answer$char"
+        elif [ "$char" == "?" ] && ! [ "${answer: -1}" == " " ];then
+            printf "$char "
+            answer="$answer$char "
+        else
+            [[ "$(printf "%d" "'$char")" == "127" ]] && ! [[ -z $answer ]] && answer="${answer:0: -1}" # ' handles the backspace character
+            printf "\r$answer    \r$answer" # needed b/c when several keys are pressed simultaneously only first gets silented
+        fi
+     done
+     if [ -z $answer$char ];then
+        exit
+     elif [[ $answer$char =~ \? ]];then
+        clear;printf "Selections: $answer$char";printf "  Since info is selected, no changes are to be made"
+        if [[ $answer$char == "?" ]];then
+             clear
+             printf "$ghscreen1"
+             read -sn1 -p "                         Press a key to continue..."
+             read -rst 0.001 -n3
+             clear
+             printf "$ghscreen2"
+             read -sn1 -p "   (Press key...)"
+             read -rst 0.001 -n3
+             echo
+        fi
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        answer=""
+     else
+         echo
+         until false;do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
+            until [ "$goahead" == "true" ];do
+                  installers=(apt-get "install --fix-missing" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
+                  for installer in {0..10};do
+                      installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}"
+                      [[ -z "$installerpath" ]] && continue
+                      installerpath+="  ${installers[$(($installer * 2 + 1))]}"
+                      break
+                  done
+#  packages required to install everything
+                  inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
+                  iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
+                  iptabperspath=$($findpath / -maxdepth 3 -name *persistent|$greppath -vw doc|$greppath -vw src|$greppath -vw sys|$greppath -e iptables -e netfilter|$greppath -m 1 -e init.d 2> /dev/null)
+                  stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
+                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+                  sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
+                  ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
+                  ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
+                  datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
+                  bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
+                  wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
+                  atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
+                  nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
+                  mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
+                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
+                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
+                  mailpath="${mailpath# }";mailpath="${mailpath%% *}"
+                  postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
+                  postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
+                  sendmail_works=""
+                  if ! [[ -z $mailpath ]];then
+                       mailadd=""
+                       mailcmd="echo $0 \"test.  Press y\"|$mailpath"
+                       printf "\nOne aspect of an option you selected will be to send you alert notices to your\
+\nemail account.  For emailing alerts to you, specialized configuration is\
+\nrequired so this computer can send emails from the command line.  We'll send a\
+\ntest email now to see if it can send from the command line already if you'll\
+\nplease enter an email address to finish the following mail command, choosing an\
+\naddress that you can immediately receive a test email through and verify\
+\nreception of it on a different computing device:\n"
+newemailconfigwarning="Installing a new configuration is\
+\ndefinitely NOT what you want if this computer is already or will be in use in a\
+\nbusiness email service role, like MTA, MDA, email relay, or email server because\
+\nthe settings this installation script will change will most certainly be\
+\nincompatible with said role.  If you need to avoid installing the emailing\
+\nconfiguration, you should manually get the command line email sending to work\
+\nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
+\nthis scripting has found to currently exist on your system."
+                       until false;do
+                            ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
+\nthis test and install a full, new configuration on this computer\
+\nfor sending emails from the command line.  $newemailconfigwarning"
+                            echo
+                            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
+                            if [[ -z "$mailadd" ]]; then break;fi
+                            if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
+
+                                 continue
+                            fi
+                            if ! [[ -z "$mailadd" ]];then
+                                 printf "\nSending a test email to $mailadd..."
+                                 eval "$mailcmd $mailadd"
+                                 wait
+                                 if [[ "$?" == "0" ]];then
+                                      printf "\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
+                                      read -r -n1
+                                      if [[ $REPLY =~ y ]];then 
+                                          sendmail_works=True
+                                          echo
+                                          break
+                                      elif [[ $REPLY =~ [at] ]];then
+                                          continue
+                                      fi
+                                 fi
+                                 printf "\nThe email command appears to have failed.  This means a full, new email sending\
+\nconfiguration will be set up on this computer. $newemailconfigwarning"
+                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing"
+                                 sleep 2
+                            fi
+                       done
+                  fi
+                  notinstalled=""
+                  if [[ $answer =~ f ]];then
+                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
+                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
+                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
+                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
+                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
+                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $bcpath ]] && notinstalled+="bc\n"
+                      [[ -z $atpath ]] && notinstalled+="at\n"
+                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                  fi
+                  if [[ $answer =~ e ]];then
+                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
+                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
+                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
+                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
+                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
+                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $bcpath ]] && notinstalled+="bc\n"
+                      [[ -z $atpath ]] && notinstalled+="at\n"
+                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                  fi
+                  if [[ $answer =~ d ]];then
+                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
+                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
+                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
+                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
+                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
+                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $bcpath ]] && notinstalled+="bc\n"
+                      [[ -z $atpath ]] && notinstalled+="at\n"
+                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
+                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                  fi
+                  if [[ $answer =~ p ]];then
+                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
+                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
+                 [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+                 [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
+                 [[ -z $mailpath ]] && notinstalled+="mailutils\n"
+                 [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
+                 [[ -z $datepath ]] && notinstalled+="coreutils\n"
+                 [[ -z $bcpath ]] && notinstalled+="bc\n"
+                 [[ -z $atpath ]] && notinstalled+="at\n"
+                 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
+                 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+             fi
+             [[ -z $notinstalled ]] && break 2
+             notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
+             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
+                  printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
+\n\nThis helper script version is not advanced enough to install needed programs on\
+\nsystems such as yours that don't use a common installer to install programs.\
+\nFor this install script to serve its purpose for you, you'll need to install all\
+\nnecessary programs yourself before anything referenced hereafter can succeed.\
+\nConsider yourself lucky if this script does anything at all for you beyond this\
+\npoint, but do understand that the programs most certainly won't get installed.\
+\n\nThe necessary programs that won't get installed until you install them are:\
+\n$notinstalled\
+\n\nYou may install them in another terminal and resume here, or press Ctrl-c to\
+\nterminate here, or press any other key to proceed as-is\
+\n\n     Acknowledge by keypress..."
+                  read -rsn 1;read -rst 0.001 -n3;ackd="true"
+             else
+                  goahead="true"
+             fi
+        done # this loops here once when installer pgm not found
+        clear
+        if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
+                  printf "Installation of\n$notinstalled\n\nwill begin after your keypress...";read -rsn 1;read -rst 0.001 -n3
+#                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
+#change the next line to a loop if need be
+                  printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
+      fi
+
+        done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
+       until false;do directoryforscripts="$( [[ -f directoryforscripts ]] && cat directoryforscripts )"
+            printf "\nSpecify the directory in which to install these scripts.  No deeper subdirectory\
+\nwill be used than what you specify here, so include any final isolating or\
+\ndescriptive subdirectory level you will want:\n"
+            read -e -r -i "$directoryforscripts" directoryforscripts
+            if ! [[ -d "$directoryforscripts" ]];then
+                 echo
+                 if [[ "$( read -n1 -p "Directory does not exist.  Create it? (y/n): " ans;echo "$ans" )" =~ [Yy] ]];then
+                      mkdir -p "$directoryforscripts" && chmod 700 "$directoryforscripts"
+                      mkdir -p "$directoryforscripts/preparedness" && chmod 700 "$directoryforscripts/preparedness"
+                      [[ "$?" == "0" ]] && break
+                      echo "Unable to use that path"
+                 fi
+            else
+                 break
+            fi
+       done
+       echo "$directoryforscripts" > directoryforscripts # handy with subsequent runs of this script, will know where everything is
+       chmod 700 directoryforscripts
+       directoryforscripts="${directoryforscripts%%/}"
+       printf "Please wait while your current iptables ruleset is backed up..."
+       current_time="$(date)"
+       $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" && printf "\nA copy of your current iptables ruleset is backed up in\
+\n\n$directoryforscripts/iptables_ruleset.$current_time\
+\n\nIf you feel the changes that this script makes to your iptables ruleset are not what you wanted, restore the current ruleset by running\
+\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n"
         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
@@ -1736,303 +2051,9 @@ directoryforscripts="${directoryforscripts%%/}"
              install_dynIPch
         fi
         if [[ "$answer" =~ p ]];then
-            until [[ "$REPLY" =~ [yn] ]]; do
-               read -e -r -n1 -p "Use OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
-               REPLY="${REPLY,}"
-               [[ "$REPLY" =~ \? ]] && ( \
-printf "\n  Client configuration is available under different licensing terms if you need\
-\nus to do it for you.  Thank you...\
-\n  Using One-Time-Passwords (OTPs) thwarts record-and-replay security attacks.\
-\nIf hackers record your port knocks, their attempts to replay the knock sequence\
-\nwith a previously used password (or wrong one or none at all) will, instead of\
-\ngiving them access to your system, broadcast an email &/or SMS alert for you. An\
-\ninvalid OTP submitted after successful port knocking positively identifies\
-\npurposeful targeted contact.  Non-knocking firewall configurations, such as\
-\nsimple SPA, lack this definity and may also be more vulnerable to memory\
-\nexhaustion under DoS attack.  Your peace of mind from knowing if hacking at that\
-\nlevel of sophistication is ever even attempted is priceless & worth the packets.\
-\n  You create an OTP list of single-use passwords and supply it to the trusting\
-\ndevice (this server) and to trusted devices and/or persons using some form of\
-\nout-of-band communication (private connection, email, thumbdrive, etc.).  The\
-\nOTP list can have not just one, but multiple OTPs for each label, so the trusted\
-\nknockers can choose or be assigned unique and different security access levels.\
-\nWhen the list of OTPs gets used up or nearly so, a notification email is sent to\
-\nremind you to distribute a new OTP list.  The old OTP list just recirculates\
-\nuntil replaced...used OTPs will get used again until you get time to generate a\
-\nnew OTP list and give everyone a copy of it. Thus, it will be YOUR\
-\nresponsibility to enforce a single-use-only policy on OTPs if you really need\
-\nthat extreme level of security.  With the encryption depth and options allowed,\
-\nyou may elect to let an OTP list be used more than once without serious risk of\
-\ncompromise, especially with unrecognizable OTPs.";read -s -n1 -p "   (Press key...)";\
-printf "\n  The OTP list is a non-encrypted text file: the first line is simply the month-\
-\nyear number pair the OTP list is created, a <comma> or <comma><space>, followed\
-\nby a <comma> or <comma><space> delimited list of encryption methods and keys to\
-\nrotate through, one line per month.  TCP and UDP encryptions are allowed, as are\
-\nmultiple encryptions.\
-\n  The template for each line after line 1 is:\
-\n\nlabel<space>class n password<space>class n+1 password, etc.\
-\n\n  Over- or under-encrypted OTPs are suggested to mask actual encryption level,\
-\nor just use randomized character strings.\
-\n  The server will initiate encryption handshaking only with a successful\
-\nclient knocker.  Handshaking is as follows:  The server tells each successful\
-\nknocker (client) what month-year their communication is taking place in.  Both\
-\nends then negotiate the \"encryption of the month\".  The server then challenges\
-\nthe client with a packet containing a label it chooses from the OTP list.  The\
-\nclient must reply with the OTP associated with both that label and the access\
-\nlevel they expect.  Sharing the set of OTPs between multiple devices is thus\
-\naccommodated, as is security level assignment.\
-\n  To make under-encrypted OTPs, run decryption on each non-encrypted OTP.  To\
-\nover-encrypt, use OTPs that you've encrypted extra times beyond what your OTP\
-\nlist specifies.\
-\n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
-\nthe labels, if you wish, to ensure your security.  Better yet for you, get\
-\nthem yourself for FREE from online sources that advertise themselves as \"Ultra\
-\nHigh Security Password Generator\"s.  Thank you...";\
-                   read -s -n1 -p "   (Press key...)";\
-printf "\n\
-\n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
-\nMac), programs (Linux/Mac/MS Windows/Android/iPhone), and OTP lists via email:\
-\n\n                       kenlovesjesus at gmail dot com\
-\n\n  Please allow for the possibility of some coding being done to order rather\
-\nthan being ready made.  Most common payment forms welcome, and we will work\
-\nwithin any reasonable purchasing protocol you need us to.  We try hard to speak\
-\nto you on your level, novice to expert.\
-\n  Developers: we encourage you to to create your own OTPs or client scripts and\
-\nprograms.  We have tried to provide you with enough information to enable you to\
-\ndo so, but if you need more, just ask us.  Be aware that actual client-side code\
-\nis otherwise licensed and is charged for.\
-\n  Homeowners: this project is being done with your Internet access, automation,\
-\nsurveillance, and remote access needs in mind, so we welcome you! \n";\
-continue)\
-               || [[ "$REPLY" =~ n ]] \
-               || ( [[ "$REPLY" =~ y ]] && (
-#                      echo "Selected OTPs"
-# Set up alert emails if not done already TODO: Make function, integrate better for answer scenarios
-                   conf_postfix
-                     )
-                 )
-            done
-            until [[ "$REPLY" =~ [ls] ]]; do
-             printf "Use loose (l) or strict (s) port knocking rules? (? for help) ";read -e -r -n1
-             REPLY="${REPLY,}"
-             [[ "$REPLY" == \? ]] && ( printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
-\ndemanding be \"knocked\" by computers trying to establish communication to this\
-\none through the Internet-facing interface that will prove their\
-\nauthorization to connect.\n   l) loose knock rules are when you are permitting knocks to arrive here out of\
-\nsequence (this is bound to happen sometimes) and even not arrive at all as long\
-\nas at least 4 valid port-protocol knocks do succeed.  Of course, to select this,\
-\nyou'll have to specify a minimum of 4 port-protocol combinations.  This option\
-\ncan reduce frustrations for you if you consider yourself a low-value target for\
-\nhackers and are taking all the other reasonable security measures anyway.  The\
-\norder which you specify the port-protocol knocks in the sequence will be\
-\nirrelevant, and the 4 knocks must arrive in a total time frame of 12 seconds\
-\nmultiplied by the total number of port-protocol combinations you specify.\
-\nKnocks on other ports during the knocking authentication period WILL BE ALLOWED.\
-\nThe source IP address sending the knocks will be permanently authenticated until\
-\nit is removed from the iptables whitelist via separate, independent iptables\
-\nrule manipulation.\
-\n   s) strict knock rules are conventional port knock rules where every port-\
-\nprotocol knock must arrive in sequence with none missed.  NO OTHER PORT-PROTOCOL\
-\nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS.\
-\nSeven seconds maximum is allowed between each knock.  After the knock sequence\
-\nis completed successfully, the knocking computer will be given only 17 seconds\
-\nin which to establish valid communication, and the knock sequence must be\
-\nrepeated for each future session.   Press a key...";read -n1 -s )
-            done
-            clear;printf "Setting up port knocking.\
-\nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
-\nspecify any knock packet or packets to be disguised as an established connection\
-\npacket rather than a knocking packet by replacing \"--syn\" with \"--tcp-flags ACK\
-\nACK\".  Ideally, it would carry data you would craft that appears to be part of\
-\nestablished-connection communication to help disguise it as a normal packet.\
-\nYou could go so far as to require that specific byte string to be required in\
-\nthat knock, but to generate such specialty knock packets will for sure require\
-\nthe knocking client to use a packet-crafting tool.  Exactly for that scenario,\
-\nthese rules will configure to reply to such a knock packet with a TCP RST packet\
-\nto make the obfuscation less obvious.  (If you intend for your server to be\
-\ninvisible, however, you probably don't want to require such a packet as the\
-\nfirst knock because not only can and will your system be visible, its first\
-\nknock port will also be giving itself away.)\
-\nTo specify the data you might require in a knock packet, include the following\
-\nin the protocol:\
-\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n"
-
-#write rules to iptables rule set
-            if [[ $REPLY == "l" ]];then
-                 echo "Setting loose rules here"
-            else
-                 echo "Setting strict rules here"
-                 $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
-                 i=1
-                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
-                      ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] && continue
-                      printf "${knockport[$i]}"
-                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
-                         printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
-'{printf $2}')")")" because it will\
-\ninterfere with you testing your sequence through an ssh session.  Do you still\
-\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
-                      fi
-                      printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
-\nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
-\nyou don\'t care to get any fancier.  You may include mask-flag spec or other\
-\niptables matching options beyond this, if you know them, except the -j target,\
-\n-g chain, -m recent, and -m comment iptables modules/options):\n\
-\n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
-                      printf -- "\n${knockproto[$i]}\n"
-                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]];then
-printf "If you intend for your server to be invisible to the world, at least beyond the\
-\nnext router, the best way to disguise a TCP ACK packet on the first knock is for\
-\nthis server not to reply with the otherwise suggested tcp-reset rejection\
-\nresponse, mostly because your system will forever be visible on that port to the\
-\nworld, but also because its first knock port will be giving itself away.  Or you\
-\nmay turn off the disguising tcp-reset reject reply for this knock only.  Press\
-\n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
-\nadvised for minimum visibility), or any other key to turn off the reject response\
-\nto this knock: (r/k/...)"
-                           read -rn 1;read -rst 0.001 -n3
-                           [[ $REPLY =~ [Rr] ]] && continue
-                           [[ $REPLY =~ [Kk] ]] && (testtarget[$i]=" -j REJECT --reject-with tcp-reset") || testtarget[$i]=" -j DROP"
-                      else
-                           testtarget[$i]=" -j DROP"
-                      fi
-                      protovar="${knockproto[$i]}"
-                      protovar="${protovar:1}"
-                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}"
-#              echo $iptablespath" -wA ruletestchain""${knockproto[$i]}${testtarget[$i]}"
-                      if ! [[ $($iptablespath -wA ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
-                          printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
-                          continue
-                      fi
-                      i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
-                 done
-                 for (( j=1;j<=i;j++ )); do
-                      printf "$iptablespath -wA knockstage$j${knockproto[$j]}\n"
-                 done
-                 printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
-\nentries just made.  The following changes are about to be made:\
-\n\n  -- All INPUT chain rules will be removed that contain the letters \"knock\" in\
-\n        sequence in their comment\
-\n\n  -- INPUT chain will receive all new knock rules that belong there, being\
-\n        placed adjacent and prior to current non-knock rules referencing the\
-\n        respective interface\
-\n\n  -- Chains knockerreap, knockersort, knockers, and all knockstages will be\
-\n        flushed and reloaded new\
-\n\nOnly continue if you are sure about making the changes.  To keep your current\
-\niptables rules as they are, quit now by pressing ctl-c.  Otherwise, make the\
-\nqueued changes by pressing any other key....\n";read -rsn 1;read -rst 0.001 -n3
-                 [[ $($iptablespath -wN knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wF knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wN knockersort 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wF knockersort 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 j=1
-                 while ! [[ -z "${knockport[$j]}" ]];do
-                      [[ $($iptablespath -wN knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      [[ $($iptablespath -wF knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      if ! [[ "$j" == "1" ]];then
-                           [[ $($iptablespath -wA knockersort${knockproto[$i]} -m recent --name knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      fi
-                      [[ $($iptablespath -wI knockstage$j -j knockerreap) == "0" ]] || printf "Failed"
-                      [[ $($iptablespath -wI knockstage$j 2 -m recent --name knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires") == "0" ]] || printf "Failed"
-#Here we put the right DROP or REJECT target in the third rule under this chain
-                      [[ $($iptablespath -wA knockstage$j"${testtarget[$j]}") == "0" ]] || printf "Failed"
-                 done
-# start making rules here
-                 [[ $($iptablespath -wN knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wF knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 i=$(( $i-1 ))
-# for persistent whitelisting only
-#                 [[ $($iptablespath -wR knockstage$i 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wR knockstage$i 2 -m recent --name authorized --set --seconds 120 -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 inchainoffset=0
-                 if ! [[ -z "$internal_net_interface" ]];then
-                      [[ $($iptablespath -wN knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      [[ $($iptablespath -wF knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      printf "\n"
-                      printf "" > internal_interfaces_present # won't include any the default gateway
-# test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
-#TODO:  CHANGE THE PROCESS HERE TO SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
-
-
-                      echo "$internal_net_interface"|$awkpath '{print $1}'|while read interface; do
-                           $iptablespath -wnvL INPUT --line-number|$awkpath '{print $1" "$6}'|$greppath -m 1 $interface|while read intfc;do [[ $(($ippath route show|$greppath $intfc|$greppath -c default)) -eq 0 ]] && echo "$intfc" >> internal_interfaces_present;done
-                      done
-                      if [[ $(($wcpath -l < internal_interfaces_present)) -eq 0 ]];then #means no interface reference to any private, non-default interface found in chain, though a private interface exists. Verify no reference in chain to ip addresses routed to any non-default private interface, then Do it to it right before it.
-# determine address range[s] routed out that interface and check for input chain references to any of them 
-#   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
-#   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
-                            $iptablespath -wnvL INPUT --line-number 2>/dev/null|$awkpath 'NR>2 {print $9}' \
-                            |while read src_addr_in_input_chain;do
-                                 $ippath route show|$greppath -v default|$greppath -v $external_net_interface \
-                                 |while read line; do 
-                                      line="${line%% *}/32"
-                                      range_start="${line%%/*}"
-                                      [[ $(printf "$range_start\n$src_addr_in_input_chain"|$sortpath -V|$tailpath -n1) == "$src_addr_in_input_chain" ]] || break
-                                      cidr_bits="${line#*/}"
-                                      cidr_bits="${line%%/*}"
-                                      src_addr_in_input_chain_seg1="${src_addr_in_input_chain%%.*}"
-                                      range_start_seg1="${range_start%%.*}"
-                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                      range_start="${range_start#*.}"
-                                      src_addr_in_input_chain_seg2="${src_addr_in_input_chain%%.*}"
-                                      range_start_seg2="${range_start%%.*}"
-                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                      range_start="${range_start#*.}"
-                                      src_addr_in_input_chain_seg3="${src_addr_in_input_chain%%.*}"
-                                      range_start_seg3="${range_start%%.*}"
-                                      src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                      range_start="${range_start#*.}"
-                                      src_addr_in_input_chain_seg4="${src_addr_in_input_chain%%.*}"
-                                      range_start_seg4="${range_start%%.*}"
-                                      doubler=1
-                                      for ((j=$((32 - $cidr_bits));j>0;j--)); do
-                                           doubler=$(( $doubler * 2 ))
-                                      done
-                                      range_end=$(( ($range_start_seg1 * 256 * 256 * 256) + ($range_start_seg2 * 256 * 256) + ($range_start_seg3 * 256) + $range_start_seg4 + $doubler -1 ))
-                                      src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
-                                      if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
-     #                                      echo "within range"
-                                           : # next step here is to note which line contains the first occurance and put the knock test rules just prior to it because we need the knock test rules being the first reference to the internal interface[[ ]] >>
-                                      fi
-                                 done
-                            done
-
-                            ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]] && ([[ $($iptablespath -wI INPUT -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed")
-                            [[ $($iptablespath -wI INPUT 2 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                            [[ $($iptablespath -wI INPUT 3 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                            [[ $($iptablespath -wI INPUT 4 -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                            inchainoffset=4
-      #                      [[ $($iptablespath -wA knockers -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                      elif [[ $(($wcpath -l < internal_interface_wanted)) -eq 1 ]];then #means one private interface found in chain. Do it to it right at the beginning
-                            :
-                      else # more than 1 line means we have to ask operator which would be used for ssh knock testing
-                            :
-                      fi
-                 fi
-                 [[ $($iptablespath -wA INPUT $(($inchainoffset + 1)) -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA INPUT -m recent --name authorized --seconds 200 --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA INPUT -i $external_net_interface -m conntrack --ctstate NEW -p ${knockproto[1]} --dport ${knockport[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -m recent --name knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -j knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wA knockers -j DROP 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-
-                 [[ $($iptablespath -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --set  2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 done
-                 for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --rcheck  --reap --seconds 12 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 done
-                 for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 done
-
-            fi
+            install_port_knocking
         fi
-    fi
+     fi
 done
+
 exit
