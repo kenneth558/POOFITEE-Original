@@ -223,7 +223,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
 \nnext router, the best way to disguise a TCP ACK packet on the first knock is for\
 \nthis server not to reply with the otherwise suggested tcp-reset rejection\
 \nresponse, mostly because your system will forever be visible on that port to the\
-\nworld, but also because its first knock port will be giving itself away.  Or you\
+\nworld, but also because its first port knock will be giving itself away.  Or you\
 \nmay turn off the disguising tcp-reset reject reply for this knock only.  Press\
 \n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
 \nadvised for minimum visibility), or any other key to turn off the reject response\
@@ -461,9 +461,10 @@ BUILDIPTABLES.SH_END
        install_cronentries () {
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
-      echo "Confirm you understand that your crontab shell is now getting changed which"
-      read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
+     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
+\nConfirm you understand that your crontab shell is now getting changed which\
+\nmight affect the above entries if they send values out, contain quotes, etc.\n"
+      read -n1 -s -p "You will need to verify proper operation of current entries after this: ")
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -l)\
 */30 * * * * $iptabperspath save >/dev/null 2>&1
