@@ -362,15 +362,26 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
                            [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
                       fi
+                      line_number_for_authorized_rule=$linenumber_for_inserting_before
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
-#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
-#                           linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 ))
-      #                [[ $($iptablespath -wA knockers -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j knockerstest -m comment --comment "for port knock testing from private side" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
+# here we also need to set up knockerstest chain before leaving if loop
+                      $iptablespath -wA knockerstest -j knockersort
+                      $iptablespath -wA knockerstest -j LOG --log-prefix "knockertest fail "
+                      $iptablespath -wA knockerstest -m recent --rcheck --seconds 200 --reap --name knocker --mask 255.255.255.255 --rsource
+                      $iptablespath -wA knockerstest -m recent --remove --name knocker --mask 255.255.255.255 --rsource
+                      $iptablespath -wA knockerstest -j knockerreap
+                      $iptablespath -wA knockerstest -j DROP
                  fi
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -m recent --name authorized --remove -j ACCEPT -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 if [[ -z "$linenumber_for_inserting_before" ]];then
+                      linenumber_for_inserting_before="1"
+                      line_number_for_authorized_rule="1"
+                 fi
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
                  [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+
                  [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
                  [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
                  [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
@@ -1938,10 +1949,13 @@ newemailconfigwarning="Installing a new configuration is\
        directoryforscripts="${directoryforscripts%%/}"
        printf "Please wait while your current iptables ruleset is backed up..."
        current_time="$(date)"
-       $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" && printf "\nA copy of your current iptables ruleset is backed up in\
+       $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" \
+          && printf "\nA copy of your current iptables ruleset is backed up in\
 \n\n$directoryforscripts/iptables_ruleset.$current_time\
-\n\nIf you feel the changes that this script makes to your iptables ruleset are not what you wanted, restore the current ruleset by running\
-\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n" || printf "\nYour current iptables ruleset did not back up as expected.  You should press\
+\n\nIf you feel the changes that this script makes to your iptables ruleset are not\
+\nwhat you wanted, restore the current ruleset by running\
+\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n" \
+          || printf "\nYour current iptables ruleset did not back up as expected.  You should press\
 \nctl-c now and fix that, or you could be in a frustrating situation if something\
 \ngoes awry with this install.\n"
         if [[ "$answer" =~ f ]];then
