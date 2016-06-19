@@ -306,7 +306,7 @@ continue)\
                  $iptablespath -wF ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
                  while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
-                      ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] && continue
+                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( "${knockport[$i]}" )) -le 65535 ]];then continue;fi
 #                      printf "${knockport[$i]}"
                       if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
@@ -469,7 +469,6 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
-# here we also need to set up knockerstest chain before leaving if loop
                       $iptablespath -wA knockerstest -j knockersort
                       $iptablespath -wA knockerstest -j LOG --log-prefix "knockertest fail "
                       $iptablespath -wA knockerstest -m recent --rcheck --seconds 200 --reap --name knocker --mask 255.255.255.255 --rsource
@@ -802,6 +801,7 @@ chmod 600 "$directoryforscripts/outemailadd"
 fi
 postfix_already_conf=True # set this to True or just anything non-empty
           }
+
           install_rc () {
 directoryforscripts="$( cat directoryforscripts )"
 # "$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")"
@@ -820,8 +820,6 @@ while true;do
 \naccount, that is, that this server will read instructions out of.)\
 \n\n  Enter the email address now from which this system will retrieve instructions\
 \nto itself that you or others will send:\n"
-
-
 #     printf "$line"
      get_1_addr_from_bunch $inemailadds
           inemailadd="emailadd";inemailacct="$emailacct";inemaildomain="$emaildomain";intopdomain="$topdomain";inemailprovider="$emailprovider";inemailpw="$emailpw"
@@ -1107,6 +1105,13 @@ exec 5>&-
 EOF
 ) > "$directoryforscripts/email_fetch_parse"
 chmod 700 "$directoryforscripts/email_fetch_parse"
+# TODO: iptables entry to log port knock for email reader
+# belongs inserted just before both whitelist and blacklist - use the lower line number of them both
+line_number_for_email_reader="$($iptablespath -wnvL INPUT --line-number|$awkpath 'NR>2 {print $1" "$4}'|$greppath -e s_whitelist -e s_blacklist|$sortpath -k1n|$awkpath 'NR==1 {print $1}')"
+until read -erp "Enter a port number you will knock to initiate email to be read" emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( "$emailport" )) -le 65535 ]];do
+    printf "\nThe port number must be a number between 0 and 65535 inclusive\n"
+done
+[[ $($iptablespath -wI INPUT $line_number_for_email_reader -p all --dpt $emailport -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-prefix "fetch email " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
           }
 install_dynIPch () {
 #dhcp_lease_path
