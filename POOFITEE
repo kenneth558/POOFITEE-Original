@@ -1479,7 +1479,7 @@ get_1_addr_from_bunch() {
               emailacct="${emailadd%@*}";emailprovider="${emailadd#*@}"
               emaildomain="${emailprovider%.*}"
               topdomain="${emailprovider##*.}"
-              if ! [[ "$emailadd" == "$emailacct"@"$emaildomain"."$topdomain" ]] || [[ -z $emaildomain ]] || [[ -z $topdomain ]];then
+              if ! [[ "$emailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                   printf "\nEmail address not in correct format.  Re-enter it...\033[1A\r$scratchpad";horizptr="${#scratchpad}"
                   continue
               fi
