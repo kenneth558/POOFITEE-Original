@@ -468,47 +468,48 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
                       [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
                       if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
                       fi
                       line_number_for_authorized_rule=$linenumber_for_inserting_before
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name knocker --seconds 200 --rcheck -j knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
-                      $iptablespath -wA knockerstest -j knockersort
-                      $iptablespath -wA knockerstest -j LOG --log-prefix "knockertest fail "
-                      $iptablespath -wA knockerstest -m recent --rcheck --seconds 200 --reap --name knocker --mask 255.255.255.255 --rsource
-                      $iptablespath -wA knockerstest -m recent --remove --name knocker --mask 255.255.255.255 --rsource
-                      $iptablespath -wA knockerstest -j knockerreap
-                      $iptablespath -wA knockerstest -j DROP
+                      $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
+                      $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "knockertest fail "
+                      $iptablespath -wA poofitee_knockerstest -m recent --rcheck --seconds 200 --reap --name poofitee_knocker --mask 255.255.255.255 --rsource
+                      $iptablespath -wA poofitee_knockerstest -m recent --remove --name poofitee_knocker --mask 255.255.255.255 --rsource
+                      $iptablespath -wA poofitee_knockerstest -j poofitee_knockerreap
+                      $iptablespath -wA poofitee_knockerstest -j DROP
                  fi
                  if [[ -z "$linenumber_for_inserting_before" ]];then
                       linenumber_for_inserting_before="1"
                       line_number_for_authorized_rule="1"
                  fi
-                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name knocker -j knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
 
-                 [[ $($iptablespath -wA knockers -m conntrack ! --ctstate NEW -j knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
-                 [[ $($iptablespath -wA knockers -m conntrack --ctstate NEW -j knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
-                 [[ $($iptablespath -wA knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
-                 [[ $($iptablespath -wA knockers -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 24"
-                 [[ $($iptablespath -wA knockers -m recent --name knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 25"
-                 [[ $($iptablespath -wA knockers -j knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 26"
-                 [[ $($iptablespath -wA knockers -j DROP 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 27"
+                 [[ $($iptablespath -wA poofitee_knockers -m conntrack ! --ctstate NEW -j poofitee_knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
+                 [[ $($iptablespath -wA poofitee_knockers -m conntrack --ctstate NEW -j poofitee_knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+                 [[ $($iptablespath -wA poofitee_knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
+                 [[ $($iptablespath -wA poofitee_knockers -m recent --name poofitee_knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 24"
+                 [[ $($iptablespath -wA poofitee_knockers -m recent --name poofitee_knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 25"
+                 [[ $($iptablespath -wA poofitee_knockers -j poofitee_knockerreap 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 26"
+                 [[ $($iptablespath -wA poofitee_knockers -j DROP 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 27"
 
-                 [[ $($iptablespath -wA knockerreap -m recent --name knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 28"
+                 [[ $($iptablespath -wA poofitee_knockerreap -m recent --name poofitee_knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 28"
                  for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --set  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 29"
+                      [[ $($iptablespath -wA poofitee_knockerreap -m recent --name poofitee_knockstage$j --set  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 29"
                  done
                  for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --rcheck  --reap --seconds 12 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 30"
+                      [[ $($iptablespath -wA poofitee_knockerreap -m recent --name poofitee_knockstage$j --rcheck  --reap --seconds 12 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 30"
                  done
                  for ((j=1;j<=i;j++));do
-                      [[ $($iptablespath -wA knockerreap -m recent --name knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 31"
+                      [[ $($iptablespath -wA poofitee_knockerreap -m recent --name poofitee_knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 31"
                  done
 
             fi
+printf "\nServer-side port knocking installed.\n"
 }
        install_buildiptablessh () {
             (cat <<BUILDIPTABLES.SH_END
@@ -1393,9 +1394,9 @@ echo "crontab set up..."
 
 outemail_warnings () {
          printf "This installation script is about to make changes to this computer that can\
-\nprofoundly change the way it sends out email.  No accommodation will be given\
+\nprofoundly change the way it SENDS OUT email.  No accommodation will be given\
 \nfor any email sending capability that you might already have set up.  PLEASE do\
-\nNOT expect this scripting to give any outbound emailing consideration for email\
+\nNOT expect this scripting to give any OUTBOUND emailing consideration for email\
 \nprograms you have previously installed.  Only proceed if you agree with this\
 \nnotion.  In contrast, INBOUND emailing is not expected to be affected because\
 \nthis scripting does not rely on, nor change the settings of, any email client\
@@ -1852,11 +1853,11 @@ newemailconfigwarning="Installing a new configuration is\
                                  continue
                             fi
                             if ! [[ -z "$mailadd" ]];then
-                                 printf "\nSending a test email to $mailadd..."
+                                 printf "Sending a test email to $mailadd..."
                                  eval "$mailcmd $mailadd"
                                  wait
                                  if [[ "$?" == "0" ]];then
-                                      printf "\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
+                                      printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                                       read -r -n1
                                       if [[ $REPLY =~ y ]];then 
                                           sendmail_works=True
