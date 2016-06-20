@@ -97,12 +97,17 @@ fi
 }
 get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will change behavior from taking numerous entries, storing them in variable toemailadds to either taking one entry or selecting one entry from previous list and storing it in variable mailadd
      [[ -z "$directoryforscripts" ]] && directoryforscripts="$( [[ -f directoryforscripts ]] && cat directoryforscripts || printf "/home/poofitee")"
-     [[ -f "$directoryforscripts/toemailadds" ]] && line="$(cat "$directoryforscripts/toemailadds")" || line=""
+     line=""
+     if [[ -f "$directoryforscripts/toemailadds" ]];then
+           line="$(cat "$directoryforscripts/toemailadds")"
+     elif [[ -f "./toemailadds" ]];then
+           line="$(cat "./toemailadds")"
+     fi
      toemailaddsmaster="$line"
      mstrlinenumber=1
      mstrnumoflines=$( echo "$toemailaddsmaster"|$sedpath 's/,/\n/g'|$wcpath -l )
      line="${line%%,*}"         # not real sure where the best place is for these lines.  Prior to while loop maybe?
-     ! [[ -z "$line" ]] && printf "$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailadds")\n\033["$mstrnumoflines"A\r$line\033[K"
+     ! [[ -z "$line" ]] && printf "$(echo "$toemailaddsmaster"|$sedpath 's/,/\n/g')\n\033["$mstrnumoflines"A\r$line\033[K"
      toemailadds=""
 
      while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
@@ -294,7 +299,7 @@ continue)\
 \nknock port will also be giving itself away.)\
 \nTo specify the data you might require in a knock packet, include the following\
 \nin the protocol:\
-\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n"
+\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n\n"
 
 #write rules to iptables rule set
             if [[ $REPLY == "l" ]];then
@@ -306,7 +311,7 @@ continue)\
                  $iptablespath -wF ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
                  while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
-                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( "${knockport[$i]}" )) -le 65535 ]];then continue;fi
+                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
 #                      printf "${knockport[$i]}"
                       if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
@@ -529,43 +534,39 @@ $iptablespath -wN s_blacklist
 $iptablespath -wN s_privateIPs
 $iptablespath -wN s_static_trusted
 $iptablespath -wN s_whitelist
-$iptablespath -wI INPUT 1  -p all -j DROP
-$iptablespath -wI INPUT 1  -p all -j LOG --log-level 4
-$iptablespath -wI INPUT 1  -p all -j s_blacklist
-$iptablespath -wI INPUT 1  -i $external_net_interface  -p all -j s_privateIPs
-$iptablespath -wI INPUT 1  -p all -j s_whitelist
-$iptablespath -wI INPUT 1  -i $external_net_interface  -p tcp --dport 1958 -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-level 4
-$iptablespath -wI INPUT 1  -p all -j s_static_trusted
-$iptablespath -wI INPUT 1  -i $internal_net_interface  -p all -j ACCEPT
-$iptablespath -wI INPUT 1  -d 192.168.3.2  -p all -j ACCEPT
-$iptablespath -wI INPUT 1  -p all -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-$iptablespath -wI FORWARD 1  ! -s 192.133.1.2  -p all -j ACCEPT
-$iptablespath -wI FORWARD 1  -p all -j DROP
-$iptablespath -wI FORWARD 1  -p all -j LOG --log-level 4
-$iptablespath -wI FORWARD 1  -p all -j s_blacklist
-$iptablespath -wI FORWARD 1  -p all -j d_privateIPs
-$iptablespath -wI FORWARD 1  -p all -j s_privateIPs
-$iptablespath -wI FORWARD 1  -p all -j d_blacklist
-$iptablespath -wI FORWARD 1  -p all -j d_whitelist
-$iptablespath -wI FORWARD 1  -p all -j s_whitelist
-$iptablespath -wI FORWARD 1  -p all -j s_static_trusted
-$iptablespath -wI FORWARD 1  -p all -j d_static_trusted
-$iptablespath -wI FORWARD 1  -o $external_net_interface  -p all -j ACCEPT
-$iptablespath -wI OUTPUT 1  -p all -j d_blacklist
-$iptablespath -wI OUTPUT 1  -p all -j d_whitelist
-$iptablespath -wI OUTPUT 1  -p all -j d_static_trusted
-$iptablespath -wI d_privateIPs 1  -d 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_privateIPs 1  -d 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_privateIPs 1  -o $external_net_interface  -d 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_static_trusted 1  -d 199.102.46.70  -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o $external_net_interface  -d 98.179.31.188  -p all -m comment --comment "knocked Sat Jan 16 12:26:40 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i $external_net_interface  -s 98.179.31.188  -p all -m comment --comment "knocked Sa
-t Jan 16 12:26:40 CST 2016" -j ACCEPT
-$iptablespath -wI d_whitelist 1  -o $external_net_interface  -d 207.177.27.131  -p all -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT;$iptablespath -wI s_whitelist 1  -i $external_net_interface  -s 207.177.27.131  -p all
- -m comment --comment "via email Sat Jan 16 20:12:44 CST 2016 Sat Jan 16 20:12:44 CST 2016" -j ACCEPT
-$iptablespath -wI s_privateIPs 1  -i $external_net_interface  -s 192.168.0.0/16  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_privateIPs 1  -s 172.16.0.0/12  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_privateIPs 1  -s 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_static_trusted 1  -s 91.189.92.201  -p all -m comment --comment "Canonical" -j ACCEPT
+$iptablespath -wA INPUT -i $external_net_interface -p all -j s_privateIPs
+$iptablespath -wA INPUT -i $internal_net_interface -p all -j ACCEPT
+$iptablespath -wA INPUT -p all -j s_static_trusted
+$iptablespath -wA INPUT -p all -j s_whitelist
+$iptablespath -wA INPUT -p all -j s_blacklist
+$iptablespath -wA INPUT -p all -j LOG --log-level 4
+$iptablespath -wA INPUT -p all -j DROP
+$iptablespath -wI FORWARD 1 ! -s 192.133.1.2 -p all -j ACCEPT
+$iptablespath -wI FORWARD 1 -p all -j DROP
+$iptablespath -wI FORWARD 1 -p all -j LOG --log-level 4
+$iptablespath -wI FORWARD 1 -p all -j s_blacklist
+$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j d_privateIPs
+$iptablespath -wI FORWARD 1 -i $external_net_interface -p all -j s_privateIPs
+$iptablespath -wI FORWARD 1 -p all -j d_blacklist
+$iptablespath -wI FORWARD 1 -p all -j d_whitelist
+$iptablespath -wI FORWARD 1 -p all -j s_whitelist
+$iptablespath -wI FORWARD 1 -p all -j s_static_trusted
+$iptablespath -wI FORWARD 1 -p all -j d_static_trusted
+$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j ACCEPT
+$iptablespath -wI OUTPUT 1 -p all -j d_blacklist
+$iptablespath -wI OUTPUT 1 -p all -j d_blacklist
+$iptablespath -wI d_privateIPs 1 -d 10.0.0.0/8 -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI d_privateIPs 1 -d 172.16.0.0/12 -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI d_privateIPs 1 -d 192.168.0.0/16 -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI d_static_trusted 1 -d 199.102.46.70 -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
+$iptablespath -wI s_privateIPs 1 -s 192.168.0.0/16 -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI s_privateIPs 1 -s 172.16.0.0/12 -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI s_privateIPs 1 -s 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
+$iptablespath -wI s_static_trusted 1 -s 91.189.88.0/21 -p all -m comment --comment "Canonical" -j ACCEPT
+$iptablespath -wI s_static_trusted 1 -i lo -p all -m comment --comment "we really have to trust localhost at this level" -j ACCEPT
+$iptablespath -wI s_static_trusted 1 -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "existing dialogs traffic presumed trusted" -j ACCEPT
+
+
 BUILDIPTABLES.SH_END
 ) > "$directoryforscripts/preparedness/buildiptables.sh"
           chmod 700 "$directoryforscripts/preparedness/buildiptables.sh"
@@ -1108,7 +1109,7 @@ chmod 700 "$directoryforscripts/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
 # belongs inserted just before both whitelist and blacklist - use the lower line number of them both
 line_number_for_email_reader="$($iptablespath -wnvL INPUT --line-number|$awkpath 'NR>2 {print $1" "$4}'|$greppath -e s_whitelist -e s_blacklist|$sortpath -k1n|$awkpath 'NR==1 {print $1}')"
-until read -erp "Enter a port number you will knock to initiate email to be read" emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( "$emailport" )) -le 65535 ]];do
+until read -erp "Enter a port number you will knock to initiate email to be read" emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( $emailport )) -le 65535 ]];do
     printf "\nThe port number must be a number between 0 and 65535 inclusive\n"
 done
 [[ $($iptablespath -wI INPUT $line_number_for_email_reader -p all --dpt $emailport -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-prefix "fetch email " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
@@ -1974,7 +1975,7 @@ newemailconfigwarning="Installing a new configuration is\
        echo "$directoryforscripts" > directoryforscripts # handy with subsequent runs of this script, will know where everything is
        chmod 600 directoryforscripts
        directoryforscripts="${directoryforscripts%%/}"
-       printf "Please wait while your current iptables ruleset is backed up..."
+       printf "\nPlease wait while your current iptables ruleset is backed up..."
        current_time="$(date)"
        $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" \
           && printf "\nA copy of your current iptables ruleset is backed up in\
