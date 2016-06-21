@@ -372,7 +372,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                  [[ $($iptablespath -wF poofitee_knockersort 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush poofitee_knockersort chain rules";break)
                  j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
                  for ((;j>0;j--)); do
-                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ poofitee_ ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset"|| printf "Failed 5")
+                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ poofitee_knock ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset"|| printf "Failed 5")
                  done
                  j=16  # here is the limit on number of knocks we can handle, just won't clear old ones above this
                  while [[ -z "${knockport[$j]}" ]];do
@@ -468,7 +468,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
                       [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
                       if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
                       fi
                       line_number_for_authorized_rule=$linenumber_for_inserting_before
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
@@ -485,7 +485,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       linenumber_for_inserting_before="1"
                       line_number_for_authorized_rule="1"
                  fi
-                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "poofitee_knock 1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
                  [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
                  [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
 
@@ -524,48 +524,47 @@ $iptablespath -wt nat -P PREROUTING ACCEPT
 $iptablespath -wt nat -P INPUT ACCEPT
 $iptablespath -wt nat -P OUTPUT ACCEPT
 $iptablespath -wt nat -P POSTROUTING ACCEPT
-$iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE
+$iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_firewall"
 $iptablespath -wP INPUT ACCEPT
 $iptablespath -wP FORWARD ACCEPT
 $iptablespath -wP OUTPUT ACCEPT
-$iptablespath -wN d_privateIPs
-$iptablespath -wN d_static_trusted
-$iptablespath -wN d_whitelist
-$iptablespath -wN s_blacklist
-$iptablespath -wN s_privateIPs
-$iptablespath -wN s_static_trusted
-$iptablespath -wN s_whitelist
-$iptablespath -wA INPUT -i $external_net_interface -p all -j s_privateIPs
-$iptablespath -wA INPUT -i $internal_net_interface -p all -j ACCEPT
-$iptablespath -wA INPUT -p all -j s_static_trusted
-$iptablespath -wA INPUT -p all -j s_whitelist
-$iptablespath -wA INPUT -p all -j s_blacklist
-$iptablespath -wA INPUT -p all -j LOG --log-level 4
-$iptablespath -wA INPUT -p all -j DROP
-$iptablespath -wI FORWARD 1 ! -s 192.133.1.2 -p all -j ACCEPT
-$iptablespath -wI FORWARD 1 -p all -j DROP
-$iptablespath -wI FORWARD 1 -p all -j LOG --log-level 4
-$iptablespath -wI FORWARD 1 -p all -j s_blacklist
-$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j d_privateIPs
-$iptablespath -wI FORWARD 1 -i $external_net_interface -p all -j s_privateIPs
-$iptablespath -wI FORWARD 1 -p all -j d_blacklist
-$iptablespath -wI FORWARD 1 -p all -j d_whitelist
-$iptablespath -wI FORWARD 1 -p all -j s_whitelist
-$iptablespath -wI FORWARD 1 -p all -j s_static_trusted
-$iptablespath -wI FORWARD 1 -p all -j d_static_trusted
-$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j ACCEPT
-$iptablespath -wI OUTPUT 1 -p all -j d_blacklist
-$iptablespath -wI OUTPUT 1 -p all -j d_blacklist
-$iptablespath -wI d_privateIPs 1 -d 10.0.0.0/8 -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_privateIPs 1 -d 172.16.0.0/12 -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_privateIPs 1 -d 192.168.0.0/16 -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI d_static_trusted 1 -d 199.102.46.70 -p all -m comment --comment "local time server hosted by Monticello" -j ACCEPT
-$iptablespath -wI s_privateIPs 1 -s 192.168.0.0/16 -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_privateIPs 1 -s 172.16.0.0/12 -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_privateIPs 1 -s 10.0.0.0/8  -p all -m comment --comment "private IPs" -j DROP
-$iptablespath -wI s_static_trusted 1 -s 91.189.88.0/21 -p all -m comment --comment "Canonical" -j ACCEPT
-$iptablespath -wI s_static_trusted 1 -i lo -p all -m comment --comment "we really have to trust localhost at this level" -j ACCEPT
-$iptablespath -wI s_static_trusted 1 -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "existing dialogs traffic presumed trusted" -j ACCEPT
+$iptablespath -wN poofitee_firewall_d_privateIPs
+$iptablespath -wN poofitee_firewall_d_static_trusted
+$iptablespath -wN poofitee_firewall_d_whitelist
+$iptablespath -wN poofitee_firewall_s_blacklist
+$iptablespath -wN poofitee_firewall_s_privateIPs
+$iptablespath -wN poofitee_firewall_s_static_trusted
+$iptablespath -wN poofitee_firewall_s_whitelist
+$iptablespath -wA INPUT -i $external_net_interface -p all -j s_privateIPs -m comment --comment "poofitee_firewall"
+$iptablespath -wA INPUT -i $internal_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
+$iptablespath -wA INPUT -p all -j poofitee_firewall_s_static_trusted
+$iptablespath -wA INPUT -p all -j poofitee_firewall_s_whitelist
+$iptablespath -wA INPUT -p all -j poofitee_firewall_s_blacklist
+$iptablespath -wA INPUT -p all -j LOG --log-level 4 -m comment --comment "poofitee_firewall"
+$iptablespath -wA INPUT -p all -j DROP -m comment --comment "poofitee_firewall"
+$iptablespath -wI FORWARD 1 -p all -j DROP -m comment --comment "poofitee_firewall"
+$iptablespath -wI FORWARD 1 -p all -j LOG --log-level 4 -m comment --comment "poofitee_firewall"
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_s_blacklist
+$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j poofitee_firewall_d_privateIPs
+$iptablespath -wI FORWARD 1 -i $external_net_interface -p all -j poofitee_firewall_s_privateIPs
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_d_blacklist
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_d_whitelist
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_s_whitelist
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_s_static_trusted
+$iptablespath -wI FORWARD 1 -p all -j poofitee_firewall_d_static_trusted
+$iptablespath -wI FORWARD 1 -o $external_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
+$iptablespath -wI OUTPUT 1 -p all -j poofitee_firewall_d_blacklist
+$iptablespath -wI OUTPUT 1 -p all -j poofitee_firewall_d_blacklist
+$iptablespath -wI poofitee_firewall_d_privateIPs 1 -d 10.0.0.0/8 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_d_privateIPs 1 -d 172.16.0.0/12 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_d_privateIPs 1 -d 192.168.0.0/16 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_d_static_trusted 1 -d 199.102.46.70 -p all -m comment --comment "poofitee_firewall_local time server hosted by Monticello" -j ACCEPT
+$iptablespath -wI poofitee_firewall_s_privateIPs 1 -s 192.168.0.0/16 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_s_privateIPs 1 -s 172.16.0.0/12 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_s_privateIPs 1 -s 10.0.0.0/8  -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
+$iptablespath -wI poofitee_firewall_s_static_trusted 1 -s 91.189.88.0/21 -p all -m comment --comment "poofitee_firewall Canonical" -j ACCEPT
+$iptablespath -wI poofitee_firewall_s_static_trusted 1 -i lo -p all -m comment --comment "poofitee_firewall we really have to trust localhost at this level" -j ACCEPT
+$iptablespath -wI poofitee_firewall_s_static_trusted 1 -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT
 
 
 BUILDIPTABLES.SH_END
@@ -575,7 +574,9 @@ BUILDIPTABLES.SH_END
        }
        install_cronentries () {
 #  Only need to confirm if there are entries in crontab
-! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
+crontab -l > $directoryforscripts/cronentries
+if [[ $(($(echo "$?"))) -eq 0 ]] && [[ $(($(wc -l < $directoryforscripts/cronentries))) -gt 0 ]];then
+     ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
      (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
 \nConfirm you understand that your crontab shell is now getting changed which\
 \nmight affect the above entries if they send values out, contain quotes, etc.\n"
@@ -596,10 +597,13 @@ $($crontabpath -l)\
 # 10 * * * * nice -n19 "$directoryforscripts/email_fetch_parse" >/dev/nul 2>&1
 CRONTAB_ENTRIES_END
 ) |$crontabpath -
-[[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-  printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
-  eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
-printf "\ncrontab set up..."
+     [[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
+       printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
+       eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
+     printf "\ncrontab set up...Original can be found in $directoryforscripts/cronentries"
+else
+     printf "\n\nYour cron file isn't saving to $directoryforscripts/cronentries, aborting...\n"
+fi
           }
        conf_postfix () {
 ! [[ -z postfix_already_conf ]] && return
