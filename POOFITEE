@@ -283,7 +283,7 @@ continue)\
 \nin which to establish valid communication, and the knock sequence must be\
 \nrepeated for each future session.   Press a key...";read -n1 -s )
             done
-            clear;printf "Setting up port knocking.\
+            printf "\n\nSetting up port knocking.\
 \nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
 \nspecify any knock packet or packets to be disguised as an established connection\
 \npacket rather than a knocking packet by replacing \"--syn\" with \"--tcp-flags ACK\
@@ -307,8 +307,8 @@ continue)\
                  continue
             else
                  echo "Setting strict rules here"
-                 $iptablespath -wN ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
-                 $iptablespath -wF ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 $iptablespath -wF poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
                  while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
                       if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
@@ -345,15 +345,14 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       protovar="${knockproto[$i]}"
                       protovar="${protovar:1}"
                       knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}" #combines both never again to need port kept separate for rule-making
-#              echo $iptablespath" -wA ruletestchain""${knockproto[$i]}${testtarget[$i]}"
-                      if ! [[ $($iptablespath -wA ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
+                      if ! [[ $($iptablespath -wA poofitee_ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
                           printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
                           continue
                       fi
                       i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
                  done
                  for (( j=1;j<i;j++ )); do
-                      printf "$iptablespath -wA knockstage$j${knockproto[$j]}\n"
+                      printf "$iptablespath -wA poofitee_knockstage$j${knockproto[$j]}\n"
                  done
                  printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
 \nentries just made.  The following changes are about to be made:\
@@ -367,46 +366,46 @@ printf "If you intend for your server to be invisible to the world, at least bey
 \n\nOnly continue if you are sure about making the changes.  To keep your current\
 \niptables rules as they are, quit now by pressing ctl-c.  Otherwise, make the\
 \nqueued changes by pressing any other key....\n";read -rsn 1;read -rst 0.001 -n3
-                 $iptablespath -wN knockerreap 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 1"
-                 [[ $($iptablespath -wF knockerreap 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush knockerreap chain rules";break)
-                 $iptablespath -wN knockersort 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 3"
-                 [[ $($iptablespath -wF knockersort 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush knockersort chain rules";break)
+                 $iptablespath -wN poofitee_knockerreap 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 1"
+                 [[ $($iptablespath -wF poofitee_knockerreap 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush poofitee_knockerreap chain rules";break)
+                 $iptablespath -wN poofitee_knockersort 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 3"
+                 [[ $($iptablespath -wF poofitee_knockersort 2>/dev/null;echo "$?") == "0" ]] || (printf "Failed to flush poofitee_knockersort chain rules";break)
                  j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
                  for ((;j>0;j--)); do
-                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ \/\*\ .*knock.*\*\/ ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete installation"|| printf "Failed 5")
+                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ poofitee_ ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset"|| printf "Failed 5")
                  done
                  j=16  # here is the limit on number of knocks we can handle, just won't clear old ones above this
                  while [[ -z "${knockport[$j]}" ]];do
-                      $iptablespath -wF knockstage$j 2>/dev/null
+                      $iptablespath -wF poofitee_knockstage$j 2>/dev/null
                       j=$(( $j-1 ))
                  done
                  j=0
                  while ! [[ -z "${knockport[$(($j + 1))]}" ]];do
                       j=$(( $j+1 ))
-                      $iptablespath -wN knockstage$j 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 6"
-                      [[ $($iptablespath -wF knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7"
+                      $iptablespath -wN poofitee_knockstage$j 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 6"
+                      [[ $($iptablespath -wF poofitee_knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7"
                       if ! [[ "$j" == "1" ]];then
-                           [[ $($iptablespath -wA knockersort ${knockproto[$j]} -m recent --name knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7.5"
+                           [[ $($iptablespath -wA poofitee_knockersort ${knockproto[$j]} -m recent --name poofitee_knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j poofitee_knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7.5"
                       fi
-                      [[ $($iptablespath -wI knockstage$j -j knockerreap;echo "$?") == "0" ]] || printf "Failed 9"
-                      [[ $($iptablespath -wI knockstage$j 2 -m recent --name knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires";echo "$?") == "0" ]] || printf "Failed 10"
+                      [[ $($iptablespath -wI poofitee_knockstage$j -j poofitee_knockerreap;echo "$?") == "0" ]] || printf "Failed 9"
+                      [[ $($iptablespath -wI poofitee_knockstage$j 2 -m recent --name poofitee_knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires";echo "$?") == "0" ]] || printf "Failed 10"
 #Here we put the right DROP or REJECT target in the third rule under this chain
-                      [[ $($iptablespath -wA knockstage$j ${testtarget[$j]} ;echo "$?") == "0" ]] || printf "Failed 11"
+                      [[ $($iptablespath -wA poofitee_knockstage$j ${testtarget[$j]} ;echo "$?") == "0" ]] || printf "Failed 11"
                  done
                  i=$(( $j + 1 ))
-                 while [[ $($iptablespath -wF knockstage$i 2>/dev/null;echo "$?") == "0" ]];do
+                 while [[ $($iptablespath -wF poofitee_knockstage$i 2>/dev/null;echo "$?") == "0" ]];do
                       i=$(( $i+1 ))
                  done
 # start making rules here
-                 $iptablespath -wN knockers 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wF knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
+                 $iptablespath -wN poofitee_knockers 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wF poofitee_knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
 # for persistent whitelisting only
-#                 [[ $($iptablespath -wR knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wR knockstage$j 2 -m recent --name authorized --set -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
+#                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
+                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
                  inchainoffset=0
                  if ! [[ -z "$internal_net_interface" ]];then
-                      $iptablespath -wN knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
-                      [[ $($iptablespath -wF knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
+                      $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
+                      [[ $($iptablespath -wF poofitee_knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
                       printf "\n"
                       printf "" > internal_interfaces_referenced # won't include the default gateway
 # test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
@@ -424,12 +423,12 @@ printf "If you intend for your server to be invisible to the world, at least bey
             # the next search is to locate references of the internal interface under scrutiny in each line of chain in route table
                                  if [[ $(($($ippath route show|$greppath $intfc_in_input_chain|$greppath -c default))) -eq 0 ]];
                                  then echo "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
+#exit # stops it
                                  elif ! [[ "$src_addr_in_input_chain" == "0.0.0.0" ]];then # we assume if finding by address, route tables are already set up
 # determine address range[s] routed out that interface and check for input chain references to any of them 
 #   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
 #   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
-#                                 $iptablespath -wnvL INPUT --line-number 2>/dev/null|$awkpath 'NR>2 {print $9}' \
-#                                 |while read src_addr_in_input_chain;do
+#exit #happened already
                                       $ippath route show|$greppath -v default|$greppath $interface \
                                       |while read line; do 
                                            line="${line%% *}/32"
@@ -465,6 +464,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                                  fi
                             done
                       done
+#exit #happened already
                       linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
                       [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
                       if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
