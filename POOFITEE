@@ -1,7 +1,9 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
-# TODO: accommodate different date, etc. format preferences in log files, directory listings, etc
+# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type restore.
+# TODO: Get all menu options finished
+# TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
 # TODO: Firewalling options this install script should be able to alter from the script set defaults:
 # TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious - comment out the crontab entry and kill the process
@@ -10,13 +12,19 @@
 # TODO: -- Alter the IP address of the private-side interface from 192.168.3.1
 # TODO: Testing using DHCP client and server on the private interface
 # TODO: WARNING -- NEVER PIPE THE OUTPUT OF 'IPTABLES -L' INTO 'LESS' OR YOU MAY LOSE ENTIRE CHAINS IN IPTABLES!
-# TODO:  CRITICAL: Determine why iptables ruleset sometimes disappears and stays gone. no wifi, no nothing unless iptables stays working
 # TODO: check for sufficient resources prior to executing, like disk space
 # TODO: fix postfix log errs about badly named email account if full install doesn't and make more secure with smtp_tls_per_site, 
-# TODO: convert from shell script restore to iptables-type restore.
 # TODO: make user poofitee that cron jobs run under, suggest /home/poofitee as the installation directory, but when user is made, use the home directory accepted by the installing operator
 # TODO: adduser -G root poofitee;passwd poofitee
 # replace initd with systemd when referencing iptables-persistent and postfix
+# before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
+# init.d doesn't seem to be restoring: line in syslog=Jun 13 06:50:24 firewall netfilter-persistent[417]: run-parts: executing /usr/share/netfilter-persistent/plugins.d/15-ip4tables start
+# --->  	if [ ! -f /etc/iptables/rules.v4 ]; then
+#		echo "Warning: skipping IPv4 (no rules to load)"
+#	else
+#		iptables-restore < /etc/iptables/rules.v4 2> /dev/null
+#		if [ $? -ne 0 ]; then
+# look in /home/homeowner/iptables.log after next reboot
 #/etc/postfix/main.cf
 #
 #. . .
@@ -206,10 +214,10 @@ printf "\n  Client configuration is available under different licensing terms if
 \nyou may elect to let an OTP list be used more than once without serious risk of\
 \ncompromise, especially with unrecognizable OTPs.";read -s -n1 -p "   (Press key...)";\
 printf "\n  The OTP list is a non-encrypted text file: the first line is simply the month-\
-\nyear number pair the OTP list is created, a <comma> or <comma><space>, followed\
-\nby a <comma> or <comma><space> delimited list of encryption methods and keys to\
-\nrotate through, one line per month.  TCP and UDP encryptions are allowed, as are\
-\nmultiple encryptions.\
+\nyear number pair (includes the dash) the OTP list is created, a <comma> or\
+\n<comma><space>, followed by a <comma> or <comma><space> delimited list of\
+\nencryption methods and keys to rotate through, one per month.  TCP and UDP\
+\nencryptions are allowed, as are multiple encryptions.\
 \n  The template for each line after line 1 is:\
 \n\nlabel<space>class n password<space>class n+1 password, etc.\
 \n\n  Over- or under-encrypted OTPs are suggested to mask actual encryption level,\
@@ -224,11 +232,7 @@ printf "\n  The OTP list is a non-encrypted text file: the first line is simply 
 \naccommodated, as is security level assignment.\
 \n  To make under-encrypted OTPs, run decryption on each non-encrypted OTP.  To\
 \nover-encrypt, use OTPs that you've encrypted extra times beyond what your OTP\
-\nlist specifies.\
-\n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
-\nthe labels, if you wish, to ensure your security.  Better yet for you, get\
-\nthem yourself for FREE from online sources that advertise themselves as \"Ultra\
-\nHigh Security Password Generator\"s.  Thank you...";\
+\nlist specifies.";\
                    read -s -n1 -p "   (Press key...)";\
 printf "\n\
 \n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
@@ -241,7 +245,7 @@ printf "\n\
 \n  Developers: we encourage you to to create your own OTPs or client scripts and\
 \nprograms.  We have tried to provide you with enough information to enable you to\
 \ndo so, but if you need more, just ask us.  Be aware that actual client-side code\
-\nis otherwise licensed and is charged for.\
+\nis licensed under different terms and is charged for.\
 \n  Homeowners: this project is being done with your Internet access, automation,\
 \nsurveillance, and remote access needs in mind, so we welcome you! \n";\
 continue)\
@@ -249,35 +253,51 @@ continue)\
                || ( [[ "$REPLY" =~ y ]] && (
 #                      echo "Selected OTPs"
 # Set up alert emails if not done already TODO: Make function, integrate better for answer scenarios
-                   echo "Sorry, this feature is not yet finished...Press a key"
-                   read -sn1
+                   until [[ -f "$REPLY" ]];do
+                        printf "\nEnter the name including absolute path of the OTP text file you're providing:\n"
+#                   echo "Sorry, this feature is not yet finished...Press a key"
+#                   read -sn1
+                        read 
+                        ! [[ -f "$REPLY" ]] && continue
+                   done
+                   cp "$REPLY" "$directoryforscripts"
                    continue
                    conf_postfix
                      )
                  )
             done
+<<-HOLD_UNTIL_ABLE
+\n  We can provide OTP lists to you for a nominal fee.  You just change/re-order\
+\nthe labels, if you wish, to ensure your security.  Better yet for you, get\
+\nthem yourself for FREE from online sources that advertise themselves as \"Ultra\
+\nHigh Security Password Generator\"s.  Thank you...";
+HOLD_UNTIL_ABLE
             until [[ "$REPLY" =~ [ls] ]]; do
              printf "Use loose (l) or strict (s) port knocking rules? (? for help) ";read -e -r -n1
              REPLY="${REPLY,}"
-             [[ "$REPLY" == \? ]] && ( printf "\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
+             [[ "$REPLY" == \? ]] && \
+( printf "\
+\n   You will select 2 to 16 port-protocol combinations (knocks) that you are\
 \ndemanding be \"knocked\" by computers trying to establish communication to this\
 \none through the Internet-facing interface that will prove their\
-\nauthorization to connect.\n   l) loose knock rules are when you are permitting knocks to arrive here out of\
-\nsequence (this is bound to happen sometimes) and even not arrive at all as long\
-\nas at least 4 valid port-protocol knocks do succeed.  Of course, to select this,\
-\nyou'll have to specify a minimum of 4 port-protocol combinations.  This option\
-\ncan reduce frustrations for you if you consider yourself a low-value target for\
-\nhackers and are taking all the other reasonable security measures anyway.  The\
-\norder which you specify the port-protocol knocks in the sequence will be\
-\nirrelevant, and the 4 knocks must arrive in a total time frame of 12 seconds\
-\nmultiplied by the total number of port-protocol combinations you specify.\
-\nKnocks on other ports during the knocking authentication period WILL BE ALLOWED.\
-\nThe source IP address sending the knocks will be permanently authenticated until\
-\nit is removed from the iptables whitelist via separate, independent iptables\
-\nrule manipulation.\
+\nauthorization to connect.\
+\n   l) loose knock rules are when you are permitting knocks to arrive here out of\
+\nsequence or not arrive at all, given at least 4 valid port-protocol knocks, all\
+\nunique from each other, do arrive.  Of course, to select this, you'll have to\
+\nspecify a minimum of 4 port-protocol combinations, all unique from each other.\
+\nThis option can reduce frustration for you if you consider yourself a low-value\
+\ntarget for hackers and are taking all the other reasonable security measures\
+\nanyway.  The order which you specify the port-protocol knocks in the sequence\
+\nwill be irrelevant, and the 4 knocks must arrive in a total time frame of 12\
+\nseconds times the total number of port-protocol combinations you specify. Knocks\
+\non other ports during the knocking authentication period WILL BE ALLOWED.  The\
+\nsource IP address sending the knocks will be permanently authenticated until it\
+\nis removed from the iptables whitelist via separate, independent iptables rule\
+\nmanipulation.\
 \n   s) strict knock rules are conventional port knock rules where every port-\
 \nprotocol knock must arrive in sequence with none missed.  NO OTHER PORT-PROTOCOL\
-\nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS.\
+\nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS,\
+\nbut youll be allowed to specify non-unique port-protocols, even consecutively.\
 \nSeven seconds maximum is allowed between each knock.  After the knock sequence\
 \nis completed successfully, the knocking computer will be given only 17 seconds\
 \nin which to establish valid communication, and the knock sequence must be\
@@ -401,7 +421,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                  [[ $($iptablespath -wF poofitee_knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
 # for persistent whitelisting only
 #                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success " -m comment --comment "allows time-limited access" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
+                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success whitelist" -m comment --comment "allows 1 time-limited attempt to establish a dialog" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
                  inchainoffset=0
                  if ! [[ -z "$internal_net_interface" ]];then
                       $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
@@ -475,7 +495,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
-                      $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "knockertest fail "
+                      $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "poofitee_knockertest fail "
                       $iptablespath -wA poofitee_knockerstest -m recent --rcheck --seconds 200 --reap --name poofitee_knocker --mask 255.255.255.255 --rsource
                       $iptablespath -wA poofitee_knockerstest -m recent --remove --name poofitee_knocker --mask 255.255.255.255 --rsource
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockerreap
@@ -588,7 +608,7 @@ $($crontabpath -l)\
 @reboot $nicepath -n19 $inotifywaitpath --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read;do "$directoryforscripts/newip_no_mysql.sh";done >/dev/null 2>&1
 @reboot "$directoryforscripts/newip_no_mysql.sh\" >/dev/null 2>&1
 #@reboot if [ \$($iptablespath -w -L INPUT -n|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) -eq "0" ]; then "$directoryforscripts/buildiptables.sh";fi >/dev/null 2>&1
-@reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$directoryforscripts/blacklistme.sh"  >/dev/null 2>&1
+@reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$directoryforscripts/process_source_ip.sh"  >/dev/null 2>&1
 */3 * * * * echo "$iptablespath s_blacklist chain is \$($iptablespath -wnL s_blacklist --line-numbers|$tailpath -n-1|$awkpath '{print \$1}') lines long" >> "$directoryforscripts/modemcheck.lastran.log"; if [ \$($ifconfigpath|$headpath -n+2|$greppath -c "inet ") -eq 0 ] || [[ \$($greppath ^d1 <"$directoryforscripts/usbrelay.log"|$tailpath -n 1|$awkpath '{for (i=4;i>=0;i--) {printf \$(NF-i)" "}print ""}') < \$( $greppath -w waiting /var/log/syslog|$greppath '\:123'|$greppath -v grep|$tailpath -n 1|$awkpath '{print $1" "$2" "$3}' ) ]]; then "$directoryforscripts/usbrelay d1";$sleeppath 1;"$directoryforscripts/usbrelay a1";$ifdownpath $external_net_interface;$ifuppath $external_net_interface; fi >/dev/null 2>&1
 0 3 * * * echo "$directoryforscripts/usbrelay d8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "\$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today + 20 minutes" +\%H\%M)
 0 3 * * * echo "$directoryforscripts/usbrelay a8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "1 + \$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today - 10 minutes" +\%H\%M)
@@ -942,7 +962,7 @@ toemailadds=$( cat "$directoryforscripts/toemailadds" )
 # identifies itself with the term "email-reader"
 # in its comments. The script searching for that
 # port-match and launching this script is called
-# blacklistme.sh.  By maintaining a dynamic
+# process_source_ip.sh.  By maintaining a dynamic
 # blacklist for a while you'll better be able
 # to determine a good port for you.
 
@@ -1095,7 +1115,7 @@ if [ \$((numofemails)) -gt -1 ]; then
               fi
               [ \$(( \${#script} )) -ne 0 ] && echo "\$script" >> "$directoryforscripts/buildiptables.sh"
           else
-              script="$directoryforscripts/blacklistme.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
+              script="$directoryforscripts/process_source_ipt.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           fi
           echo "$directoryforscripts/email_fetch_parse is sending the following command to be executed:" >> "$directoryforscripts/email_fetch_parse.log"
           echo "\$script"  >> "$directoryforscripts/email_fetch_parse.log"
