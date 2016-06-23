@@ -1,6 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
-# PROJECT NAME: POOFITEE: "nearly Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type restore.
 # TODO: Get remainder of menu options finished
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
