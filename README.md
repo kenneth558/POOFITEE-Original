@@ -11,7 +11,7 @@ No hackers can get any data or communication at all out of your system when this
 
 1. Only you know how to get your remote IP address permitted by whitelist to become an authorized source address.  This will be by port knocking or email.  Source addresses not whitelisted are ignored as effectively as them being explicitly blacklisted.  All 65536 of your ports are invisible to them.
 2. Only you know the IP address of your system – it's emailed to you fresh every time your systems gets it changed by DHCP.  
-3. You will be immediately notified by email/text of any and all source addresses that your system places on its whitelist or removes from its blacklist.  
+3. You will be notified immediately by email/text of any and all source addresses that your system places on its whitelist or removes from its blacklist.  
 4. You would still continue to use passwords and ssh keys as is prudent even for systems without firewall protection.
 
 All this PLUS the simplicity and robustness inherent in a bare iptables and scripting-only Linux solution, PLUS the option of building an explicit blacklist of first-time hacking packets in real-time for your reference and curiosity, if your system has enough RAM.
