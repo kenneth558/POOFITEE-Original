@@ -123,7 +123,8 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
      while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
           if [[ "$(printf "%d" "'$char")" == "27" ]];then # 'escape or extended key has been detected, single quote is important
                      if [[ $(read -rst 0.001 -n1;echo $REPLY) == "[" ]];then
-                           read -rst 0.001 -n1;read -rst 0.001 -n1 discard
+#                           read -rst 0.001 -n1;read -rst 0.001 -n1 discard
+                           read -rst 0.001 -n3 discard
                            if [[ "$REPLY" == "B" ]] && ! [[ $(( $mstrlinenumber )) -gt $(( $mstrnumoflines )) ]];then #down-arrow pressed
                                 mstrlinenumber="$(( $mstrlinenumber + 1 ))"
                                 move_cursor_to_next_entry_in_list
@@ -534,6 +535,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
 printf "\nServer-side port knocking installed.\n"
 }
        install_buildiptablessh () {
+# TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
             (cat <<BUILDIPTABLES.SH_END
 echo 1 > /proc/sys/net/ipv4/ip_forward
 $iptablespath -wF
@@ -587,8 +589,6 @@ $iptablespath -wI poofitee_firewall_s_privateIPs 1 -s 10.0.0.0/8  -p all -m comm
 $iptablespath -wI poofitee_firewall_s_static_trusted 1 -s 91.189.88.0/21 -p all -m comment --comment "poofitee_firewall Canonical" -j ACCEPT
 $iptablespath -wI poofitee_firewall_s_static_trusted 1 -i lo -p all -m comment --comment "poofitee_firewall we really have to trust localhost at this level" -j ACCEPT
 $iptablespath -wI poofitee_firewall_s_static_trusted 1 -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT
-
-
 BUILDIPTABLES.SH_END
 ) > "$directoryforscripts/preparedness/buildiptables.sh"
           chmod 700 "$directoryforscripts/preparedness/buildiptables.sh"
@@ -605,18 +605,8 @@ if [[ $(($(echo "$?"))) -eq 0 ]] && [[ $(($(wc -l < $directoryforscripts/cronent
       read -n1 -s -p "You will need to verify proper operation of current entries after this: ")
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -l)\
-*/30 * * * * $iptabperspath save >/dev/null 2>&1
- # @reboot $iptabperspath reload >/dev/null 2>&1
-@reboot $nicepath -n19 $inotifywaitpath --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read;do "$directoryforscripts/newip_no_mysql.sh";done >/dev/null 2>&1
-@reboot "$directoryforscripts/newip_no_mysql.sh\" >/dev/null 2>&1
-#@reboot if [ \$($iptablespath -w -L INPUT -n|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) -eq "0" ]; then "$directoryforscripts/buildiptables.sh";fi >/dev/null 2>&1
+# line below is from poofitee_firewall
 @reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$directoryforscripts/process_source_ip.sh"  >/dev/null 2>&1
-*/3 * * * * echo "$iptablespath s_blacklist chain is \$($iptablespath -wnL s_blacklist --line-numbers|$tailpath -n-1|$awkpath '{print \$1}') lines long" >> "$directoryforscripts/modemcheck.lastran.log"; if [ \$($ifconfigpath|$headpath -n+2|$greppath -c "inet ") -eq 0 ] || [[ \$($greppath ^d1 <"$directoryforscripts/usbrelay.log"|$tailpath -n 1|$awkpath '{for (i=4;i>=0;i--) {printf \$(NF-i)" "}print ""}') < \$( $greppath -w waiting /var/log/syslog|$greppath '\:123'|$greppath -v grep|$tailpath -n 1|$awkpath '{print $1" "$2" "$3}' ) ]]; then "$directoryforscripts/usbrelay d1";$sleeppath 1;"$directoryforscripts/usbrelay a1";$ifdownpath $external_net_interface;$ifuppath $external_net_interface; fi >/dev/null 2>&1
-0 3 * * * echo "$directoryforscripts/usbrelay d8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "\$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today + 20 minutes" +\%H\%M)
-0 3 * * * echo "$directoryforscripts/usbrelay a8"|$atpath \$(timevar=\$($awkpath '{timevar=('\$($bcpath <<< "1 + \$($datepath +\%m) * 2")');printf \$timevar}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timevar=\$($bcpath <<< "\${timevar:0:2} + 1")\${timevar:2};fi;$datepath -d "$timevar today - 10 minutes" +\%H\%M)
-@reboot timerise=\$($awkpath '{timerise=('\$($bcpath <<< "\$($datepath +\%m) * 2")');printf \$timerise}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timerise=\$($bcpath <<< "\${timerise:0:2} + 1")\${timerise:2};fi;timeset=\$($awkpath '{timeset=('\$($bcpath <<< "1 + \$($datepath +\%m) * 2")');printf \$timeset}' <($headpath -n+1 <($tailpath -n-\$($bcpath <<< "32 - \$($datepath +\%d)") "$directoryforscripts/sunrise-set.local")));datevar=\$($datepath +\%Z);if [ \${datevar: -2:1} == "D" ];then timeset=\$($bcpath <<< "\${timeset:0:2} + 1")\${timeset:2};fi;if [ \$($bcpath <<< "\$($datepath +\%H\%M) - \$timerise") -ge 0 ] && [ \$($bcpath <<< "\$timeset - \$($datepath +\%H\%M)") -ge 0 ];then "$directoryforscripts/usbrelay d8";else "$directoryforscripts/usbrelay a8";fi
-@reboot $nicepath -n19 $inotifywaitpath -q --monitor --format "\%f" --event create /var/run/|while read filename;do if [ \$filename == "reboot-required" ];then "$directoryforscripts/rebootreqd";fi;done >/dev/null 2>&1
-# 10 * * * * nice -n19 "$directoryforscripts/email_fetch_parse" >/dev/nul 2>&1
 CRONTAB_ENTRIES_END
 ) |$crontabpath -
      [[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
@@ -1363,24 +1353,17 @@ else
 echo "IP address is <\$ip_from_resolver> and not acceptable"
     exit
 fi
-printf "$webpageprotocol://$ip_from_resolver/zm\
-\nhttp://\$ip_from_resolver:9080\
-\nhttp://\$ip_from_resolver:8080\
-\nhttp://\$ip_from_resolver:7080\
-\nhttp://\$ip_from_resolver:6080\
-\nhttp://\$ip_from_resolver:5080\
-\nhttp://\$ip_from_resolver:4080\
-\nssh homeowner@\$ip_from_resolver\
-\nnc -w 1 \$ip_from_resolver\
-\n$webpageprotocol://192.168.3.3/zm\
-\nhttp://192.168.1.9:9080\
-\nhttp://192.168.1.8:8080\
-\nhttp://192.168.1.7:7080\
-\nhttp://192.168.1.6:6080\
-\nhttp://192.168.1.5:5080\
-\nhttp://192.168.1.4:4080\
-\nssh homeowner@192.168.1.1\
-\n" | mail -s "\$emailsubjectline" \$emaildestination
+#fill in the here-doc section below to produce your desired email notification
+(cat <<EOM
+$webpageprotocol://$ip_from_resolver
+\$($iptablespath -wnL PREROUTING -t nat|awk '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
+ssh user@\$ip_from_resolver\
+hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver\
+#adjust the protocol to the targeted service
+http://$ip_from_internal_interface+1\
+ssh user@\$ip_from_internal_interface\
+EOM
+) | mail -s "\$emailsubjectline" \$emaildestination
 
 echo \$ip_from_resolver > \$file_to_store_ip
 echo "IP address is <\$ip_from_resolver>"
@@ -1394,8 +1377,9 @@ EOF
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -l)\
+# line below is from poofitee_DynAddChangeNotify
 @reboot "$directoryforscripts/newdynip.sh" >/dev/null 2>&1
-##The following lines are intentionally redundant to allow system admin to change dhcp client package and still get notified of dhcp change
+##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$directoryforscripts/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpcd*.info        DO MONITOR, make separate entry for each file found
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$directoryforscripts/newdynip.sh";done >/dev/null 2>&1 # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
@@ -1645,33 +1629,42 @@ startscreen+="\n\n      (p) port knocking\
 ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                              Helper Script Overview\
 \nThis set of Linux scripts can install several Internet security features useful\
-\nin homeowner and enterprise systems alike.  For enterprise systems however,\
-\nnetwork traffic is typically not regarded by the firewall as malicious until\
-\npacket stream behavior proves it to be or packet construction violates rules of\
-\nInternet operation.  POOFITEE does not configure firewalling this way.  Rather,\
-\nit only regards traffic as NON-malicious if it originates from trusted sources.\
-\nOf course, those source addresses can be spoofed, but when spoofed, a two-way\
-\nconnection capable of stealing information is not really possible when the\
-\nlegitimate computer owning the spoofed address is non-cooperative with the\
-\nspoofer.  The name \"POOFITEE\" is derived from the descriptive phrase \"Perfect\
-\nOwner Only access linux Firewall - the system is Invisible To Everyone Else\".\
-\nPOOFITEE is not really a program as much as it is simply an Internet security\
-\nscripting project that, in part, installs a set of Linux iptables rules.  Nor is\
-\nPOOFITEE an iptables front-end; it simply installs an iptables ruleset and a few\
-\nscripts, then exits completely.  To be perfect in Internet security as its name\
-\nimplies, POOFITEE obviously greets Internet traffic that seeks to discover\
-\nyour server[s] with a different attitude than other firewalling solutions do.\
-\nIt is the attitude that your intuition tells you to expect in a firewall: \"NO,\
-\nyou'll not receive a response to give away my existence unless you first prove\
-\nthat you are supposed to\".  Gone are the complex, buggy \"badguy detection\"\
-\nalgorithms of other firewalls."
+\nin homeowner and enterprise systems alike. Enterprise systems however, typically\
+\nare stranger-visible, while the POOFITEE ruleset is stranger-INvisible.  Gone\
+\nare the complex, buggy \"badguy detection\" algorithms of other firewalls.  More\
+\nunique still to POOFITEE is that the only continuously-running process it has is\
+\na \"tail -f\" bash script line monitoring kernel log events for the purpose of\
+\nlaunching a script.  So POOFITEE is a firewall-plus paradigm, not a running\
+\nprogram.  For a similar reason, it is not an iptables front-end and does not\
+\ninterfere with manual iptables manipluation, allowing you to fine-tune the rule-\
+\nset yourself.  Only trusted addresses can initiate a dialog under the POOFITEE\
+\nruleset.  Of course, those source addresses can be spoofed, but when spoofed, a\
+\ntwo-way connection capable of stealing information is not really possible: the\
+\nlegitimate computer owning the spoofed trusted address will receive return\
+\ncommunications and, without a reason to be in collusion with the spoofer, not\
+\nrelay the information on to them.  The name \"POOFITEE\" is derived from the\
+\ndescriptive phrase \"almost Perfect Owner Only access linux Firewall - the system\
+\nis Invisible To Everyone Else\".  \"Almost\", you protest?  That is because\
+\nhackers commonly use deceitful email to convince the unsuspecting operator of a\
+\ntrusted computer to execute malicious email links.  POOFITEE does not block such\
+\ncommunications that are initiated by trusted computer addresses like that, but\
+\nagain, POOFITEE will allow you to improve the iptables rules manually, if you\
+\nare so inspired..."
 ghscreen2="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n\nThe advantages of using scripting over a compiled program are significant:\
 \n - most importantly - robust operation in indefinitely continuous duty\
 \n - less script complexity means less risk of programming bugs and mysterious,\
 \n      hard-to-troubleshoot resource limitations\
 \n - source code is simple and extremely easy for you to customize to your liking\
-\n - iptables rule changes are implemented instantly without any process restarts"
+\n - iptables rule changes are implemented instantly without any process restarts\
+\n      nor conflicts with iptables rules manipulated manually\
+\n - system operators can customize the behavior of all aspects of POOFITEE\
+\n      support scripts without learning to compile, and those customizations are\
+\n      implemented instantly.\
+\n\nThe disadvantages of scripting to compiled languages are normally considered\
+\nto be execution speed of the finished program and fine control of low-level\
+\nsystem functionalities.  POOFITEE is not practically affected by either, thanks\
+\nto the power that Linux scripting offers."
 fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                        FIREWALLING WITH THIS SCRIPT SET\
 \n( As you read, please realize the difference between this installation \"helper\
@@ -1801,7 +1794,7 @@ until ! [ -z $answer ];do
         if [[ $answer$char == "?" ]];then
              clear
              printf "$ghscreen1"
-             read -sn1 -p "                         Press a key to continue..."
+             read -sn1 -p "        Press a key to continue..."
              read -rst 0.001 -n3
              clear
              printf "$ghscreen2"
