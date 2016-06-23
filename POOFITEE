@@ -1,9 +1,9 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
-# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.
-# TODO: Get remainder of menu options finished
+# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
+# TODO: Get remainder of menu options finished
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
 # TODO: Firewalling options this install script should be able to alter from the script set defaults:
@@ -122,8 +122,7 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
      while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
           if [[ "$(printf "%d" "'$char")" == "27" ]];then # 'escape or extended key has been detected, single quote is important
                      if [[ $(read -rst 0.001 -n1;echo $REPLY) == "[" ]];then
-#                           read -rst 0.001 -n1;read -rst 0.001 -n1 discard
-                           read -rst 0.001 -n3 discard
+                           read -rst 0.001 -n1;read -rst 0.001 -n1 discard
                            if [[ "$REPLY" == "B" ]] && ! [[ $(( $mstrlinenumber )) -gt $(( $mstrnumoflines )) ]];then #down-arrow pressed
                                 mstrlinenumber="$(( $mstrlinenumber + 1 ))"
                                 move_cursor_to_next_entry_in_list
@@ -133,7 +132,7 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
                                 move_cursor_to_next_entry_in_list
                            fi
                      else
-                         read -rst 0.001 -n1;read -rst 0.001 -n1 # read & discard 2nd extended key field, timeout if real escape
+                         read -rst 0.001 -n2 # read & discard 2nd extended key field, timeout if real escape
                      fi
           elif [[ -z "$char" ]] || [[ "$char" == " " ]];then
                       if [[ -z "$line" ]] && [[ $(( $mstrlinenumber )) -lt $(( $mstrnumoflines )) ]];then
@@ -1375,7 +1374,7 @@ EOF
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -l)\
+$($crontabpath -l)
 # line below is from poofitee_DynAddChangeNotify
 @reboot "$directoryforscripts/newdynip.sh" >/dev/null 2>&1
 ##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
