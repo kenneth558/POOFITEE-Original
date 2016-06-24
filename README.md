@@ -5,7 +5,7 @@ Linux iptables plus scripting firewall  "NOT COMPATIBLE WITH BSD NOR MAC SYSTEMS
 
 BULLET-PROOF YOUR “OWNER-ACCESS-ONLY” LINUX SERVER FROM HACKERS WITH IPTABLES AND ROBUST SHELL SCRIPTING.
 
-Bare minimum packages and whitelist-only access to your Linux home surveillance &amp;/or automation system such as NEST or WeMo,  or your WiFi router.  Enterprises: Let POOFITEE create the blacklists you need! Run POOFITEE on an external ip address that should have no incoming traffic, then share the blacklists it creates (iptables needs two separate blacklists, one each for sources and destinations) with your firewalls.
+Bare minimum packages and whitelist-only access to your Linux home surveillance &amp;/or automation system such as NEST or WeMo,  or your WiFi router.  ENTERPRISES: Let POOFITEE create the blacklists you need! Run POOFITEE on an external ip address that should have no incoming traffic, then share the blacklists it creates (iptables needs two separate blacklists, one each for sources and destinations) with your firewalls.
 
 No hackers can get any data or communication at all out of your system when this firewalling solution is installed on it:
 
