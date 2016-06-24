@@ -82,14 +82,14 @@ get_operator_knock_choices () {
                  $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  $iptablespath -wF poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
-                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
+                 while knockport[$i]="";printf "\n";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
                       if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
 #                      printf "${knockport[$i]}"
                       if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
-'{printf $2}')")")" because it will\
+'{printf $2}')")")" simply because it will\
 \ninterfere with you testing your sequence through an ssh session.  Do you still\
-\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
+\nwant to specify this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
                       fi
                       printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
 \nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
@@ -99,13 +99,25 @@ get_operator_knock_choices () {
 \n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
 #                      printf -- "\n${knockproto[$i]}\n"
                       testtarget[$i]=" -j DROP"
-                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]] ; then
+                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ .*ACK\ .*ACK ]] ; then
+#                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]] ; then
                            until false; do
                                 if ! [[ -z "$if_first_knock_is_ACK_message" ]] && [[ "$i" == "1" ]];then
                                      printf "$if_first_knock_is_ACK_message"
                                      read -rn 1;read -rst 0.001 -n3 discard
                                      [[ $REPLY =~ [Rr] ]] && continue 2
                                      ! [[ $REPLY =~ [Kk] ]] && break
+                                else
+                                     printf "You've specified a packet type that would generate a reply of some type from the\
+\nserver in normal communications.  To help disguise the knock packet from packet\
+\nsniffing hackers so it looks like a normal communication packet, do you want the\
+\nserver to reply to this knock (with a REJECT$(! [[ -z "$if_first_knock_is_ACK_message" ]] && \
+printf ", and of course only if the previous\nknocks in the sequence have been received correctly)" || printf ")")? (y/n): "
+                                     read -rn 1;read -rst 0.001 -n3 discard
+                                     if ! [[ $REPLY =~ [Yy] ]]; then
+                                          [[ $REPLY =~ [Nn] ]] && break
+                                          continue
+                                     fi
                                 fi
                                 testtarget[$i]=" -j REJECT --reject-with tcp-reset"
                                 break
@@ -113,7 +125,6 @@ get_operator_knock_choices () {
                       fi
                       protovar="${knockproto[$i]}"
                       protovar="${protovar:1}"
-echo "$iptablespath -wA poofitee_ruletestchain ${knockproto[$i]}${testtarget[$i]}"
                       knockproto[$i]="-${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}" #combines both never again to need port kept separate for rule-making
                       if ! [[ $($iptablespath -wA poofitee_ruletestchain ${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
                           printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
@@ -366,7 +377,11 @@ HOLD_UNTIL_ABLE
 \nto make the obfuscation less obvious.  (If you intend for your server to be\
 \ninvisible, however, you probably don't want to require such a packet as the\
 \nfirst knock because not only can and will your system be visible, its first\
-\nknock port will also be giving itself away.)\
+\nknock port will also be giving itself away.  ACK knocks as described will only\
+\nproduce server replies if the knocking computer is correctly knocking through\
+\nthe sequence up to that point in the sequence.)  If you want to require ACK\
+\nknocks but you don't want this server to reply to them at all, modify the iptables\
+\nruleset accordingly after installation.\
 \nTo specify the data you might require in a knock packet, include the following\
 \nin the protocol:\
 \n\n-m string --algo=bm --string \"bm-encrypted normal-looking data\"\n\n"
@@ -465,8 +480,8 @@ EOF
 \nresponse, mostly because your system will forever be visible on that port to the\
 \nworld, but also because its first port knock will be giving itself away.  Or you\
 \nmay turn off the disguising tcp-reset reject reply for this knock only.  Press\
-\n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
-\nadvised for minimum visibility), or any other key to turn off the reject response\
+\n\'r\' to re-enter entire knock, or \'k\' to keep the reject response anyway (not\
+\nadvised for minimum visibility). Any other key will turn off the reject response\
 \nto this knock: (r/k/...)"
                  get_operator_knock_choices
                  printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
@@ -1608,7 +1623,8 @@ get_1_addr_from_bunch() {
           done
 }
 
-echo "Sorry, POOFITEE is still under development ... press a key to continue"
+printf "POOFITEE is currently available in experimental status.  Your suggestions for\
+\nimprovements are solicited and welcome ... press a key to continue"
 read -rsn 1;read -rst 0.001 -n3
 usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
 D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
