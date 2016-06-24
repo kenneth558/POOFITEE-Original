@@ -103,7 +103,7 @@ get_operator_knock_choices () {
                            until false; do
                                 if ! [[ -z "$if_first_knock_is_ACK_message" ]] && [[ "$i" == "1" ]];then
                                      printf "$if_first_knock_is_ACK_message"
-                                     read -rn 1;read -rst 0.001 -n3
+                                     read -rn 1;read -rst 0.001 -n3 discard
                                      [[ $REPLY =~ [Rr] ]] && continue 2
                                      ! [[ $REPLY =~ [Kk] ]] && break
                                 fi
