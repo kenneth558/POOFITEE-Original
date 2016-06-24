@@ -79,16 +79,18 @@
 
 ################  FUNCTIONS FIRST, THEN MAIN:
 get_operator_knock_choices () {
+                 minimum_number_of_knocks="$([[ "x$1$2$3" =~ unique ]] && echo "4" || echo "2")"
                  $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  $iptablespath -wF poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
                  i=1
-                 while knockport[$i]="";printf "\n";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
-                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
+                 while knockport[$i]="";printf "\n";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]] || [[ $(($i)) -le $(($minimum_number_of_knocks)) ]];do
+                      [[ -z "${knockport[$i]}" ]] && printf " You need to specify at least $minimum_number_of_knocks knocks" && continue
+                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]] || [[ -z "${knockport[$i]}" ]] ;then continue;fi
                       if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
 '{printf $2}')")")" simply because it will\
 \ninterfere with you testing your sequence through an ssh session.  Do you still\
-\nwant to specify this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
+\nwant to specify this port? (y/n) ";read  -rn1;read -rst 0.001 -n3 discard;! [[ $REPLY =~ [Yy] ]] && continue
                       fi
                       printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
 \nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
@@ -430,9 +432,6 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       [[ "$($iptablespath -wA poofitee_knock_check ${knockproto[$j]} -m recent --name poofitee_knock_port$j --set -j poofitee_knock_new_knock;echo "$?")" == "0" ]] || printf "Failed 2"
                       [[ "$($iptablespath -wA poofitee_knock_customexit ${knockproto[$j]} ${testtarget[$j]};echo "$?")" == "0" ]] || printf "Failed 3"
                  done
-                 [[ "$($iptablespath -wA poofitee_knock_customexit -j LOG 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 4"
-                 [[ "$($iptablespath -wA poofitee_knock_customexit -j LOG --log-prefix "poofitee_knock ERROR knock_portcustomexit" -m comment --comment "There is no known reason for this to happen.  Troubleshoot if it does" 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 5"
-                 [[ "$($iptablespath -wA poofitee_knock_customexit -j DROP 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 6"
                  [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_senior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_authorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 7"
                  [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_junior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_seniorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 8"
                  [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_sophomore --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_juniorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 9"
@@ -584,8 +583,8 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                            [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
                       fi
                       line_number_for_authorized_rule=$linenumber_for_inserting_before
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "for knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
                       $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "poofitee_knockertest fail "
@@ -599,9 +598,8 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       line_number_for_authorized_rule="1"
                  fi
                  [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "poofitee_knock 1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "for port knock capability, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
-
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
                  [[ $($iptablespath -wA poofitee_knockers -m conntrack ! --ctstate NEW -j poofitee_knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
                  [[ $($iptablespath -wA poofitee_knockers -m conntrack --ctstate NEW -j poofitee_knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
                  [[ $($iptablespath -wA poofitee_knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
@@ -626,6 +624,25 @@ printf "\nServer-side port knocking installed.\n"
 }
        install_buildiptablessh () {
 # TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
+if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]];then
+     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && iptables_masquerading=true || iptables_masquerading=false
+     cat <<EOF
+This server is capable of being a firewall for an internal network, but you
+haven't enabled the forwarding feature needed in Linux, at least persisently.
+If you'd like, that $( [[ $iptables_masquerading == false ]] && printf "and the iptables MASQUERADE ")can be easily enough done for
+you right now, but IP address, routing tables, and DNAT in iptables POSTROUTING
+nat table configurations are left completely to you at this stage of POOFITEE
+development.  Would you like to enable IP forwarding persistently and have
+iptables masquerade your internal network so it has Internet access? y/n:
+EOF
+     read -rn1;read -rsn3 -t 0.001 discard
+     if [[ $REPLY =~ [Yy] ]];then
+          echo 1 > /proc/sys/net/ipv4/ip_forward
+          $sedpath -i 's/^#*net.ipv4.ip_forward=.*/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
+          [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]] && echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+          [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
+     fi
+fi
             (cat <<BUILDIPTABLES.SH_END
 echo 1 > /proc/sys/net/ipv4/ip_forward
 $iptablespath -wF
@@ -686,8 +703,9 @@ BUILDIPTABLES.SH_END
        }
        install_cronentries () {
 #  Only need to confirm if there are entries in crontab
-crontab -l > $directoryforscripts/cronentries
-if [[ $(($(echo "$?"))) -eq 0 ]] && [[ $(($(wc -l < $directoryforscripts/cronentries))) -gt 0 ]];then
+date_for_cronentries_backup="poofitee_installer_$(date)"
+crontab -l > "$directoryforscripts/cronentries.$date_for_cronentries_backup"
+if [[ $(($(echo "$?"))) -eq 0 ]] && [[ $(($(wc -l < "$directoryforscripts/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
      ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
      (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
 \nConfirm you understand that your crontab shell is now getting changed which\
@@ -1325,12 +1343,12 @@ toemailaddsIP="$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailaddsIP")"
 scratchpad="${toemailaddsIP##*'\n'}"
 line="${toemailaddsIP##*'\n'}";printf "$line"
 toemailaddsIPid=1
-              while IFS= read  -s -n1 -r char;do
+              while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
                          char1="";char2="";char3=""
-                         read -r -s -t 0.001 -n1 char1
-                         read -r -s -t 0.001 -n1 char2
-                         read -r -s -t 0.001 -n1 char3
+                         read -rst 0.001 -n1 char1
+                         read -rst 0.001 -n1 char2
+                         read -rst 0.001 -n1 char3
                          if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
                               if [[ "$char1$char2$char3" == "[A" ]];then
                                    toemailaddsIPid=$(( $toemailaddsIPid - 1 ))
@@ -1520,12 +1538,12 @@ get_1_addr_from_bunch() {
           emailaddid=1 ;horizptr="${#scratchpad}"
           printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
           while true;do #this loop get a new email account or one chosen from bunch with password
-              while IFS= read  -s -n1 -r char;do
+              while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
                          char1="";char2="";char3=""
-                         read -r -s -t 0.001 -n1 char1
-                         read -r -s -t 0.001 -n1 char2
-                         read -r -s -t 0.001 -n1 char3
+                         read -rst 0.001 -n1 char1
+                         read -rst 0.001 -n1 char2
+                         read -rst 0.001 -n1 char3
                          if [[ "$char1$char2$char3" == "[A" ]] || [[ "$char1$char2$char3" == "[B" ]];then
                               if [[ "$char1$char2$char3" == "[A" ]];then
                                    emailaddid=$(( $emailaddid - 1 ))
@@ -1685,7 +1703,7 @@ pspath=$($whereispath $binaryflag ps);pspath="${pspath#*:}";pspath="${pspath# }"
 rhel="$($whereispath $binaryflag chkconfig)"
 rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
 eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -rsn 1;read -rst 0.001 -n3" \
+    || eval "printf \"Functionality may be limited due to inability to determine distribution type\n...press a key to continue...\";read -rsn1;read -rst 0.001 -n3" \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
 external_net_interface="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
@@ -1865,7 +1883,9 @@ until ! [ -z $answer ];do
      while IFS= read  -sn1 char;do [[ -z "$char" ]] && break
         [[ "$answer$char" == "?" ]] && break
         if [[ "$(printf "%d" "'$char")" == "27" ]];then # ' escape or extended key has been detected
-            read -rst 0.001 -n3 # read & discard 2nd extended key field, timeout if real escape
+            read -rt 0.001 -n1 discard # read 2nd extended key field, timeout if real escape
+            [[ "$(printf "%d" "'$discard")" == "0" ]] && exit # '
+            read -rt 0.001 -n2 discard # read & discard 2nd extended key field, timeout if no more
         elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
             char="${char,}"
             printf "$char"
@@ -1885,20 +1905,20 @@ until ! [ -z $answer ];do
         if [[ $answer$char == "?" ]];then
              clear
              printf "$ghscreen1"
-             read -sn1 -p "        Press a key to continue..."
+             read -rsn1 -p "        Press a key to continue..."
              read -rst 0.001 -n3
              clear
              printf "$ghscreen2"
-             read -sn1 -p "   (Press key...)"
+             read -rsn1 -p "   (Press key...)"
              read -rst 0.001 -n3
              echo
         fi
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -sn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
         answer=""
      else
          echo
@@ -2093,7 +2113,7 @@ newemailconfigwarning="Installing a new configuration is\
 \n\n$directoryforscripts/iptables_ruleset.$current_time\
 \n\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
-\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n" \
+\n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n\n" \
           || printf "\nYour current iptables ruleset did not back up as expected.  You should press\
 \nctl-c now and fix that, or you could be in a frustrating situation if something\
 \ngoes awry with this install.\n"
