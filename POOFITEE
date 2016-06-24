@@ -3,7 +3,7 @@
 # PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
-# TODO: Get remainder of menu options finished
+# TODO: Get remainder of menu options finished, started writing rules for loose knocking
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
 # TODO: Replicate not getting email even when port 1958 knocked, then fix
 # TODO: Firewalling options this install script should be able to alter from the script set defaults:
@@ -18,6 +18,7 @@
 # TODO: make user poofitee that cron jobs run under, suggest /home/poofitee as the installation directory, but when user is made, use the home directory accepted by the installing operator
 # TODO: adduser -G root poofitee;passwd poofitee
 # replace initd with systemd when referencing iptables-persistent and postfix
+# replace iptables with nftables
 # before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
 # init.d doesn't seem to be restoring: line in syslog=Jun 13 06:50:24 firewall netfilter-persistent[417]: run-parts: executing /usr/share/netfilter-persistent/plugins.d/15-ip4tables start
 # --->  	if [ ! -f /etc/iptables/rules.v4 ]; then
@@ -77,6 +78,54 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
+get_operator_knock_choices () {
+                 $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 $iptablespath -wF poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
+                 i=1
+                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
+                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
+#                      printf "${knockport[$i]}"
+                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
+                         printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
+'{printf $2}')")")" because it will\
+\ninterfere with you testing your sequence through an ssh session.  Do you still\
+\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
+                      fi
+                      printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
+\nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
+\nyou don\'t care to get any fancier.  You may include mask-flag spec or other\
+\niptables matching options beyond this, if you know them, except the -j target,\
+\n-g chain, -m recent, and -m comment iptables modules/options):\n\
+\n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
+#                      printf -- "\n${knockproto[$i]}\n"
+                      testtarget[$i]=" -j DROP"
+                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]] ; then
+                           until false; do
+                                if ! [[ -z "$if_first_knock_is_ACK_message" ]] && [[ "$i" == "1" ]];then
+                                     printf "$if_first_knock_is_ACK_message"
+                                     read -rn 1;read -rst 0.001 -n3
+                                     [[ $REPLY =~ [Rr] ]] && continue 2
+                                     ! [[ $REPLY =~ [Kk] ]] && break
+                                fi
+                                testtarget[$i]=" -j REJECT --reject-with tcp-reset"
+                                break
+                           done
+                      fi
+                      protovar="${knockproto[$i]}"
+                      protovar="${protovar:1}"
+echo "$iptablespath -wA poofitee_ruletestchain ${knockproto[$i]}${testtarget[$i]}"
+                      knockproto[$i]="-${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}" #combines both never again to need port kept separate for rule-making
+                      if ! [[ $($iptablespath -wA poofitee_ruletestchain ${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
+                          printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
+                          continue
+                      fi
+                      i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
+                 done
+                 for (( j=1;j<i;j++ )); do
+                      printf "$iptablespath -wA poofitee_knockstage$j${knockproto[$j]}\n"
+                 done
+
+}
 move_cursor_to_next_entry_in_list () {
 line=""
 echo
@@ -320,35 +369,97 @@ HOLD_UNTIL_ABLE
 \nknock port will also be giving itself away.)\
 \nTo specify the data you might require in a knock packet, include the following\
 \nin the protocol:\
-\n\n-m string --algo=bm --string \"bm-encrypted normal-appearing data\"\n\n"
+\n\n-m string --algo=bm --string \"bm-encrypted normal-looking data\"\n\n"
 
 #write rules to iptables rule set
             if [[ $REPLY == "l" ]];then
+                 if_first_knock_is_ACK_message=""
+                 get_operator_knock_choices
                  echo "Setting loose rules here...not yet developed.  Sorry"
                  continue
+<<EOF
+INPUT
+-m conntrack -ctstate NEW -j poofitee_knock_check
+
+poofitee_knock_check
+-p tcp --dpt 45411 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45412 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45413 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45414 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45415 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45416 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45417 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45418 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45419 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45420 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45421 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45422 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45423 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45424 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45425 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+-p tcp --dpt 45426 -m recent --name poofitee_knock_port1 --rcheck -j poofitee_knock_throw_it_back
+#at this point: tossed out packets that knocked same knock over
+#next goal: toss out packets not knocking at all
+-p tcp --dpt 45411 -m recent --name poofitee_knock_port1 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45412 -m recent --name poofitee_knock_port2 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45413 -m recent --name poofitee_knock_port3 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45414 -m recent --name poofitee_knock_port4 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45415 -m recent --name poofitee_knock_port5 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45416 -m recent --name poofitee_knock_port6 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45417 -m recent --name poofitee_knock_port7 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45418 -m recent --name poofitee_knock_port8 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45419 -m recent --name poofitee_knock_port9 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45420 -m recent --name poofitee_knock_port10 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45421 -m recent --name poofitee_knock_port11 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45422 -m recent --name poofitee_knock_port12 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45423 -m recent --name poofitee_knock_port13 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45424 -m recent --name poofitee_knock_port14 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45425 -m recent --name poofitee_knock_port15 --set -j poofitee_knock_new_knock
+-p tcp --dpt 45426 -m recent --name poofitee_knock_port16 --set -j poofitee_knock_new_knock
+-j poofitee_knock_throw_it_back #optional
+#at this point: tossed out packets that knocked same knock over and those not knocking at all, knockers thrown into poofitee_knock_new_knock with them added to their new list
+#end of this chain
+#next goal: determine highest knock level then reap 
+poofitee_knock_new_knock
+-m recent --name poofitee_knock_port1 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port2 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port3 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port4 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port5 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port6 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port7 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port8 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port9 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port10 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port11 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port12 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port13 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port14 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port15 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_knock_port16 --rcheck --seconds 12 --reap -j poofitee_knock_new_knock_a
+-m recent --name poofitee_one_knock --set -j poofitee_knock_throw_it_back
+
+poofitee_knock_new_knock_a
+-m recent --name poofitee_knocked_four --rcheck -g poofitee_knock_authorize
+-m recent --name poofitee_knocked_thrice --rcheck -g poofitee_knock_four
+-m recent --name poofitee_knocked_twice --rcheck -g poofitee_knock_thrice
+-m recent --name poofitee_knocked_once --rcheck -g poofitee_knock_twice
+-m recent --name poofitee_knocked_once --set
+
+poofitee_knock_twice
+-m recent --name poofitee_knocked_twice --set
+poofitee_knock_thrice
+-m recent --name poofitee_knocked_thrice --set
+poofitee_knock_four
+-m recent --name poofitee_knocked_four --set
+poofitee_knock_authorize
+-m recent --name poofitee_authorized --set -j LOG --log-prefix "poofitee authorized "
+-j ACCEPT
+
+EOF
             else
                  echo "Setting strict rules here"
-                 $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
-                 $iptablespath -wF poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
-                 i=1
-                 while knockport[$i]="";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]];do
-                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]];then continue;fi
-#                      printf "${knockport[$i]}"
-                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
-                         printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
-'{printf $2}')")")" because it will\
-\ninterfere with you testing your sequence through an ssh session.  Do you still\
-\ninsist on using this port? (y/n) ";read  -rn1;read -rst 0.001 -n3;! [[ $REPLY =~ [Yy] ]] && continue
-                      fi
-                      printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
-\nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
-\nyou don\'t care to get any fancier.  You may include mask-flag spec or other\
-\niptables matching options beyond this, if you know them, except the -j target,\
-\n-g chain, -m recent, and -m comment iptables modules/options):\n\
-\n";knockproto[$i]="-p tcp --syn ";read -e -i "${knockproto[$i]}" knockproto[$i]
-#                      printf -- "\n${knockproto[$i]}\n"
-                      if [[ "${knockproto[$i]}" =~ \ --tcp-flags\ *[^[:space:]g]*\ *ACK\  ]];then
-printf "If you intend for your server to be invisible to the world, at least beyond the\
+                 if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
 \nnext router, the best way to disguise a TCP ACK packet on the first knock is for\
 \nthis server not to reply with the otherwise suggested tcp-reset rejection\
 \nresponse, mostly because your system will forever be visible on that port to the\
@@ -357,24 +468,7 @@ printf "If you intend for your server to be invisible to the world, at least bey
 \n\'r\' to re-enter entire knock), or \'k\' to keep the reject response anyway (not\
 \nadvised for minimum visibility), or any other key to turn off the reject response\
 \nto this knock: (r/k/...)"
-                           read -rn 1;read -rst 0.001 -n3
-                           [[ $REPLY =~ [Rr] ]] && continue
-                           [[ $REPLY =~ [Kk] ]] && (testtarget[$i]=" -j REJECT --reject-with tcp-reset") || testtarget[$i]=" -j DROP"
-                      else
-                           testtarget[$i]=" -j DROP"
-                      fi
-                      protovar="${knockproto[$i]}"
-                      protovar="${protovar:1}"
-                      knockproto[$i]=" -${protovar%%-*} --dport ${knockport[$i]} -${protovar#*-}" #combines both never again to need port kept separate for rule-making
-                      if ! [[ $($iptablespath -wA poofitee_ruletestchain${knockproto[$i]}${testtarget[$i]} ;echo "$?") == "0" ]];then
-                          printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
-                          continue
-                      fi
-                      i=$(( $i+1 ));[[ $(( $i )) -gt 16 ]] && break
-                 done
-                 for (( j=1;j<i;j++ )); do
-                      printf "$iptablespath -wA poofitee_knockstage$j${knockproto[$j]}\n"
-                 done
+                 get_operator_knock_choices
                  printf "\n\nYour current iptables ruleset is about to be changed to reflect your knock\
 \nentries just made.  The following changes are about to be made:\
 \n\n  -- All INPUT chain rules will be removed that contain the letters \"knock\" in\
