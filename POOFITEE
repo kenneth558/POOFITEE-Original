@@ -1,6 +1,7 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# TODO: CURRENTLY UNDERWAY: perfect the tail -f script line and ensure its installation in all case needed.
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
 # TODO: Get remainder of menu options finished, started writing rules for loose knocking
@@ -491,7 +492,6 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  for ((;j>0;j--)); do
                       [[ $($iptablespath -wnL INPUT $j 2>/dev/null) =~ poofitee_knock ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset" || printf "Failed 5")
                  done
-# start making rules here
                  [[ $($iptablespath -wN poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_check 2>/dev/null
                  [[ $($iptablespath -wN poofitee_knock_new_knock 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_new_knock 2>/dev/null
                  [[ $($iptablespath -wN poofitee_knock_authorize 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_authorize 2>/dev/null
