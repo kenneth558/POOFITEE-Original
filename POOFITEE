@@ -2122,7 +2122,7 @@ newemailconfigwarning="Installing a new configuration is\
             if ! [[ "$($getentpath passwd|$greppath -wc ^poofitee)" == "0" ]];then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
             else
-                  poofitee_home_dir=$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir) || printf "/home/poofitee")
+                  poofitee_home_dir=$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "/home/poofitee")
                   printf "\nSpecify a home directory which will be created for user poofitee, which is where these scripts will be installed.  No deeper subdirectory\
 \nwill be used than what you specify here, so include any final isolating or\
 \ndescriptive subdirectory level you will want:\n"
