@@ -756,6 +756,7 @@ printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
 eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
 printf "\ncrontab set up...Original can be found in $poofitee_home_dir/cronentries\n"
 # TODO: if not in ps list, launch the script line as nohup &
+su - poofitee -c nohup $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$poofitee_home_dir/process_source_ip.sh"  >/dev/null 2>&1 &
 }
        conf_postfix () {
 ! [[ -z postfix_already_conf ]] && return
