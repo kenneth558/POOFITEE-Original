@@ -78,6 +78,17 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
+back_up_iptables_ruleset () {
+printf "\nPlease wait while your $1 iptables ruleset is backed up..."
+while current_time="$(date)";[[ -f "$directoryforscripts/iptables_ruleset.$current_time" ]];do
+     sleep 1
+done
+$iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" 
+backup_result="$?"
+printf "\nA copy of your $1 iptables ruleset is backed up in\
+\n\n$directoryforscripts/iptables_ruleset.$current_time\n\n"
+return $(($backup_result))
+}
 find_first_reference_to_internal_interface () {
 if ! [[ -z "$internal_net_interface" ]];then
      $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
@@ -522,6 +533,10 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       line_number_for_authorized_rule="1"
                  fi
                  [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -m comment --comment "poofitee_knock loose rule" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 back_up_iptables_ruleset new && \
+                      printf "Note that the file name is different than the one saved before" || \
+                      printf "Your new iptables ruleset did NOT get backed up correctly.  You should\
+\ntroubleshoot the problem, correct it, and start this install over again.\n"
             else
                  echo "Setting strict rules here"
                  if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
@@ -2114,17 +2129,12 @@ newemailconfigwarning="Installing a new configuration is\
        echo "$directoryforscripts" > directoryforscripts # handy with subsequent runs of this script, will know where everything is
        chmod 600 directoryforscripts
        directoryforscripts="${directoryforscripts%%/}"
-       printf "\nPlease wait while your current iptables ruleset is backed up..."
-       current_time="$(date)"
-       $iptablespath-save > "$directoryforscripts/iptables_ruleset.$current_time" \
-          && printf "\nA copy of your current iptables ruleset is backed up in\
-\n\n$directoryforscripts/iptables_ruleset.$current_time\
-\n\nIf you feel the changes that this script makes to your iptables ruleset are not\
+       back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
 \n\niptables-restore < $directoryforscripts/iptables_ruleset.$current_time\n\n" \
-          || printf "\nYour current iptables ruleset did not back up as expected.  You should press\
-\nctl-c now and fix that, or you could be in a frustrating situation if something\
-\ngoes awry with this install.\n"
+          || printf "Your current iptables ruleset did not get backed up as expected.  You should\
+\npress ctl-c now and fix that, or you could be in a frustrating situation if\
+\nsomething goes awry with this install.\n"
         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
