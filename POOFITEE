@@ -80,7 +80,90 @@
 
 ################  FUNCTIONS FIRST, THEN MAIN:
 install_tail_f_line_and_receiving_script () {
-:
+<<SCRIPT_END
+#!/bin/bash
+# THIS SCRIPT IS LAUNCHED IN CRONTAB AT REBOOT AND OFTEN THEREAFTER FOR REAL-TIME FIREWALLING BLACKLIST MAINTENANCE
+#This script will add or remove to iptables (IPv4) s_blacklist and d_blacklist chains unless the last line is 'pause'
+poofitee_home_dir="$poofitee_home_dir"
+email_subjectline_front="POOFITEE "
+recipient_list="$poofitee_home_dir/toemailadds"
+if [ "x$(tail -n-1 $0|/usr/bin/awk '{printf $1}')" == "xpause" ]; then echo "$1" >> "$poofitee_home_dir/preparedness/saveforlater";echo "$2" >> "$poofitee_home_dir/preparedness/saveforlater";echo "$3" >> "$poofitee_home_dir/preparedness/saveforlater";exit;fi
+
+#This test will allow CIDR-type consolidated IPv4 address ranges
+if ! [[ $1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
+    echo "This script requires a valid IP address besides the script name: $1" >> "$0.log"
+    exit
+fi
+save_iptables () {
+if [ $(sudo /sbin/iptables -wnL s_static_trusted|stdbuf -o0 grep -m 1 -c ESTABLISHED) == "1" ] && [ $(sudo /sbin/iptables -wnL INPUT|stdbuf -o0 grep -m 1 -c s_static_trusted) == "1" ]; then
+#      echo "Saving iptables ruleset $(date) by $0 from $(ps -o comm= $PPID)" >> "$poofitee_home_dir/$0.log"
+      sudo /sbin/iptables-save > /etc/iptables/rules.v4
+      ls -l /etc/iptables/rules.v4|awk '{{print $5" "$NF}}' > "$poofitee_home_dir/filessizer"
+      oldest_rules_file="$(ls -rt $poofitee_home_dir/preparedness/rules.v4*|head -n1)"
+      ls -l "$oldest_rules_file"|awk '{print $5" "$NF}' >> "$poofitee_home_dir/filessizer"
+      if [[ "$(sort -k1 < $poofitee_home_dir/filessizer|/usr/bin/awk 'NR==1 {print $2}')" == "/etc/iptables/rules.v4" ]];then
+           mv "$oldest_rules_file" "$oldest_rules_file"".size_shrank_after_this.$(date)"
+      fi
+      sudo /sbin/iptables-save > "$oldest_rules_file"
+else #somehow iptables has lost normal rules
+          echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|mail -s "$email_subjectline_front""firewall iptables ruleset" "$recipient_list"
+          crontab -l > "$poofitee_home_dir/cronentries.bak"
+          if [[ $(($(/usr/bin/wc -l < "$poofitee_home_dir/cronentries.bak"))) -gt 1 ]];then
+               (cat <<EOF
+
+$(/usr/bin/crontab -l)\
+*/5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/nul 2>&1
+
+EOF
+)|/usr/bin/crontab -
+               if ! [[ $(($(/usr/bin/crontab -l|/usr/bin/wc -l))) -gt $(($(/usr/bin/wc -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
+                    cat "$poofitee_home_dir/cronentries.bak"|/usr/bin/crontab -
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will still work"|mail -s "$email_subjectline_front""firewall iptables ruleset" "$recipient_list"
+               else
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|mail -s "$email_subjectline_front""firewall iptables ruleset" "$recipient_list"
+               fi
+          fi
+fi
+}
+# [[ $(wc -l < s_blacklistadds) == "0" ]] &&
+# sudo /sbin/iptables -wnL s_blacklist|awk '{print $4}' > /root/s_blacklistadds
+if [ $(printf "$3"|grep -c "whitelist") -gt 0 ];then
+      "$poofitee_home_dir/openall.sh" "$1" "by knocking"
+# elif [ $(($(sudo /sbin/iptables -wnL s_whitelist|grep -cwm 1 "$1"))) -eq 0 ] && [ $(($(sudo /sbin/iptables -wnL s_blacklist|grep -cwm 1 "$1"))) -eq 0 ] && [ "$2x" != "-rx" ] && [ "$3x" != "-rx" ]; then #this version overloads system with too many iptables commands waiting
+elif [ $(($(grep -cwm 1 "$1" < /root/s_blacklistadds))) -eq 0 ] && [ "$2x" != "-rx" ] && [ "$3x" != "-rx" ]; then
+      cmdline="sudo /sbin/iptables -wI s_blacklist 1 -i eth0 -s $1 -p all -m comment --comment \"$2\" -j DROP;sudo /sbin/iptables -wI d_blacklist 1 -o eth0 -d $1 -p all -m comment --comment \"$2\" -j DROP"
+      if ! [[ "$3x" =~ knock ]]; then
+          printf "$1\n" >> $poofitee_home_dir/s_blacklistadds
+          eval "$cmdline"
+      else
+          echo "if [ \$(sudo /sbin/iptables -wnL s_whitelist|grep -cwm 1 $1) -eq 0 ] && [ \$(sudo /sbin/iptables -wnL s_blacklist|grep -cwm 1 $1) -eq 0 ]; then sudo /sbin/iptables -wI s_blacklist 1 -i eth0 -s $1 -p all -m comment --comment \"$2\" -j DROP;sudo /sbin/iptables -wI d_blacklist 1 -o eth0 -d $1 -p all -m comment --comment \"$2\" -j DROP;if [ $(sudo /sbin/iptables -wnvL INPUT|/usr/bin/stdbuf -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then /etc/init.d/netfilter-persistent save;fi;fi"|at now +2 minute
+      fi
+      save_iptables
+else
+     if [ "$2x" == "-rx" ] || [ "$3x" == "-rx" ];then
+         until [ $(sudo /sbin/iptables -wnL s_blacklist|grep  -cwm 1 "$1") == "0" ] && [ $(sudo /sbin/iptables -wnL d_blacklist|grep  -cwm 1 "$1") == "0" ];do
+                 cmdline0="[[ \$(sudo /sbin/iptables -wnL s_blacklist --line-numbers|grep -wm 1 $1|/usr/bin/awk '{print \$1}') -gt 0 ]] && sudo /sbin/iptables -wD s_blacklist \$(sudo /sbin/iptables -wnL s_blacklist --line-numbers|grep -wm 1 $1|/usr/bin/awk '{print \$1}');"
+                 cmdline0+="[[ \$(sudo /sbin/iptables -wnL d_blacklist --line-numbers|grep -wm 1 $1|/usr/bin/awk '{print \$1}') -gt 0 ]] && sudo /sbin/iptables -wD d_blacklist \$(sudo /sbin/iptables -wnL d_blacklist --line-numbers|grep -wm 1 $1|/usr/bin/awk '{print \$1}')"
+                 until eval "$cmdline0";
+                    do sleep 1;
+                 done;
+                 echo "$cmdline0" >> "$poofitee_home_dir/preparedness/buildiptables.filterblacklist.sh"
+                 echo "$cmdline0"|mail -s "$email_subjectline_front""blacklist $1" "$(cat $recipient_list)"
+         done
+         save_iptables
+     fi
+fi
+#  The lines below this are for detecting the knock and launching email fetch when the email-reader triggering port is knocked
+#  Notice that the email-reader triggering port is gotten from iptables INPUT chain rule with email-reader in its comment
+#  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
+#  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
+[[ $(grep -c "#running" <(tail -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
+if [ $(printf "$3"|grep -c "fetch email") -gt 0 ];then
+        nohup "$poofitee_home_dir/email_fetch_parse" &
+fi
+exit
+
+SCRIPT_END
 }
 back_up_iptables_ruleset () {
 printf "\nPlease wait while your $1 iptables ruleset is backed up..."
@@ -731,31 +814,34 @@ BUILDIPTABLES.SH_END
        install_cronentries () {
 #  Only need to confirm if there are entries in crontab
 date_for_cronentries_backup="poofitee_installer_$(date)"
-$crontabpath -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
+$crontabpath -u poofitee -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
 if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
-     printf "\n\nYour cron file isn't being saved right to\
+     printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
 \nIf you are certain it is rightfully empty, press 'p' to proceed, otherwise\
 \npress ctrl-c and troubleshoot the problem..."
-     read -rn1;read -rsn3 -t 0.001 discard
+     read -rsn1;read -rsn3 -t 0.001 discard
      ! [[ $REPLY =~ [Pp] ]] && return 1
 fi
-! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-(printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
-\nConfirm you understand that your crontab shell is now getting changed which\
-\nmight affect the above entries if they send values out, contain quotes, etc.\n"
-read -n1 -s -p "You will need to verify proper operation of current entries after this: ")
+! [[ $($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
+(printf "$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
+\n\nConfirm you understand that the shell in POOFITEE's crontab is now getting\
+\nchanged which might affect the above entries if they send values out, contain\
+\nquotes, etc.\n"
+read -n1 -s -p "You will need to verify proper operation of current entries after this.")
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -l)\
+$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log")\
+
 # line below is from poofitee_firewall
 @reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$poofitee_home_dir/process_source_ip.sh"  >/dev/null 2>&1
+
 CRONTAB_ENTRIES_END
-) |$crontabpath -
-[[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
-eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
-printf "\ncrontab set up...Original can be found in $poofitee_home_dir/cronentries\n"
-# TODO: if not in ps list, launch the script line as nohup &
+) |$crontabpath -u poofitee -
+[[ $($crontabpath -u poofitee -l|$greppath -Ec "^SHELL=") == "0" ]] && \
+printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l)\n"|$crontabpath -u poofitee - || \
+$crontabpath -u poofitee -l|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
+printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
+#if not in ps list, launch the script line as nohup &, run it as poofitee user
 # su - poofitee -c nohup $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$poofitee_home_dir/process_source_ip.sh"  >/dev/null 2>&1 &
 }
        conf_postfix () {
@@ -1512,12 +1598,12 @@ EOF
 ) > "$poofitee_home_dir/newdynip.sh"
 
 #  Only need to confirm if there are entries in crontab
-! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+! [[ "$(eval $crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
+     (printf "$(eval $crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -l)
+$($crontabpath -u poofitee -l)
 # line below is from poofitee_DynAddChangeNotify
 @reboot "$poofitee_home_dir/newdynip.sh" >/dev/null 2>&1
 ##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
@@ -1536,10 +1622,10 @@ $($crontabpath -l)
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/misc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # udhcpc*.lease*
 @reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
 CRONTAB_ENTRIES_END
-) |$crontabpath -
-[[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-  printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
-  eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
+) |$crontabpath -u poofitee -
+[[ "$(eval "$crontabpath -u poofitee -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
+  printf "SHELL=/bin/bash\n$($crontabpath -u poofitee -l)"|$crontabpath -u poofitee - || \
+  eval "$crontabpath -u poofitee -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -u poofitee -"
 echo "crontab set up..."
 }
 
@@ -1977,6 +2063,7 @@ until ! [ -z $answer ];do
                   ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
                   ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
                   datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
+                  bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
                   bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
                   wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
                   atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
