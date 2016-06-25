@@ -1,7 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
-# TODO: UNTESTED: adding user poofitee
 # TODO: CURRENTLY UNDERWAY: perfect the tail -f script line to ensure its installation in all cases needed.
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
@@ -730,31 +729,34 @@ BUILDIPTABLES.SH_END
           echo "$poofitee_home_dir/preparedness/buildiptables.sh set up..."
        }
        install_cronentries () {
-#if not in ps list, launch the script line as nohup &
-
 #  Only need to confirm if there are entries in crontab
 date_for_cronentries_backup="poofitee_installer_$(date)"
-crontab -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
-if [[ $(($(echo "$?"))) -eq 0 ]] && [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
-     ! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
+$crontabpath -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
+if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
+     printf "\n\nYour cron file isn't being saved right to\
+\n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
+\nIf you are certain it is rightfully empty, press 'p' to proceed, otherwise\
+\npress ctrl-c and troubleshoot the problem..."
+     read -rn1;read -rsn3 -t 0.001 discard
+     ! [[ $REPLY =~ [Pp] ]] && return 1
+fi
+! [[ "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
+(printf "$(eval $crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\
 \nConfirm you understand that your crontab shell is now getting changed which\
 \nmight affect the above entries if they send values out, contain quotes, etc.\n"
-      read -n1 -s -p "You will need to verify proper operation of current entries after this: ")
+read -n1 -s -p "You will need to verify proper operation of current entries after this: ")
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -l)\
 # line below is from poofitee_firewall
 @reboot $nicepath -n15 $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$poofitee_home_dir/process_source_ip.sh"  >/dev/null 2>&1
 CRONTAB_ENTRIES_END
 ) |$crontabpath -
-     [[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-       printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
-       eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
-     printf "\ncrontab set up...Original can be found in $poofitee_home_dir/cronentries"
-else
-     printf "\n\nYour cron file isn't saving to $poofitee_home_dir/cronentries, aborting...\n"
-fi
-          }
+[[ "$(eval "$crontabpath -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
+printf "SHELL=/bin/bash\n$($crontabpath -l)"|$crontabpath - || \
+eval "$crontabpath -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -"
+printf "\ncrontab set up...Original can be found in $poofitee_home_dir/cronentries\n"
+# TODO: if not in ps list, launch the script line as nohup &
+}
        conf_postfix () {
 ! [[ -z postfix_already_conf ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
@@ -1705,7 +1707,7 @@ printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \ncontribute, see the comments within the source code of this script"
 printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
 read -rsn 1;read -rst 0.001 -n3
-awkpath="$($whereispath $binaryflag awk)" # some occurances removed due to inconsistencies with macs
+awkpath="$($whereispath $binaryflag awk)"
 awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
 pythonpath="$($whereispath $binaryflag python)"
 pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
@@ -1726,7 +1728,7 @@ xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% 
 sedpath="$($whereispath $binaryflag sed)"
 sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
 wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-ippath="$($whereispath $binaryflag ip)" # Macs don't have the ip command at this time
+ippath="$($whereispath $binaryflag ip)" 
 ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
 pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
@@ -2123,9 +2125,10 @@ newemailconfigwarning="Installing a new configuration is\
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
             else
                   poofitee_home_dir=$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "/home/poofitee")
-                  printf "\nSpecify a home directory which will be created for user poofitee, which is where these scripts will be installed.  No deeper subdirectory\
-\nwill be used than what you specify here, so include any final isolating or\
-\ndescriptive subdirectory level you will want:\n"
+                  printf "\nSpecify a home directory which will be created for user poofitee, which is where\
+\nthese scripts will be installed.  No deeper subdirectory will be used than what\
+\nyou specify here, so include any final isolating or descriptive subdirectory\
+\nlevel you will want:\n"
                   read -e -r -i "$poofitee_home_dir" poofitee_home_dir
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
@@ -2141,7 +2144,8 @@ newemailconfigwarning="Installing a new configuration is\
             fi
        done
        if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
-            printf "\n\nUser poofitee needs to be created next.  Press a key when ready, or ctrl-c to abort..."
+            printf "\n\nUser poofitee needs to be created next.  Press a key when ready, or ctrl-c\
+\nto abort..."
             read -rsn1 discard; read -rsn3 -t 0.001 discard
             $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
        fi
