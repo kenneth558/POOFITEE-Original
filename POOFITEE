@@ -78,6 +78,73 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
+find_first_reference_to_internal_interface () {
+if ! [[ -z "$internal_net_interface" ]];then
+     $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
+     [[ $($iptablespath -wF poofitee_knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
+     printf "\n"
+     printf "" > internal_interfaces_referenced # won't include the default gateway
+# test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
+#SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
+     echo "$internal_net_interface"|$awkpath '{print $1}' \
+     |while read interface; do
+          $iptablespath -wnvL INPUT --line-number \
+          |$awkpath 'NR>2 {print $1" "$7" "$9}' \
+          |while read linenum_intfc_src_addr_in_input_chain; do
+                    linenum_in_input_chain="${linenum_intfc_src_addr_in_input_chain%% *}"
+                    intfc_src_addr_in_input_chain="${linenum_intfc_src_addr_in_input_chain#* }"
+                    intfc_in_input_chain="${intfc_src_addr_in_input_chain% *}"   # echo "$src_addr_in_input_chain | $linenum_in_input_chain | $intfc_in_input_chain";
+                    src_addr_in_input_chain="${intfc_src_addr_in_input_chain#* }"; src_addr_in_input_chain="${src_addr_in_input_chain%/*}"
+            # the next search is to locate references of the internal interface under scrutiny in each line of chain in route table
+                    if [[ $(($($ippath route show|$greppath $intfc_in_input_chain|$greppath -c default))) -eq 0 ]];
+                    then echo "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
+                    elif ! [[ "$src_addr_in_input_chain" == "0.0.0.0" ]];then # we assume if finding by address, route tables are already set up
+# determine address range[s] routed out that interface and check for input chain references to any of them 
+#   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
+#   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
+                         $ippath route show|$greppath -v default|$greppath $interface \
+                         |while read line; do 
+                              line="${line%% *}/32"
+                              range_start="${line%%/*}"
+                         [[ $(printf "$range_start\n$src_addr_in_input_chain"|$sortpath -V|$tailpath -n1) == "$src_addr_in_input_chain" ]] || break
+                         cidr_bits="${line#*/}"
+                         cidr_bits="${line%%/*}"
+                         src_addr_in_input_chain_seg1="${src_addr_in_input_chain%%.*}"
+                         range_start_seg1="${range_start%%.*}"
+                         src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                         range_start="${range_start#*.}"
+                         src_addr_in_input_chain_seg2="${src_addr_in_input_chain%%.*}"
+                         range_start_seg2="${range_start%%.*}"
+                         src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                         range_start="${range_start#*.}"
+                         src_addr_in_input_chain_seg3="${src_addr_in_input_chain%%.*}"
+                         range_start_seg3="${range_start%%.*}"
+                         src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
+                         range_start="${range_start#*.}"
+                         src_addr_in_input_chain_seg4="${src_addr_in_input_chain%%.*}"
+                         range_start_seg4="${range_start%%.*}"
+                         doubler=1
+                         for ((j=$((32 - $cidr_bits));j>0;j--)); do
+                              doubler=$(( $doubler * 2 ))
+                         done
+                         range_end=$(( ($range_start_seg1 * 256 * 256 * 256) + ($range_start_seg2 * 256 * 256) + ($range_start_seg3 * 256) + $range_start_seg4 + $doubler -1 ))
+                         src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
+                         if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
+                              #   echo "within range"
+                              "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
+                         fi
+                    done
+               fi
+          done
+     done
+     linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
+     [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
+     if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
+          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+     fi
+     line_number_for_authorized_rule=$linenumber_for_inserting_before
+fi
+}
 get_operator_knock_choices () {
                  minimum_number_of_knocks="$([[ "x$1$2$3" =~ unique ]] && echo "4" || echo "2")"
                  $iptablespath -wN poofitee_ruletestchain 2>/dev/null # This chain is merely a place to pre-test whether a rule will be accepted by iptables or not
@@ -411,43 +478,50 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 \nqueued changes by pressing any other key....\n";read -rsn 1;read -rst 0.001 -n3
                  j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
                  for ((;j>0;j--)); do
-                      [[ "$($iptablespath -wnL INPUT $j 2>/dev/null)" =~ poofitee_knock ]] && ([[ "$($iptablespath -wD INPUT $j 2>/dev/null;echo "$?")" == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset" || printf "Failed 5")
+                      [[ $($iptablespath -wnL INPUT $j 2>/dev/null) =~ poofitee_knock ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee knock ruleset" || printf "Failed 5")
                  done
 # start making rules here
-                 [[ "$($iptablespath -wN poofitee_knock_check 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_check 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_new_knock 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_new_knock 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_authorize 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_authorize 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_seniorize 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_seniorize 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_juniorize 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_juniorize 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_sophomorize 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_sophomorize 2>/dev/null
-                 [[ "$($iptablespath -wN poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || $iptablespath -wF poofitee_knock_customexit 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_check 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_new_knock 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_new_knock 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_authorize 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_authorize 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_seniorize 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_seniorize 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_juniorize 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_juniorize 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_sophomorize 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_sophomorize 2>/dev/null
+                 [[ $($iptablespath -wN poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || $iptablespath -wF poofitee_knock_customexit 2>/dev/null
                  j=0
                  while ! [[ -z "${knockproto[$(($j + 1))]}" ]];do
                       j=$(( $j + 1 ))
-                      [[ "$($iptablespath -wA poofitee_knock_check ${knockproto[$j]} -m recent --name poofitee_knock_port$j --rcheck -j RETURN;echo "$?")" == "0" ]] || printf "Failed 1"
+                      [[ $($iptablespath -wA poofitee_knock_check ${knockproto[$j]} -m recent --name poofitee_knock_port$j --rcheck -j RETURN;echo "$?") == "0" ]] || printf "Failed 1"
                  done
                  j=0
                  while ! [[ -z "${knockproto[$(($j + 1))]}" ]];do
                       j=$(( $j + 1 ))
-                      [[ "$($iptablespath -wA poofitee_knock_check ${knockproto[$j]} -m recent --name poofitee_knock_port$j --set -j poofitee_knock_new_knock;echo "$?")" == "0" ]] || printf "Failed 2"
-                      [[ "$($iptablespath -wA poofitee_knock_customexit ${knockproto[$j]} ${testtarget[$j]};echo "$?")" == "0" ]] || printf "Failed 3"
+                      [[ $($iptablespath -wA poofitee_knock_check ${knockproto[$j]} -m recent --name poofitee_knock_port$j --set -j poofitee_knock_new_knock;echo "$?") == "0" ]] || printf "Failed 2"
+                      [[ $($iptablespath -wA poofitee_knock_customexit ${knockproto[$j]} ${testtarget[$j]};echo "$?") == "0" ]] || printf "Failed 3"
                  done
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_senior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_authorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 7"
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_junior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_seniorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 8"
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_sophomore --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_juniorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 9"
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_sophomorize 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 10"
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --set -j LOG --log-prefix "poofitee knock freshman " -m comment --comment "poofitee_knock:This will schedule its blacklisting for couple mins from now" 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 11"
-                 [[ "$($iptablespath -wA poofitee_knock_new_knock -j poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 12"
-                 [[ "$($iptablespath -wA poofitee_knock_authorize -m recent --name poofitee_knock_authorized --set -j LOG --log-prefix "poofitee knock authorized " 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 13"
-                 [[ "$($iptablespath -wA poofitee_knock_authorize -j poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 14"
-                 [[ "$($iptablespath -wA poofitee_knock_seniorize -m recent --name poofitee_knock_senior --set -j LOG --log-prefix "poofitee knock senior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 15"
-                 [[ "$($iptablespath -wA poofitee_knock_seniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 16"
-                 [[ "$($iptablespath -wA poofitee_knock_juniorize -m recent --name poofitee_knock_junior --set -j LOG --log-prefix "poofitee knock junior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 17"
-                 [[ "$($iptablespath -wA poofitee_knock_juniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 18"
-                 [[ "$($iptablespath -wA poofitee_knock_sophomorize -m recent --name poofitee_knock_sophomore --set -j LOG --log-prefix "poofitee knock sophomore " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 19"
-                 [[ "$($iptablespath -wA poofitee_knock_sophomorize -j poofitee_knock_customexit 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 20"
-                 [[ "$($iptablespath -wI INPUT -m recent --name poofitee_knock_authorized --rcheck -j ACCEPT 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 21"
-                 [[ "$($iptablespath -wI INPUT -m conntrack --ctstate NEW -j poofitee_knock_check 2>/dev/null;echo "$?")" == "0" ]] || printf "Failed 22"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_senior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_authorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_junior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_seniorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 8"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_sophomore --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_juniorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 9"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_sophomorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 10"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --set -j LOG --log-prefix "poofitee knock freshman " -m comment --comment "poofitee_knock:This will schedule its blacklisting for couple mins from now" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 11"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
+                 [[ $($iptablespath -wA poofitee_knock_authorize -m recent --name poofitee_knock_authorized --set -j LOG --log-prefix "poofitee knock authorized " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 13"
+                 [[ $($iptablespath -wA poofitee_knock_authorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 14"
+                 [[ $($iptablespath -wA poofitee_knock_seniorize -m recent --name poofitee_knock_senior --set -j LOG --log-prefix "poofitee knock senior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 15"
+                 [[ $($iptablespath -wA poofitee_knock_seniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 16"
+                 [[ $($iptablespath -wA poofitee_knock_juniorize -m recent --name poofitee_knock_junior --set -j LOG --log-prefix "poofitee knock junior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
+                 [[ $($iptablespath -wA poofitee_knock_juniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 18"
+                 [[ $($iptablespath -wA poofitee_knock_sophomorize -m recent --name poofitee_knock_sophomore --set -j LOG --log-prefix "poofitee knock sophomore " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 19"
+                 [[ $($iptablespath -wA poofitee_knock_sophomorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+                 find_first_reference_to_internal_interface
+                 if ! [[ -z "$internal_net_interface" ]];then
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(($linenumber_for_inserting_before + 1)) || printf "Failed 22"
+                 fi
+                 if [[ -z "$linenumber_for_inserting_before" ]];then
+                      linenumber_for_inserting_before="1" #even though we may never use this var again
+                      line_number_for_authorized_rule="1"
+                 fi
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -m comment --comment "poofitee_knock loose rule" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
             else
                  echo "Setting strict rules here"
                  if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
@@ -515,74 +589,8 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 #                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
                  [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success whitelist" -m comment --comment "allows 1 time-limited attempt to establish a dialog" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
                  inchainoffset=0
+                 find_first_reference_to_internal_interface
                  if ! [[ -z "$internal_net_interface" ]];then
-                      $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
-                      [[ $($iptablespath -wF poofitee_knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
-                      printf "\n"
-                      printf "" > internal_interfaces_referenced # won't include the default gateway
-# test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
-#SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
-                      echo "$internal_net_interface"|$awkpath '{print $1}' \
-                      |while read interface; do
-                           $iptablespath -wnvL INPUT --line-number \
-                           |$awkpath 'NR>2 {print $1" "$7" "$9}' \
-                           |while read linenum_intfc_src_addr_in_input_chain
-                             do 
-                                 linenum_in_input_chain="${linenum_intfc_src_addr_in_input_chain%% *}"
-                                 intfc_src_addr_in_input_chain="${linenum_intfc_src_addr_in_input_chain#* }"
-                                 intfc_in_input_chain="${intfc_src_addr_in_input_chain% *}"   # echo "$src_addr_in_input_chain | $linenum_in_input_chain | $intfc_in_input_chain";
-                                 src_addr_in_input_chain="${intfc_src_addr_in_input_chain#* }"; src_addr_in_input_chain="${src_addr_in_input_chain%/*}"
-            # the next search is to locate references of the internal interface under scrutiny in each line of chain in route table
-                                 if [[ $(($($ippath route show|$greppath $intfc_in_input_chain|$greppath -c default))) -eq 0 ]];
-                                 then echo "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
-#exit # stops it
-                                 elif ! [[ "$src_addr_in_input_chain" == "0.0.0.0" ]];then # we assume if finding by address, route tables are already set up
-# determine address range[s] routed out that interface and check for input chain references to any of them 
-#   using $ippath route show|$greppath $internal_net_interface|$awkpath '{print $1}' -> convert each line 
-#   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
-#exit #happened already
-                                      $ippath route show|$greppath -v default|$greppath $interface \
-                                      |while read line; do 
-                                           line="${line%% *}/32"
-                                           range_start="${line%%/*}"
-                                           [[ $(printf "$range_start\n$src_addr_in_input_chain"|$sortpath -V|$tailpath -n1) == "$src_addr_in_input_chain" ]] || break
-                                           cidr_bits="${line#*/}"
-                                           cidr_bits="${line%%/*}"
-                                           src_addr_in_input_chain_seg1="${src_addr_in_input_chain%%.*}"
-                                           range_start_seg1="${range_start%%.*}"
-                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                           range_start="${range_start#*.}"
-                                           src_addr_in_input_chain_seg2="${src_addr_in_input_chain%%.*}"
-                                           range_start_seg2="${range_start%%.*}"
-                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                           range_start="${range_start#*.}"
-                                           src_addr_in_input_chain_seg3="${src_addr_in_input_chain%%.*}"
-                                           range_start_seg3="${range_start%%.*}"
-                                           src_addr_in_input_chain="${src_addr_in_input_chain#*.}"
-                                           range_start="${range_start#*.}"
-                                           src_addr_in_input_chain_seg4="${src_addr_in_input_chain%%.*}"
-                                           range_start_seg4="${range_start%%.*}"
-                                           doubler=1
-                                           for ((j=$((32 - $cidr_bits));j>0;j--)); do
-                                                doubler=$(( $doubler * 2 ))
-                                           done
-                                           range_end=$(( ($range_start_seg1 * 256 * 256 * 256) + ($range_start_seg2 * 256 * 256) + ($range_start_seg3 * 256) + $range_start_seg4 + $doubler -1 ))
-                                           src_addr_in_input_chain=$(( ($src_addr_in_input_chain_seg1 * 256 * 256 * 256) + ($src_addr_in_input_chain_seg2 * 256 * 256) + ($src_addr_in_input_chain_seg3 * 256) + $src_addr_in_input_chain_seg4 ))
-                                           if [[ "$(printf "$range_end\n$src_addr_in_input_chain"|$sortpath -n|$tailpath -n1)" == "$range_end" ]];then
-  #                                              echo "within range"
-                                                "$linenum_in_input_chain $intfc_in_input_chain" >> internal_interfaces_referenced
-                                           fi
-                                      done
-                                 fi
-                            done
-                      done
-#exit #happened already
-                      linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
-                      [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
-                      if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-                           [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
-                      fi
-                      line_number_for_authorized_rule=$linenumber_for_inserting_before
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
                       [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
@@ -1338,7 +1346,7 @@ fi
 resolver="$(while read -e -i "dig +short myip.opendns.com @resolver1.opendns.com" resolver;do 
      echo "$resolver";break;
 done)"
-printf "\nAddress[es] where to send IP change notifications to:\n"
+printf "\nEmail address[es] where to send IP change notifications to:\n"
 toemailaddsIP="$($sedpath 's/,/\n/g' <"$directoryforscripts/toemailaddsIP")"
 scratchpad="${toemailaddsIP##*'\n'}"
 line="${toemailaddsIP##*'\n'}";printf "$line"
@@ -1865,7 +1873,7 @@ restorescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\
 \nthis one after an operating system upgrade without answering the setup questions\
 \nall over again.  This can be highly important when you don't know for sure that\
 \nthe person who needs to configure will know or remember the details of this\
-\nconfiguration."
+\nconfiguration.  $internal_net_interface"
 answer=""
 singinterf="\nBased on finding only one pluggable network interface, your intentions seem\
 \nto be to have this firewalling computer be a terminal (end) device rather than\
@@ -1913,12 +1921,12 @@ until ! [ -z $answer ];do
              read -rst 0.001 -n3
              echo
         fi
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen\n";read -rsn1 -p "                         Press a key to continue...";read -rst 0.001 -n3;echo)
         answer=""
      else
          echo
