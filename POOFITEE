@@ -2143,7 +2143,7 @@ newemailconfigwarning="Installing a new configuration is\
        if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
             printf "\n\nUser poofitee needs to be created next.  Press a key when ready, or ctrl-c to abort..."
             read -rsn1 discard; read -rsn3 -t 0.001 discard
-            $adduserpath --home /home/poofitee --shell /bin/bash --disabled-login --disabled-password poofitee
+            $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
        fi
        if [[ "$($greppath ^sudo: </etc/group|$greppath -c poofitee)" == "0" ]];then
            sudo_group_line="$($greppath ^sudo: </etc/group),poofitee"
