@@ -184,8 +184,13 @@ exit
 
 SCRIPT_END
 ) > "$poofitee_home_dir/process_logfile_line"
+if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then 
+    echo;echo "$poofitee_home_dir/process_logfile_line did not get created just now"
+    exit
+fi
+chmod 500 "$poofitee_home_dir/process_logfile_line"
 install_firewall_cronentries
-}
+}  
 back_up_iptables_ruleset () {
 printf "\nPlease wait while your $1 iptables ruleset is backed up..."
 while current_time="$(date)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current_time" ]];do
@@ -753,7 +758,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 
             fi
 printf "\nServer-side port knocking installed.\n"
-}
+} 
        install_buildiptablessh () {
 # TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
 REPLY=""
@@ -864,6 +869,11 @@ fi
 \nchanged which might affect the above entries if they send values out, contain\
 \nquotes, etc.\n"
 read -n1 -s -p "You will need to verify proper operation of current entries after this.")
+
+
+# TODO minimize the number of stdbuf's used
+
+
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log")
@@ -879,10 +889,14 @@ CRONTAB_ENTRIES_END
 printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l)\n"|$crontabpath -u poofitee - || \
 $crontabpath -u poofitee -l|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
 #couldn't launch the process until receiving script is there
+if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
+     echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have long before now."
+     exit
+fi
 (cat <<SCRIPT_END
 
 #!/bin/bash
-nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l1 "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
+nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 
 SCRIPT_END
@@ -2327,7 +2341,7 @@ newemailconfigwarning="Installing a new configuration is\
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
              install_buildiptablessh
-             install_firewall_cronentries
+             install_tail_f_lines_and_receiving_script
              if [[ -z $sendmail_works ]];then
                   outemail_warnings
                   press_any_key
