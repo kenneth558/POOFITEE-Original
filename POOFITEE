@@ -2320,10 +2320,6 @@ newemailconfigwarning="Installing a new configuration is\
             $sedpath -i '/^sudo:.*,poofitee/b;s/^sudo:.*/&,poofitee/' /etc/group
             $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
        fi
-#       if [[ "$($greppath ^sudo: </etc/group|$greppath -c poofitee)" == "0" ]];then
-#           sudo_group_line="$($greppath ^sudo: </etc/group),poofitee"
-#           $sedpath -i 's/^sudo:.*/'"$sudo_group_line"'/g' /etc/group
-#       fi
        echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
        chown poofitee "$poofitee_home_dir"
        chmod 770 "$poofitee_home_dir"
