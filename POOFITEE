@@ -2317,8 +2317,7 @@ newemailconfigwarning="Installing a new configuration is\
             press_any_key
             echo
             echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
-# the following line adjustment of sed script so that if poofitee is already in group, it ends sed script before action
-#            $sedpath -i '/^sudo:.*poofitee/b;s/^sudo:.*/&,poofitee/' /etc/group
+            $sedpath -i '/^sudo:.*,poofitee/b;s/^sudo:.*/&,poofitee/' /etc/group
             $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
        fi
 #       if [[ "$($greppath ^sudo: </etc/group|$greppath -c poofitee)" == "0" ]];then
