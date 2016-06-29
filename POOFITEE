@@ -19,8 +19,8 @@
 # TODO: make user poofitee that cron jobs run under, suggest /home/poofitee as the installation directory, but when user is made, use the home directory accepted by the installing operator
 # TODO: adduser --home $poofitee_home_dir --shell /bin/bash --ingroup sudo --disabled-login --disabled-password poofitee
 # TODO:  replace initd with systemd when referencing iptables-persistent and postfix
-#  TODO: replace iptables with nftables
-#  TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
+# TODO: replace iptables with nftables
+# TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
 
 
 #You could possibly modify the sudoers file.
@@ -143,12 +143,12 @@ if [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-
      if [ $(printf "\$3"|$greppath -c "whitelist") -gt 0 ];then
            "\$poofitee_home_dir/openall.sh" "\$1" "by knocking"
      elif [[ \$($greppath -wcm 1 "$1" < "\$poofitee_home_dir/s_blacklistadds") == "0" ]] && [[ "\$((echo "\$1 c";cat "\$poofitee_home_dir/s_blacklistadds")|$awkpath -F. '{if (index($4,"/")==0 && index($4,"c")==0) {next}starting=($1*256*256*256)+($2*256*256)+($3*256)+$4;if (index($4,"/")==0) {if (starting!=0) {print starting" c"}} else {ending=starting+(2**(32-substr($4,index($4,"/")+1)))-1;print starting" beg"; print ending" end"}}'|sort -V|awk 'BEG{inside=0}{if ($0~/c/){if (inside>0) {exit 0} else {exit 1}}else{if($0~/beg/){inside=inside+1}else{inside=inside-1}}}';echo $?)" == "1" ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ]; then
-           cmdline="$iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP"
+           cmdline="$iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP"
            if ! [[ "\$3x" =~ knock ]]; then
                printf "\$1\n" >> \$poofitee_home_dir/s_blacklistadds
                eval "$cmdline"
            else
-               echo "if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ $($iptablespath -wnvL INPUT|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then $iptables-save;fi;fi"|at now +2 minute
+               echo "if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ $($iptablespath -wnvL INPUT|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then $iptables-save;fi;fi"|at now +2 minute
            fi
            save_iptables
      else
@@ -259,7 +259,7 @@ if ! [[ -z "$internal_net_interface" ]];then
      linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
      [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
      if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
      fi
      line_number_for_authorized_rule=$linenumber_for_inserting_before
 fi
@@ -634,7 +634,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wA poofitee_knock_sophomorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
                  find_first_reference_to_internal_interface
                  if ! [[ -z "$internal_net_interface" ]];then
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(($linenumber_for_inserting_before + 1)) || printf "Failed 22"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -j poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(($linenumber_for_inserting_before + 1)) || printf "Failed 22"
                  fi
                  if [[ -z "$linenumber_for_inserting_before" ]];then
                       linenumber_for_inserting_before="1" #even though we may never use this var again
@@ -643,7 +643,8 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -m comment --comment "poofitee_knock loose rule" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
                  back_up_iptables_ruleset new && \
                       printf "Note that the file name is different than the one saved before" || \
-                      printf "Your new iptables ruleset did NOT get backed up correctly.  You should\
+                      printf "Your new iptables ruleset did NOT get backed up correctly.  You should\"
+                 fi
 \ntroubleshoot the problem, correct it, and start this install over again.\n"
             else
                  echo "Setting strict rules here"
@@ -714,9 +715,9 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  inchainoffset=0
                  find_first_reference_to_internal_interface
                  if ! [[ -z "$internal_net_interface" ]];then
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
-#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$xargspath|$awkpath '{print $1}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
                       $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "poofitee_knockertest fail "
                       $iptablespath -wA poofitee_knockerstest -m recent --rcheck --seconds 200 --reap --name poofitee_knocker --mask 255.255.255.255 --rsource
@@ -757,15 +758,15 @@ printf "\nServer-side port knocking installed.\n"
 # TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
 REPLY=""
 if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]];then
-     cat <<EOF
-This server is capable of being a firewall for an internal network, but you
-haven't enabled the forwarding feature needed in Linux, at least persisently.
-If you'd like, that $( [[ $iptables_masquerading == false ]] && printf "and the iptables MASQUERADE ")can be easily enough done for
-you right now, but IP address, routing tables, and DNAT in iptables POSTROUTING
-nat table configurations are left completely to you at this stage of POOFITEE
-development.  Would you like to enable IP forwarding persistently and have
-iptables masquerade your internal network so it has Internet access? y/n:
-EOF
+     cat <<-EOF
+	This server is capable of being a firewall for an internal network, but you
+	haven't enabled the forwarding feature needed in Linux, at least persisently.
+	If you'd like, that $( [[ $iptables_masquerading == false ]] && printf "and the iptables MASQUERADE ")can be easily enough done for
+	you right now, but IP address, routing tables, and DNAT in iptables POSTROUTING
+	nat table configurations are left completely to you at this stage of POOFITEE
+	development.  Would you like to enable IP forwarding persistently and have
+	iptables masquerade your internal network so it has Internet access? y/n:
+	EOF
      read -rn1;read -rsn3 -t 0.001 discard
      if [[ $REPLY =~ [Yy] ]];then
           echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -775,9 +776,10 @@ EOF
      fi
 fi
             (cat <<BUILDIPTABLES.SH_END
+#!/bin/bash
 $iptablespath -wP INPUT DROP
-$iptablespath -wA INPUT -i $external_net_interface -p all -j s_privateIPs -m comment --comment "poofitee_firewall"
-$iptablespath -wA INPUT -i $internal_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
+$iptablespath -wA INPUT -i $external_net_interface -p all -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"
+# $iptablespath -wA INPUT -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p all -j ACCEPT -m comment --comment "poofitee_firewall"
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_static_trusted
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_whitelist
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_privateIPs
@@ -789,6 +791,7 @@ $iptablespath -wN poofitee_fw_d_privateIPs
 $iptablespath -wN poofitee_fw_d_static_trusted
 $iptablespath -wN poofitee_fw_d_whitelist
 $iptablespath -wN poofitee_fw_s_blacklist
+$iptablespath -wN poofitee_fw_d_blacklist
 $iptablespath -wN poofitee_fw_s_privateIPs
 $iptablespath -wN poofitee_fw_s_static_trusted
 $iptablespath -wN poofitee_fw_s_whitelist
@@ -807,18 +810,20 @@ $iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -p all -m commen
 BUILDIPTABLES.SH_END
 ) > "$poofitee_home_dir/preparedness/buildiptables.sh"
 # "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
-if [[ $REPLY =~ [Yy] ]] || [[ "$(hostname -I)" =~ \  ]] #has more than one ip address, ask about enabling routing
 
 if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && [[ ifconfig== ]] && ! [[ $iptables_masquerading == false ]];then
-? "$(hostname -I|$sedpath 's/\ /\n/g')" see if any are private range
-? hostname -I enumerates and outs space-delimited list of all configured addresses of all network interfaces
-?     $iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_firewall"
 
-remove masquerading statement above
-get the ip address of $internal_net_interface from ip route or ifconfig or ipconfig to see which ones need masquerading.  Either way, routing tables may need to be set up as well as ....
-?     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
-?          iptables_masquerading=true \ 
-?          || iptables_masquerading=false
+# TODO:  get next commented section working
+# if [[ $REPLY =~ [Yy] ]] || [[ "$(hostname -I)" =~ \  ]] #has more than one ip address, ask about enabling routing
+# "$(hostname -I|$sedpath 's/\ /\n/g')" see if any are private range
+#  hostname -I enumerates and outs space-delimited list of all configured addresses of all network interfaces
+#    $iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_firewall"
+
+#remove masquerading statement above
+#get the ip address of $internal_net_interface from ip route or ifconfig or ipconfig to see which ones need masquerading.  Either way, routing tables may need to be set up as well as ....
+#     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
+#          iptables_masquerading=true \ 
+#          || iptables_masquerading=false
             (cat <<BUILDIPTABLES.SH_END
 
 $iptablespath -wP FORWARD DROP
@@ -838,9 +843,8 @@ BUILDIPTABLES.SH_END
 ) >> "$poofitee_home_dir/preparedness/buildiptables.sh"
 
 fi
-
-          chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
-          echo "$poofitee_home_dir/preparedness/buildiptables.sh set up..."
+chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
+echo "$poofitee_home_dir/preparedness/buildiptables.sh set up..."
 $poofitee_home_dir/preparedness/buildiptables.sh
 }
        install_firewall_cronentries () {
@@ -862,7 +866,7 @@ fi
 read -n1 -s -p "You will need to verify proper operation of current entries after this.")
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
-\$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log")\
+$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log")
 
 # lines below are from poofitee_firewall
 @reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
@@ -1297,7 +1301,19 @@ toemailadds=$( cat "$poofitee_home_dir/toemailadds" )
 #       open
 #       allow
 
-until (set -o noclobber;echo "\$$" > "/tmp/\$0.lockfile");do ! [[ -f "/tmp/\$0.lockfile" ]] && break;inotifywait -q -e DELETE_SELF "/tmp/\$0.lockfile" --format %e 2>&1|while read inotifywait_output;do if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="${inotifywait_output:: -2}";echo "\$(( \$(cat "${setting_home#*'`'}") + 5000 ))" > "${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ ${#inotifywait_output} -lt 12 ]] && break;done || sleep 1;done
+until (set -o noclobber;echo "\$$" > "/tmp/\$0.lockfile");do ! [[ -f "/tmp/\$0.lockfile" ]] && break
+     inotifywait -q -e DELETE_SELF "/tmp/\$0.lockfile" --format %e 2>&1 \
+         |while read inotifywait_output;do
+              if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then 
+                   setting_home="${inotifywait_output:: -2}"
+                   echo "\$(( \$(cat "${setting_home#*'`'}") + 5000 ))" > "${setting_home#*'`'}"
+                   [[ \$(( \$(cat "${setting_home#*'`'}")))" -lt 600000 ]] && echo "fs.inotify.max_user_watches = \$(( \$(cat "${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
+                   continue
+              fi
+              [[ "$inotifywait_output" == "DELETE_SELF" ]] && break
+          done \
+             || sleep 1
+done
 trap 'rm /tmp/\$0.lockfile' INT TERM EXIT
 [[ \$- = *i* ]] && echo "Connecting to email...."
 port="${line#*:}";MAIL_PROT="${line%:*}"
@@ -1366,7 +1382,7 @@ if [ \$((numofemails)) -gt -1 ]; then
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
               script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
-              if [ \$(( \${#option} )) -eq 0 ];then script="$iptablespath -wI INPUT \$($iptablespath -wnL INPUT --line-numbers|$greppath "s_privateIPs"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$(date) - remove when not needed\\" -j LOG"
+              if [ \$(( \${#option} )) -eq 0 ];then script="$iptablespath -wI INPUT \$($iptablespath -wnL INPUT --line-numbers|$greppath "poofitee_fw_s_privateIPs"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$(date) - remove when not needed\\" -j LOG"
               elif [ \$($iptablespath -wnL INPUT|$greppath -c "remove when not needed") -gt 0 ];then script="[[ \$($iptablespath -wnL INPUT --line-numbers|$greppath -m 1 "remove when not needed"|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD INPUT \$($iptablespath -wnL INPUT --line-numbers|$greppath -m 1 "remove when not needed"|$awkpath '{print \$1}')"
               else
                   script=""
@@ -1648,20 +1664,20 @@ $($crontabpath -u poofitee -l)
 # line below is from poofitee_DynAddChangeNotify
 @reboot "$poofitee_home_dir/newdynip.sh" >/dev/null 2>&1
 ##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpcd*.info        DO MONITOR, make separate entry for each file found
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$poofitee_home_dir/newdynip.sh";done >/dev/null 2>&1 # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/db/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhclient*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcpd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpd.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhclient*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhcpcd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/dhclient/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/misc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # udhcpc*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format %w%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpcd*.info        DO MONITOR, make separate entry for each file found
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$poofitee_home_dir/newdynip.sh";done >/dev/null 2>&1 # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/db/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhclient*.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhcpd.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # dhclient*.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpcd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhclient/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/misc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # udhcpc*.lease*
+@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
 [[ "$(eval "$crontabpath -u poofitee -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
