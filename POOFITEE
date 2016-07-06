@@ -21,7 +21,7 @@
 # TODO:  replace initd with systemd when referencing iptables-persistent and postfix
 # TODO: replace iptables with nftables
 # TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
-
+# TODO:  Explain why anyone would want a blacklist to accumulate:  1) differentiate between neutral and hostile when providing public services, 2) assist in selecting ports for knock sequence or email knock by which are least probed, 3) just to have a blacklist so admin/owner can blacklist their own choices of Internet addresses, 4) give to other firewall software in a multi-box environment, 5) sales, marketing, winning a bet, or other reasons to prove the point to self or others, 6) curiousity
 
 #You could possibly modify the sudoers file.
 #Run sudo visudo /etc/sudoers
@@ -94,45 +94,78 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
-press_any_key () {
-printf "press any key, Ctrl-c aborts...";read -rsn 1;read -rst 0.001 -n3 discard
+set_notinstalled_var () {
+[[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
+[[ -z $iptablespath ]] && notinstalled+="iptables\n"
+[[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+[[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
+[[ -z $mailpath ]] && notinstalled+="mailutils\n"
+[[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
+[[ -z $datepath ]] && notinstalled+="coreutils\n"
+[[ -z $bcpath ]] && notinstalled+="bc\n"
+[[ -z $atpath ]] && notinstalled+="at\n"
+[[ -z $nicepath ]] && notinstalled+="coreutils\n"
+[[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+}
+press_a_key () {
+printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c aborts...";read -rsn 1;read -rst 0.001 -n3 discard
+"$REPLY" == "$1" && return 0 || return 1
 }
 install_tail_f_lines_and_receiving_script () {
+#
+# until (set -o noclobber;echo "\$$" > "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile");do ! [[ -f "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'\\`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+#
 (cat <<SCRIPT_END
 #!/bin/bash
 # THIS SCRIPT IS LAUNCHED IN CRONTAB AT REBOOT AND OFTEN THEREAFTER FOR REAL-TIME FIREWALLING BLACKLIST MAINTENANCE
 #This script will add or remove to iptables (IPv4) s_blacklist and d_blacklist chains unless the last line is 'pause'
-until (set -o noclobber;echo "\$$" > "/tmp/\$0.lockfile");do ! [[ -f "/tmp/\$0.lockfile" ]] && break;inotifywait -q -e DELETE_SELF "/tmp/\$0.lockfile" --format %e 2>&1|while read inotifywait_output;do if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="${inotifywait_output:: -2}";echo "\$(( \$(cat "${setting_home#*'`'}") + 5000 ))" > "${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ ${#inotifywait_output} -lt 12 ]] && break;done || sleep 1;done
-trap 'rm /tmp/\$0.lockfile' INT TERM EXIT
 poofitee_home_dir="$poofitee_home_dir"
+until (set -o noclobber;echo "\$$" > "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do
+       ! [[ -f "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break
+       $inotifywaitpath -q -e DELETE_SELF "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1| \
+            while read inotifywait_output;do
+                 if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then
+                        setting_home="\${inotifywait_output:: -2}
+                        echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}"
+                        echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
+                        continue
+                 fi
+                 [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
+            done || sleep 1
+done
+trap 'rm "$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 email_subjectline_front="POOFITEE "
 recipient_list="\$(cat \$poofitee_home_dir/toemailadds)"
+amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
+make_the_ramdisk_hash_file () {
+$awkpath '{if (started!="true"){if (\$1\$2=="-As_blacklist"){started="true"}else{next}}else {if (\$1\$2!="-As_blacklist"){exit}print \$4}}' < /etc/iptables/rules.v4|$awkpath -F. '{if (index(\$4,"/")==0 && index(\$4,"c")==0) {next}starting=(\$1*256*256*256)+(\$2*256*256)+(\$3*256)+\$4;if (index(\$4,"/")==0) {if (starting!=0) {print starting" c"}} else {ending=starting+(2**(32-substr(\$4,index(\$4,"/")+1)))-1;print starting" beg"; print ending" end"}}'|$sortpath -V > "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4"
+}
 save_iptables () {
-if [ \$($iptablespath -wnL poofitee_fw_s_static_trusted|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnL INPUT|$stdbufpath -o0 grep -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then
+if [ \$($iptablespath -wnL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then
       $iptablespath-save > /etc/iptables/rules.v4
-      ls -l /etc/iptables/rules.v4|awk '{{print $5" "$NF}}' > "\$poofitee_home_dir/filessizer"
-      oldest_rules_file="\$(ls -rt \$poofitee_home_dir/preparedness/rules.v4*|head -n1)"
-      ls -l "$oldest_rules_file"|awk '{print $5" "$NF}' >> "\$poofitee_home_dir/filessizer"
-      if [[ "\$($sortpath -k1 < \$poofitee_home_dir/filessizer|$awkpath 'NR==1 {print $2}')" == "/etc/iptables/rules.v4" ]];then
-           mv "$oldest_rules_file" "$oldest_rules_file"".size_shrank_after_this.\$(date)"
+      ls -l /etc/iptables/rules.v4|$awkpath '{{print \$5" "\$NF}}' > "\$poofitee_home_dir/filessizer"
+      oldest_rules_file="\$(ls -rt "\$poofitee_home_dir/preparedness/rules.v4*"|head -n1)"
+      ls -l "\$oldest_rules_file"|$awkpath '{print \$5" "\$NF}' >> "\$poofitee_home_dir/filessizer"
+      if [[ "\$($sortpath -k1 < "\$poofitee_home_dir/filessizer"|$awkpath 'NR==1 {print \$2}')" == "/etc/iptables/rules.v4" ]];then
+           mv "\$oldest_rules_file" "\$oldest_rules_file"".size_shrank_after_this.\$(date)"
       fi
-      $iptablespath-save > "$oldest_rules_file"
+      cp /etc/iptables/rules.v4 "\$oldest_rules_file"
 else #somehow iptables has lost normal rules
-          echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
+          echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
           $crontabpath -l -u poofitee > "\$poofitee_home_dir/cronentries.bak"
           if [[ \$((\$($wcpath -l < "\$poofitee_home_dir/cronentries.bak"))) -gt 1 ]];then
                (cat <<EOF
 
-\$($crontabpath -l -u poofitee)\
+\$($crontabpath -l -u poofitee)
 */5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/nul 2>&1
 
 EOF
 )|$crontabpath -u poofitee -
                if ! [[ \$((\$($crontabpath -l -u poofitee|$wcpath -l))) -gt \$((\$($wcpath -l < "\$poofitee_home_dir/cronentries.bak"))) ]];then
                     cat "\$poofitee_home_dir/cronentries.bak"|$crontabpath -u poofitee -
-                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  Also unable to schedule checking for email arrival, so hopefully knocking the email through will still work"|$mailpath -s "$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  Also unable to schedule checking for email arrival, so hopefully knocking the email through will still work"|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
                else
-                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
                fi
           fi
 fi
@@ -140,15 +173,24 @@ fi
 #This test will allow CIDR consolidated IPv4 address ranges
 if [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
      if [ "x\$($tailpath -n-1 $0|$awkpath '{printf $1}')" == "xpause" ]; then echo "\$1" >> "\$poofitee_home_dir/preparedness/saveforlater";echo "\$2" >> "\$poofitee_home_dir/preparedness/saveforlater";echo "\$3" >> "\$poofitee_home_dir/preparedness/saveforlater";exit;fi
-     if [ $(printf "\$3"|$greppath -c "whitelist") -gt 0 ];then
+     [[ -f "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4" ]] && make_the_ramdisk_hash_file
+     if [[ "\$3x" =~ whitelist ]];then
            "\$poofitee_home_dir/openall.sh" "\$1" "by knocking"
-     elif [[ \$($greppath -wcm 1 "$1" < "\$poofitee_home_dir/s_blacklistadds") == "0" ]] && [[ "\$((echo "\$1 c";cat "\$poofitee_home_dir/s_blacklistadds")|$awkpath -F. '{if (index($4,"/")==0 && index($4,"c")==0) {next}starting=($1*256*256*256)+($2*256*256)+($3*256)+$4;if (index($4,"/")==0) {if (starting!=0) {print starting" c"}} else {ending=starting+(2**(32-substr($4,index($4,"/")+1)))-1;print starting" beg"; print ending" end"}}'|sort -V|awk 'BEG{inside=0}{if ($0~/c/){if (inside>0) {exit 0} else {exit 1}}else{if($0~/beg/){inside=inside+1}else{inside=inside-1}}}';echo $?)" == "1" ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ]; then
-           cmdline="$iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP"
+     elif [[ "$3x" =~ forcex ]] || \
+             ([ "\$2x" != "-rx" ] && \
+              [ "\$3x" != "-rx" ] && \
+              ! ((echo "\$1"|$awkpath -F. \
+                    '{starting=(\$1*256*256*256)+(\$2*256*256)+(\$3*256)+\$4
+                        if (index(\$4,"/")==0) {if (starting!=0) {print starting" c"}}}'
+                        cat "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4")| \
+                    $sortpath -V| \
+                    $teepath "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4"| \
+                    $awkpath 'BEG{inside=0}{if (\$0~/c/){if (inside>0) {exit 0} else {exit 1}}else{if(\$0~/beg/){inside=inside+1}else{inside=inside-1}}}')); then
+           cmdline="$iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP"
            if ! [[ "\$3x" =~ knock ]]; then
-               printf "\$1\n" >> \$poofitee_home_dir/s_blacklistadds
-               eval "$cmdline"
+               eval "\$cmdline"
            else
-               echo "if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ $($iptablespath -wnvL INPUT|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then $iptables-save;fi;fi"|at now +2 minute
+               echo "if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ $($iptablespath -wnvL INPUT|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then $iptables-save;fi;fi"|at now +2 minute
            fi
            save_iptables
      else
@@ -463,7 +505,7 @@ printf "\n  Client configuration is available under different licensing terms if
 \nresponsibility to enforce a single-use-only policy on OTPs if you really need\
 \nthat extreme level of security.  With the encryption depth and options allowed,\
 \nyou may elect to let an OTP list be used more than once without serious risk of\
-\ncompromise, especially with unrecognizable OTPs.";press_any_key;\
+\ncompromise, especially with unrecognizable OTPs.";press_a_key;\
 printf "\n  The OTP list is a non-encrypted text file: the first line is simply the month-\
 \nyear number pair (includes the dash) the OTP list is created, a <comma> or\
 \n<comma><space>, followed by a <comma> or <comma><space> delimited list of\
@@ -484,7 +526,7 @@ printf "\n  The OTP list is a non-encrypted text file: the first line is simply 
 \n  To make under-encrypted OTPs, run decryption on each non-encrypted OTP.  To\
 \nover-encrypt, use OTPs that you've encrypted extra times beyond what your OTP\
 \nlist specifies.";\
-                   press_any_key;\
+                   press_a_key;\
 printf "\n\
 \n\n  You may arrange for purchase and installation of client-side scripts (Linux/\
 \nMac), programs (Linux/Mac/MS Windows/Android/iPhone), and OTP lists via email:\
@@ -507,7 +549,7 @@ continue)\
                    until [[ -f "$REPLY" ]];do
                         printf "\nEnter the name including absolute path of the OTP text file you're providing:\n"
 #                   echo "Sorry, this feature is not yet finished..."
-#                   press_any_key
+#                   press_a_key
                         read 
                         ! [[ -f "$REPLY" ]] && continue
                    done
@@ -552,7 +594,7 @@ HOLD_UNTIL_ABLE
 \nSeven seconds maximum is allowed between each knock.  After the knock sequence\
 \nis completed successfully, the knocking computer will be given only 17 seconds\
 \nin which to establish valid communication, and the knock sequence must be\
-\nrepeated for each future session.  ";press_any_key )
+\nrepeated for each future session.  ";press_a_key )
             done
             printf "\n\nSetting up port knocking.\
 \nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
@@ -777,11 +819,20 @@ if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forwa
           [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
      fi
 fi
+
             (cat <<BUILDIPTABLES.SH_END
 #!/bin/bash
 $iptablespath -wP INPUT DROP
+$iptablespath -wN poofitee_fw_d_privateIPs 2>&1
+$iptablespath -wN poofitee_fw_d_static_trusted 2>&1
+$iptablespath -wN poofitee_fw_d_whitelist 2>&1
+$iptablespath -wN poofitee_fw_s_blacklist 2>&1
+$iptablespath -wN poofitee_fw_d_blacklist 2>&1
+$iptablespath -wN poofitee_fw_s_privateIPs 2>&1
+$iptablespath -wN poofitee_fw_s_static_trusted 2>&1
+$iptablespath -wN poofitee_fw_s_whitelist 2>&1
 $iptablespath -wA INPUT -i $external_net_interface -p all -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"
-# $iptablespath -wA INPUT -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p all -j ACCEPT -m comment --comment "poofitee_firewall"
+$iptablespath -wA INPUT -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p all -j ACCEPT -m comment --comment "poofitee_firewall"
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_static_trusted
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_whitelist
 $iptablespath -wA INPUT -p all -j poofitee_fw_s_privateIPs
@@ -789,14 +840,6 @@ $iptablespath -wA INPUT -p all -j poofitee_fw_s_blacklist
 $iptablespath -wA INPUT -p all -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_firewall"
 $iptablespath -wA INPUT -p all -j DROP -m comment --comment "poofitee_firewall"
 $iptablespath -wP OUTPUT ACCEPT
-$iptablespath -wN poofitee_fw_d_privateIPs
-$iptablespath -wN poofitee_fw_d_static_trusted
-$iptablespath -wN poofitee_fw_d_whitelist
-$iptablespath -wN poofitee_fw_s_blacklist
-$iptablespath -wN poofitee_fw_d_blacklist
-$iptablespath -wN poofitee_fw_s_privateIPs
-$iptablespath -wN poofitee_fw_s_static_trusted
-$iptablespath -wN poofitee_fw_s_whitelist
 $iptablespath -wA OUTPUT -p all -j poofitee_fw_d_blacklist
 $iptablespath -wA poofitee_fw_d_privateIPs -d 10.0.0.0/8 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
 $iptablespath -wA poofitee_fw_d_privateIPs -d 172.16.0.0/12 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
@@ -812,6 +855,8 @@ $iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -p all -m commen
 BUILDIPTABLES.SH_END
 ) > "$poofitee_home_dir/preparedness/buildiptables.sh"
 # "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
+
+#  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
 
 if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && [[ ifconfig== ]] && ! [[ $iptables_masquerading == false ]];then
 
@@ -843,11 +888,48 @@ $iptablespath -wA FORWARD -p all -j DROP -m comment --comment "poofitee_firewall
 
 BUILDIPTABLES.SH_END
 ) >> "$poofitee_home_dir/preparedness/buildiptables.sh"
+<<SANDBOX
+$iptablespath -wN poofitee_fw_publics
+$iptablespath -wA poofitee_fw_publics -p all -j poofitee_fw_s_reallybad
+$iptablespath -wA poofitee_fw_publics -p all -j poofitee_fw_d_reallybad
+$iptablespath -wA poofitee_fw_publics -p tcp --dport 20:22 -j poofitee_fw_publics
+$iptablespath -wA poofitee_fw_publics -p all --dport 6660:7020 -j poofitee_fw_publics
+$iptablespath -wA poofitee_fw_publics -p all --dport 9996:9999 -j poofitee_fw_publics
+$iptablespath -wA poofitee_fw_publics -p tcp -m multiport --dports 23,80,17855,8080,443,465,993,995,25,110 -j poofitee_fw_publics
+established user of public services
+first-timer of public services must not be in either blacklist,  source address be put in recent list to bypass general blacklist check (allow quicker access for authentication)
+--blacklisting command will be scheduled for now+x minutes, (scheduled command includes check for inclusion in specific whitelist) and
+--successful entrants will be whitelisted for that service and not have to get checked for blacklist presence
+--failures will get blacklisted in which blacklist?  General one is fine as long as they are removed from recent list?  How to remove via script from recent list?  Must do so through file system? /proc/net/xt_recent
+if fw_publics traffic is blacklisted generally, make it unable to get whitelisted
+How acceptable source IP addresses are determined:
 
+technique to identified authorized sources:
+   legitimate traffic must be characterized by initiator (should be an inside source address), packet frequency (higher means time window is right to assume authorized person is attempting to communicate)
+   when initiator is on the outside and could be from anywhere, just make sure they don't hit ANY other ports than they should or they get banished forever, and their source address gets whitelisted within x minutes by some log file activity
+
+
+HTTP TCP 80
+IRCD TCP/UDP 6660-7020  unreal
+OpenSSL TCP/UDP 9996-9999
+Router-Access TCP 8080
+HTTPS TCP 443
+SMTPS TCP 465 postfix
+IMAPS TCP 993
+POP3S TCP 995
+SMTP TCP 25, from 25 as well! the same for some others of these ports
+POP3 TCP 110
+206.174.118.125
+kodiak - owner-only ssh+
+nickserv
+anope
+
+
+SANDBOX
 fi
 chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
 echo "$poofitee_home_dir/preparedness/buildiptables.sh set up..."
-$poofitee_home_dir/preparedness/buildiptables.sh
+# $poofitee_home_dir/preparedness/buildiptables.sh
 }
        install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
@@ -873,7 +955,7 @@ read -n1 -s -p "You will need to verify proper operation of current entries afte
 
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log")
+$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
 
 # lines below are from poofitee_firewall
 @reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
@@ -890,6 +972,7 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have long before now."
      exit
 fi
+mkdir /tmp/poofitee 2>&1
 (cat <<SCRIPT_END
 
 #!/bin/bash
@@ -897,9 +980,9 @@ nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-b
 nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 
 SCRIPT_END
-) > /tmp/launch_complex_cron_line
-chmod 777 /tmp/launch_complex_cron_line
-sudo -u poofitee /var/tmp/launch_complex_cron_line
+) > /tmp/poofitee/launch_complex_cron_line
+chmod 777 /tmp/poofitee/launch_complex_cron_line
+sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
 printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
 }
        conf_postfix () {
@@ -1311,21 +1394,21 @@ toemailadds=$( cat "$poofitee_home_dir/toemailadds" )
 #       on
 #       open
 #       allow
-
-until (set -o noclobber;echo "\$$" > "/tmp/\$0.lockfile");do ! [[ -f "/tmp/\$0.lockfile" ]] && break
-     inotifywait -q -e DELETE_SELF "/tmp/\$0.lockfile" --format %e 2>&1 \
+mkdir /tmp/poofitee 2>&1
+until (set -o noclobber;echo "\$$" > "/tmp/poofitee\$0.lockfile");do ! [[ -f "/tmp/poofitee\$0.lockfile" ]] && break
+     inotifywait -q -e DELETE_SELF "/tmp/poofitee\$0.lockfile" --format %e 2>&1 \
          |while read inotifywait_output;do
-              if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then 
-                   setting_home="${inotifywait_output:: -2}"
-                   echo "\$(( \$(cat "${setting_home#*'`'}") + 5000 ))" > "${setting_home#*'`'}"
-                   [[ \$(( \$(cat "${setting_home#*'`'}")))" -lt 600000 ]] && echo "fs.inotify.max_user_watches = \$(( \$(cat "${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
+              if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then 
+                   setting_home="\${inotifywait_output:: -2}"
+                   echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'`'}"
+                   [[ \$(( \$(cat "\${setting_home#*'`'}")))" -lt 600000 ]] && echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
                    continue
               fi
-              [[ "$inotifywait_output" == "DELETE_SELF" ]] && break
+              [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
           done \
              || sleep 1
 done
-trap 'rm /tmp/\$0.lockfile' INT TERM EXIT
+trap 'rm /tmp/poofitee\$0.lockfile' INT TERM EXIT
 [[ \$- = *i* ]] && echo "Connecting to email...."
 port="${line#*:}";MAIL_PROT="${line%:*}"
 MAIL_FROM="$inemailacct@$inemailprovider"
@@ -1387,7 +1470,7 @@ if [ \$((numofemails)) -gt -1 ]; then
      do option=""
           [ \$($greppath -cwie "undo" -e "remove" -e "delete" -e "end" -e "stop" <(echo "\$line")) -gt 0 ] && option="-r"
           if [ \$($greppath -cwie "report" -e "send" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($iptablespath -wnvL s_whitelist|$awkpath '{print \$8}')\\"|mail -s \\"As you requested\\" \\"$toemailadds\\""
+              script="echo \\"\$($iptablespath -wnvL poofitee_fw_s_whitelist|$awkpath '{print \$8}')\\"|mail -s \\"As you requested\\" \\"$toemailadds\\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
               script="echo \\"\$($tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"$toemailadds\\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
@@ -1400,7 +1483,7 @@ if [ \$((numofemails)) -gt -1 ]; then
               fi
               [ \$(( \${#script} )) -ne 0 ] && echo "\$script" >> "$poofitee_home_dir/buildiptables.sh"
           else
-              script="$poofitee_home_dir/process_source_ipt.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
+              script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           fi
           echo "$poofitee_home_dir/email_fetch_parse is sending the following command to be executed:" >> "$poofitee_home_dir/email_fetch_parse.log"
           echo "\$script"  >> "$poofitee_home_dir/email_fetch_parse.log"
@@ -1813,7 +1896,7 @@ get_1_addr_from_bunch() {
 
 printf "POOFITEE is currently available in experimental status.  Your suggestions for\
 \nimprovements are solicited and welcome ... "
-press_any_key
+press_a_key
 clear
 usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
 D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
@@ -1859,7 +1942,7 @@ fi
 if ! [ "$(whoami)" == "root" ];then 
 printf "\nWithout being launched by su, this script won't be able to do anything except\
 \ndisplay menus.  No control of this computer can be made by this script unless\
-\nre-launched by root.  ";press_any_key;fi
+\nre-launched by root.  ";press_a_key;fi
 #  Beginning of copyright message
 printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \n\nThis work of authorship is made available to you under only one out of the\
@@ -1906,7 +1989,7 @@ adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";add
 rhel="$($whereispath $binaryflag chkconfig)"
 rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
 eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_any_key) \
+    || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
 external_net_interface="$($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')"
@@ -2108,18 +2191,18 @@ until ! [ -z $answer ];do
         if [[ $answer$char == "?" ]];then
              clear
              printf "$ghscreen1"
-             press_any_key
+             press_a_key
              clear
              printf "$ghscreen2"
-             press_any_key
+             press_a_key
              echo
         fi
-        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen\n";press_any_key;echo)
-        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen\n";press_any_key;echo)
-        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen\n";press_any_key;echo)
-        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen\n";press_any_key;echo)
-        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen\n";press_any_key;echo)
-        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen\n";press_any_key;echo)
+        [[ $answer =~ f ]] || [[ $answer$char == "?" ]] && (clear;printf "$fwscreen\n";press_a_key;echo)
+        [[ $answer =~ e ]] || [[ $answer$char == "?" ]] && (clear;printf "$rcscreen\n";press_a_key;echo)
+        [[ $answer =~ d ]] || [[ $answer$char == "?" ]] && (clear;printf "$dascreen\n";press_a_key;echo)
+        [[ $answer =~ p ]] || [[ $answer$char == "?" ]] && (clear;printf "$pkscreen\n";press_a_key;echo)
+        [[ $answer =~ s ]] || [[ $answer$char == "?" ]] && (clear;printf "$savescreen\n";press_a_key;echo)
+        [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen\n";press_a_key;echo)
         answer=""
      else
          echo
@@ -2132,6 +2215,7 @@ until ! [ -z $answer ];do
                       installerpath+="  ${installers[$(($installer * 2 + 1))]}"
                       break
                   done
+# In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to go
 #  packages required to install everything
                   inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
                   iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
@@ -2146,7 +2230,9 @@ until ! [ -z $answer ];do
                   bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
                   bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
                   wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
+                  freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
                   atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
+                  ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
                   visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
                   nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
                   mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
@@ -2209,57 +2295,17 @@ newemailconfigwarning="Installing a new configuration is\
                   fi
                   notinstalled=""
                   if [[ $answer =~ f ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                      set_notinstalled_var # during development, just install everything
                   fi
                   if [[ $answer =~ e ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                      set_notinstalled_var # during development, just install everything
                   fi
                   if [[ $answer =~ d ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                      [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                      [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                      [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                      [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                      [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $bcpath ]] && notinstalled+="bc\n"
-                      [[ -z $atpath ]] && notinstalled+="at\n"
-                      [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                      [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+                      set_notinstalled_var # during development, just install everything
                   fi
                   if [[ $answer =~ p ]];then
-                      [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-                      [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-                 [[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
-                 [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-                 [[ -z $mailpath ]] && notinstalled+="mailutils\n"
-                 [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-                 [[ -z $datepath ]] && notinstalled+="coreutils\n"
-                 [[ -z $bcpath ]] && notinstalled+="bc\n"
-                 [[ -z $atpath ]] && notinstalled+="at\n"
-                 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-                 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
-             fi
+                      set_notinstalled_var # during development, just install everything
+                  fi
              [[ -z $notinstalled ]] && break 2
              notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
              if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
@@ -2275,14 +2321,14 @@ newemailconfigwarning="Installing a new configuration is\
 \n\nYou may install them in another terminal and resume here, or press Ctrl-c to\
 \nterminate here, or press any other key to proceed as-is\
 \n\n"
-                  press_any_key;ackd="true"
+                  press_a_key;ackd="true"
              else
                   goahead="true"
              fi
         done # this loops here once when installer pgm not found
         clear
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-                  printf "Installation of\n$notinstalled\n\nwill begin after you ";press_any_key
+                  printf "Installation of\n$notinstalled\n\nwill begin after you ";press_a_key
 #                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
 #change the next line to a loop if need be
                   printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
@@ -2314,10 +2360,10 @@ newemailconfigwarning="Installing a new configuration is\
        done
        if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
             printf "\n\nUser poofitee needs to be created next.  "
-            press_any_key
+            press_a_key
             echo
             echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
-            $sedpath -i '/^sudo:.*,poofitee/b;s/^sudo:.*/&,poofitee/' /etc/group
+            sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
             $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
        fi
        echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
@@ -2330,15 +2376,21 @@ newemailconfigwarning="Installing a new configuration is\
           || printf "Your current iptables ruleset did not get backed up as expected.  You should\
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
+#       amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
+       ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" && chown poofitee "$poofitee_home_dir/ramdisk"
+       (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" # the size when set to 0 is not limited.  Let POOFITEE use all it needs
+       $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
+             echo "going off to installbuildiptables"
              install_buildiptablessh
+             echo "going off to tail f lines and recvg script"
              install_tail_f_lines_and_receiving_script
              if [[ -z $sendmail_works ]];then
                   outemail_warnings
-                  press_any_key
+                  press_a_key
              fi
              conf_postfix
         fi
