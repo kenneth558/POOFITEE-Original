@@ -822,7 +822,13 @@ fi
 
 #            (cat <<BUILDIPTABLES.SH_END
 #!/bin/bash
-#  TODO:  First we should remove already existing poofitee_fw rules
+#  TODO: First we should remove already existing poofitee_fw rules as line below is supposed to do
+#$iptablespath -wnL INPUT --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
+j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
+for ((;j>0;j--)); do
+     [[ $($iptablespath -wnL INPUT $j 2>/dev/null) =~ poofitee_firewall ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee firewall ruleset" || printf "Failed 5")
+done
+
 $iptablespath -wP INPUT DROP
 $iptablespath -wN poofitee_fw_d_privateIPs 2>&1
 $iptablespath -wN poofitee_fw_d_static_trusted 2>&1
@@ -858,7 +864,6 @@ $iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -p all -m commen
 # "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
 
 #  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
-
 if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && [[ ifconfig== ]] && ! [[ $iptables_masquerading == false ]];then
 
 # TODO:  get next commented section working
@@ -872,8 +877,8 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 #     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
 #          iptables_masquerading=true \ 
 #          || iptables_masquerading=false
-#  TODO: First we should remove already existing poofitee_fw rules
-$iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
+#  TODO: First we should remove already existing poofitee_fw rules as line below is supposed to do
+#$iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
 $iptablespath -wP FORWARD DROP
 $iptablespath -wA FORWARD -o $external_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
 $iptablespath -wA FORWARD -p all -j poofitee_fw_d_static_trusted
