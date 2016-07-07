@@ -2269,7 +2269,7 @@ newemailconfigwarning="Installing a new configuration is\
                                       printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                                       read -r -n1
                                       if [[ $REPLY =~ y ]];then 
-                                          sendmail_works=True
+                                          sendmail_works="AnyNon-ZeroLengthStringMeansTrue"
                                           echo
                                           break
                                       elif [[ $REPLY =~ [at] ]];then
