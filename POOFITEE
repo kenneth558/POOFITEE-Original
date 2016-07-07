@@ -871,8 +871,8 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 #     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
 #          iptables_masquerading=true \ 
 #          || iptables_masquerading=false
-            (cat <<BUILDIPTABLES.SH_END
-
+# Here FORWARD chain can be totally cleared of all poofitee entries, since no other poofitee option has any in this chain
+$iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
 $iptablespath -wP FORWARD DROP
 $iptablespath -wA FORWARD -o $external_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
 $iptablespath -wA FORWARD -p all -j poofitee_fw_d_static_trusted
@@ -883,11 +883,8 @@ $iptablespath -wA FORWARD -p all -j poofitee_fw_d_blacklist
 $iptablespath -wA FORWARD -i $external_net_interface -p all -j poofitee_fw_s_privateIPs
 $iptablespath -wA FORWARD -o $external_net_interface -p all -j poofitee_fw_d_privateIPs
 $iptablespath -wA FORWARD -p all -j poofitee_fw_s_blacklist
-$iptablespath -wA FORWARD -p all -j LOG --log-level 4 -m comment --comment "poofitee_firewall"
+$iptablespath -wA FORWARD -p all -j LOG --log-level 4 --log-prefix "iptables INPUT chain termed " -m comment --comment "poofitee_firewall"
 $iptablespath -wA FORWARD -p all -j DROP -m comment --comment "poofitee_firewall"
-
-BUILDIPTABLES.SH_END
-) >> "$poofitee_home_dir/preparedness/buildiptables.sh"
 <<SANDBOX
 $iptablespath -wN poofitee_fw_publics
 $iptablespath -wA poofitee_fw_publics -p all -j poofitee_fw_s_reallybad
@@ -906,9 +903,7 @@ How acceptable source IP addresses are determined:
 
 technique to identified authorized sources:
    legitimate traffic must be characterized by initiator (should be an inside source address), packet frequency (higher means time window is right to assume authorized person is attempting to communicate)
-   when initiator is on the outside and could be from anywhere, just make sure they don't hit ANY other ports than they should or they get banished forever, and their source address gets whitelisted within x minutes by some log file activity
-
-
+   when initiator is on the outside and could be from anywhere, just make sure they don't hit ANY other ports than they should or they get banished forever, but their source address must also get whitelisted within x minutes by some log file activity
 HTTP TCP 80
 IRCD TCP/UDP 6660-7020  unreal
 OpenSSL TCP/UDP 9996-9999
@@ -923,13 +918,8 @@ POP3 TCP 110
 kodiak - owner-only ssh+
 nickserv
 anope
-
-
 SANDBOX
 fi
-chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
-echo "$poofitee_home_dir/preparedness/buildiptables.sh set up..."
-# $poofitee_home_dir/preparedness/buildiptables.sh
 }
        install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
@@ -1923,7 +1913,7 @@ headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
 filepath="$($whereispath $binaryflag file)";filepath="${filepath#*:}";filepath="${filepath# }";filepath="${filepath%% *}"
 
 # The reject and exit notices should be in order of how extensive of upgrades would be required.  Entire computer first, then OS, then executable version
-#  I haven't sorted them in that order, yet
+#  I haven't yet sorted them in that order
 
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you pass it on"
