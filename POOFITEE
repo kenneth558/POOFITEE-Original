@@ -2172,7 +2172,7 @@ until ! [ -z $answer ];do
             read -rt 0.001 -n1 discard # read 2nd extended key field, timeout if real escape
             [[ "$(printf "%d" "'$discard")" == "0" ]] && exit # '
             read -rt 0.001 -n2 discard # read & discard 2nd extended key field, timeout if no more
-        elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [frdpFRDP] ]];then
+        elif [ "${answer%$char*}" == "$answer" ] && [[ "$char" =~ [ferdspFERDSP] ]];then
             char="${char,}"
             printf "$char"
             answer="$answer$char"
