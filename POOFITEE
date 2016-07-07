@@ -822,6 +822,7 @@ fi
 
 #            (cat <<BUILDIPTABLES.SH_END
 #!/bin/bash
+#  TODO:  First we should remove already existing poofitee_fw rules
 $iptablespath -wP INPUT DROP
 $iptablespath -wN poofitee_fw_d_privateIPs 2>&1
 $iptablespath -wN poofitee_fw_d_static_trusted 2>&1
@@ -871,7 +872,7 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 #     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
 #          iptables_masquerading=true \ 
 #          || iptables_masquerading=false
-# Here FORWARD chain can be totally cleared of all poofitee entries, since no other poofitee option has any in this chain
+#  TODO: First we should remove already existing poofitee_fw rules
 $iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
 $iptablespath -wP FORWARD DROP
 $iptablespath -wA FORWARD -o $external_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
