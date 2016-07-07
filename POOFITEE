@@ -2278,7 +2278,7 @@ newemailconfigwarning="Installing a new configuration is\
                                  fi
                                  printf "\nThe email command appears to have failed.  This means a full, new email sending\
 \nconfiguration will be set up on this computer. $newemailconfigwarning"
-                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing/n"
+                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
                                  press_a_key
                                  echo
                                  break
