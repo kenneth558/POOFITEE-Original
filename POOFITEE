@@ -2364,7 +2364,7 @@ newemailconfigwarning="Installing a new configuration is\
        poofitee_home_dir="${poofitee_home_dir%%/}"
        back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
-\n\niptables-restore < $poofitee_home_dir/iptables_ruleset.$current_time\n\n" \
+\n\niptables-restore < \"$poofitee_home_dir/iptables_ruleset.$current_time\"\n\n" \
           || printf "Your current iptables ruleset did not get backed up as expected.  You should\
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
