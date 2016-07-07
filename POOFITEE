@@ -820,7 +820,7 @@ if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forwa
      fi
 fi
 
-            (cat <<BUILDIPTABLES.SH_END
+#            (cat <<BUILDIPTABLES.SH_END
 #!/bin/bash
 $iptablespath -wP INPUT DROP
 $iptablespath -wN poofitee_fw_d_privateIPs 2>&1
@@ -852,8 +852,8 @@ $iptablespath -wA poofitee_fw_s_static_trusted -i lo -p all -m comment --comment
 $iptablespath -wA poofitee_fw_s_static_trusted -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT
 $iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -p all -m comment --comment "poofitee_firewall_local time server hosted by Monticello" -j ACCEPT
 
-BUILDIPTABLES.SH_END
-) > "$poofitee_home_dir/preparedness/buildiptables.sh"
+# BUILDIPTABLES.SH_END
+# ) > "$poofitee_home_dir/preparedness/buildiptables.sh"
 # "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
 
 #  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
