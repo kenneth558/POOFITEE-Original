@@ -2245,7 +2245,7 @@ until ! [ -z $answer ];do
 newemailconfigwarning="Installing a new configuration is\
 \ndefinitely NOT what you want if this computer is already or will be in use in a\
 \nbusiness email service role, like MTA, MDA, email relay, or email server because\
-\nthe settings this installation script will change will most certainly be\
+\nthe settings that this installation script will change will most certainly be\
 \nincompatible with said role.  If you need to avoid installing the emailing\
 \nconfiguration, you should manually get the command line email sending to work\
 \nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
@@ -2278,8 +2278,10 @@ newemailconfigwarning="Installing a new configuration is\
                                  fi
                                  printf "\nThe email command appears to have failed.  This means a full, new email sending\
 \nconfiguration will be set up on this computer. $newemailconfigwarning"
-                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing"
-                                 sleep 2
+                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing/n"
+                                 press_a_key
+                                 echo
+                                 break
                             fi
                        done
                   fi
