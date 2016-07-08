@@ -112,115 +112,106 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 "$REPLY" == "$1" && return 0 || return 1
 }
 install_tail_f_lines_and_receiving_script () {
-#
-# until (set -o noclobber;echo "\$$" > "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile");do ! [[ -f "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "/tmp/poofitee\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'\\`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
-#
 (cat <<SCRIPT_END
 #!/bin/bash
-# THIS SCRIPT IS LAUNCHED IN CRONTAB AT REBOOT AND OFTEN THEREAFTER FOR REAL-TIME FIREWALLING BLACKLIST MAINTENANCE
-#This script will add or remove to iptables (IPv4) s_blacklist and d_blacklist chains unless the last line is 'pause'
-poofitee_home_dir="$poofitee_home_dir"
-until (set -o noclobber;echo "\$$" > "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do
-       ! [[ -f "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break
-       $inotifywaitpath -q -e DELETE_SELF "\$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1| \
-            while read inotifywait_output;do
-                 if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then
-                        setting_home="\${inotifywait_output:: -2}
-                        echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}"
-                        echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
-                        continue
-                 fi
-                 [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
-            done || sleep 1
-done
-trap 'rm "$poofitee_home_dir/ramdisk/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
+lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
+until (set -o noclobber;echo "$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 email_subjectline_front="POOFITEE "
-recipient_list="\$(cat \$poofitee_home_dir/toemailadds)"
-amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
-make_the_ramdisk_hash_file () {
-$awkpath '{if (started!="true"){if (\$1\$2=="-As_blacklist"){started="true"}else{next}}else {if (\$1\$2!="-As_blacklist"){exit}print \$4}}' < /etc/iptables/rules.v4|$awkpath -F. '{if (index(\$4,"/")==0 && index(\$4,"c")==0) {next}starting=(\$1*256*256*256)+(\$2*256*256)+(\$3*256)+\$4;if (index(\$4,"/")==0) {if (starting!=0) {print starting" c"}} else {ending=starting+(2**(32-substr(\$4,index(\$4,"/")+1)))-1;print starting" beg"; print ending" end"}}'|$sortpath -V > "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4"
+recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
+# amount_of_free_memory="\$($freepath -b|$awkpath '{if (\$1=="Mem:"){printf \$4;exit}}')"
+echo "\$(date) - Entering the script with \$1 \$2 \$3" >> "\$0.log"
+make_the_ramdisk_lookup_file () {
+$greppath -- "-A poofitee_fw_s_blacklist" < /etc/iptables/rules.v4 > "$poofitee_home_dir/ramdisk/blacklist.v4.addresses"
 }
 save_iptables () {
+# skip this if another instance of this script is waiting to run
+# echo "\$(date) - Entered save ruleset" >> "\$0.log"
+# pslinecount="\$(\$greppath "\$(ps > "$poofitee_home_dir/ramdisk/psout";$greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$sedpath -n 's/\\S*\\s*\\S*\\s*\\S*\\s*//p')" < "$poofitee_home_dir/ramdisk/psout"|$wcpath -l)"
+# echo "\$(date) - pslinecount=\$pslinecount" >> "\$0.log"
+#!!!!!!! get this functional when it gets launched by poofitee user from crontab
+# if [[ \$(("\$pslinecount")) -lt 3 ]];then
+# :
+# else
+# echo "\$(date) - Passed first condition in save ruleset" >> "\$0.log"
 if [ \$($iptablespath -wnL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then
-      $iptablespath-save > /etc/iptables/rules.v4
-      ls -l /etc/iptables/rules.v4|$awkpath '{{print \$5" "\$NF}}' > "\$poofitee_home_dir/filessizer"
-      oldest_rules_file="\$(ls -rt "\$poofitee_home_dir/preparedness/rules.v4*"|head -n1)"
-      ls -l "\$oldest_rules_file"|$awkpath '{print \$5" "\$NF}' >> "\$poofitee_home_dir/filessizer"
-      if [[ "\$($sortpath -k1 < "\$poofitee_home_dir/filessizer"|$awkpath 'NR==1 {print \$2}')" == "/etc/iptables/rules.v4" ]];then
+      $iptablespath-save > /etc/iptables/rules.v4 # this way takes too long, need to simply let a regular file in ramdrive /tmp/ hold the
+      make_the_ramdisk_lookup_file
+      ls -l /etc/iptables/rules.v4|$awkpath '{{print \$5" "$NF}}' > "$poofitee_home_dir/ramdisk/filessizer"
+      oldest_rules_file="\$(ls -rt "$poofitee_home_dir/preparedness/rules.v4.?"|$headpath -n1)"
+      ls -l "\$oldest_rules_file"|$awkpath '{print \$5" "\$NF}' >> "$poofitee_home_dir/ramdisk/filessizer"
+      if [[ "\$($sortpath -k1 < "$poofitee_home_dir/ramdisk/filessizer"|$awkpath 'NR==1 {print \$2}')" == "/etc/iptables/rules.v4" ]];then
            mv "\$oldest_rules_file" "\$oldest_rules_file"".size_shrank_after_this.\$(date)"
       fi
       cp /etc/iptables/rules.v4 "\$oldest_rules_file"
 else #somehow iptables has lost normal rules
           echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
-          $crontabpath -l -u poofitee > "\$poofitee_home_dir/cronentries.bak"
-          if [[ \$((\$($wcpath -l < "\$poofitee_home_dir/cronentries.bak"))) -gt 1 ]];then
+          $crontabpath -l -u poofitee > "$poofitee_home_dir/cronentries.bak"
+          if [[ \$((\$(\$wcpath -l < "$poofitee_home_dir/cronentries.bak"))) -gt 1 ]] && ! ($greppath "^\*/5\ \*\ \*\ \*\ \*\ \"$poofitee_home_dir/email_fetch_parse\"\ >/dev/null\ 2>&1$" "$poofitee_home_dir/cronentries.bak");then
                (cat <<EOF
 
 \$($crontabpath -l -u poofitee)
 */5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/null 2>&1
-
 EOF
-)|$crontabpath -u poofitee -
-               if ! [[ \$((\$($crontabpath -l -u poofitee|$wcpath -l))) -gt \$((\$($wcpath -l < "\$poofitee_home_dir/cronentries.bak"))) ]];then
-                    cat "\$poofitee_home_dir/cronentries.bak"|$crontabpath -u poofitee -
-                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  Also unable to schedule checking for email arrival, so hopefully knocking the email through will still work"|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
+)|$crontabpath  -u poofitee -
+:
+               if ! [[ \$((\$($crontabpath -l -u poofitee |$wcpath -l))) -gt \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
+                    cat "$poofitee_home_dir/cronentries.bak"|$crontabpath -u poofitee  -
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \"restore ruleset\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will still work"|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "$recipient_list"
                else
-                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
+                    echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
                fi
           fi
 fi
+# fi
 }
-#This test will allow CIDR consolidated IPv4 address ranges
-if [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
-     if [ "x\$($tailpath -n-1 $0|$awkpath '{printf $1}')" == "xpause" ]; then echo "\$1" >> "\$poofitee_home_dir/preparedness/saveforlater";echo "\$2" >> "\$poofitee_home_dir/preparedness/saveforlater";echo "\$3" >> "\$poofitee_home_dir/preparedness/saveforlater";exit;fi
-     [[ -f "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4" ]] && make_the_ramdisk_hash_file
-     if [[ "\$3x" =~ whitelist ]];then
-           "\$poofitee_home_dir/openall.sh" "\$1" "by knocking"
-     elif [[ "$3x" =~ forcex ]] || \
-             ([ "\$2x" != "-rx" ] && \
-              [ "\$3x" != "-rx" ] && \
-              ! ((echo "\$1"|$awkpath -F. \
-                    '{starting=(\$1*256*256*256)+(\$2*256*256)+(\$3*256)+\$4
-                        if (index(\$4,"/")==0) {if (starting!=0) {print starting" c"}}}'
-                        cat "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4")| \
-                    $sortpath -V| \
-                    $teepath "\$poofitee_home_dir/ramdisk/s_blacklist_addresses_from_rules.v4"| \
-                    $awkpath 'BEG{inside=0}{if (\$0~/c/){if (inside>0) {exit 0} else {exit 1}}else{if(\$0~/beg/){inside=inside+1}else{inside=inside-1}}}')); then
-           cmdline="$iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP"
-           if ! [[ "\$3x" =~ knock ]]; then
-               eval "\$cmdline"
-           else
-               echo "if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ $($iptablespath -wnvL INPUT|$stdbufpath -o0 grep -m 1 -c ESTABLISHED) == \"1\" ];then $iptables-save;fi;fi"|at now +2 minute
+echo "\$(date) - Entering the ip address test with \$1 \$2 \$3" >> "\$0.log"
+#This test will allow CIDR-type consolidated IPv4 address ranges
+if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
+           if ! [[ -f "$poofitee_home_dir/ramdisk/blacklist.v4.addresses" ]];then
+# echo "\$(date) - No lookup file, making a new one" >> "\$0.log"
+                 make_the_ramdisk_lookup_file
            fi
+# echo "\$(date) - Entering the zone with \$1 \$2 \$3" >> "\$0.log"
+     if [[ "\$3x" =~ whitelist ]];then
+           "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
+     elif [[ "\$3x" =~ forcex ]] || ( [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ] && ! ($greppath -w "\$1" "$poofitee_home_dir/ramdisk/blacklist.v4.addresses")); then
+#echo "\$(date) - Not a duplicate per lookup file" >> "\$0.log"
+           if ! [[ "\$3x" =~ knock ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ]; then
+                 $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment "\$2" -j DROP
+                 $iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment "\$2" -j DROP
+           else
+               echo "if [ \\\$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \\\$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ \\\$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == \"1\" ];then $iptablespath-save > /etc/iptables/rules.v4;fi;fi"|at now +2 minute
+           fi
+          printf "\$1\n" >> "$poofitee_home_dir/ramdisk/blacklist.v4.addresses"
+#echo "\$(date) - Saving iptables ruleset" >> "\$0.log"
            save_iptables
-     else
-          if [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
-              until [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath  -cwm 1 "\$1") == "0" ] && [ \$(sudo $iptablespath -wnL poofitee_fw_d_blacklist|$greppath  -cwm 1 "\$1") == "0" ];do
-                      cmdline0="[[ \$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print $1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_blacklist \$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 $1|$awkpath '{print $1}');"
-                      cmdline0+="[[ \$($iptablespath -wnL poofitee_fw_d_blacklist --line-numbers|$greppath -wm 1 \$1|/usr/bin/awk '{print $1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_d_blacklist \$($iptablespath -wnL poofitee_fw_d_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print $1}')"
-                      until eval "$cmdline0";
-                         do sleep 1;
-                      done;
-                      echo "$cmdline0" >> "\$poofitee_home_dir/preparedness/buildiptables.filterblacklist.sh"
-                      echo "$cmdline0"|$mailpath -s "$email_subjectline_front""blacklist \$1" "\$recipient_list"
-              done
-              save_iptables
-          fi
+#echo "\$(date) - Done saving iptables ruleset" >> "\$0.log"
+     elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
+          until [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath  -cwm 1 "\$1") == "0" ] && ! ($iptablespath -wnL poofitee_fw_d_blacklist|$greppath  -wm 1 "\$1");do
+               cmdline0="[[ \\\$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_blacklist \\\$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}');"
+               cmdline0+="[[ \\\$($iptablespath -wnL poofitee_fw_d_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_d_blacklist \\\$($iptablespath -wnL poofitee_fw_d_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}')"
+               until eval "\$cmdline0";
+                   do sleep 1;
+               done;
+               echo "\$cmdline0"|$mailpath -s "\$email_subjectline_front""blacklist \$1" "\$recipient_list"
+          done
+          save_iptables
      fi
      #  The lines below this are for detecting the knock and launching email fetch when the email-reader triggering port is knocked
      #  Notice that the email-reader triggering port is gotten from iptables INPUT chain rule with email-reader in its comment
      #  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
-     #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
-     if [ $(printf "\$3"|$greppath -c "fetch email") -gt 0 ];then
-             nohup "\$poofitee_home_dir/email_fetch_parse" &
+     #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): $iptablespath -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
+     [[ \$($greppath -c "#running" <($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
+     if [ \$(printf "\$3"|$greppath -c "fetch email") -gt 0 ];then
+             nohup "$poofitee_home_dir/email_fetch_parse" &
      fi
 elif [[ "\$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
-     echo "\$1"|mail -s "$email_subjectline_front""auth.log entry" "\$recipient_list"
+     echo "\$1"|$mailpath -s "\$email_subjectline_front""auth.log entry" "\$recipient_list"
 else
-    echo "This script requires a valid IP address besides the script name: \$1" >> "\$0.log"
+     echo "This script requires a valid IP address besides the script name: \$1" >> "\$0.log"
 fi
-exit
-
+# echo "\$(date) Done with all processing file" >> "\$0.log"
 SCRIPT_END
 ) > "$poofitee_home_dir/process_logfile_line"
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then 
