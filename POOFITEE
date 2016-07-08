@@ -964,17 +964,31 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have long before now."
      exit
 fi
-mkdir /tmp/poofitee 2>&1
-(cat <<SCRIPT_END
+if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "kern.log");then
+	mkdir /tmp/poofitee 2>&1
+	(cat <<-SCRIPT_END
 
-#!/bin/bash
-nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
-nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
+	#!/bin/bash
+	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 
-SCRIPT_END
-) > /tmp/poofitee/launch_complex_cron_line
-chmod 777 /tmp/poofitee/launch_complex_cron_line
-sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
+	SCRIPT_END
+	) > /tmp/poofitee/launch_complex_cron_line
+	chmod 777 /tmp/poofitee/launch_complex_cron_line
+	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
+fi
+if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "auth.log");then
+	mkdir /tmp/poofitee 2>&1
+	(cat <<-SCRIPT_END
+
+	#!/bin/bash
+	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
+
+	SCRIPT_END
+	) > /tmp/poofitee/launch_complex_cron_line
+	chmod 777 /tmp/poofitee/launch_complex_cron_line
+	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
+fi
+
 printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
 }
        conf_postfix () {
