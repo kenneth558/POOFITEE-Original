@@ -876,7 +876,7 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 #          iptables_masquerading=true \ 
 #          || iptables_masquerading=false
 #  TODO: First we should remove already existing poofitee_fw rules as line below is supposed to do
-            (cat <<BUILDIPTABLES.SH_END
+            (cat <<BUILDIPTABLES2.SH_END
 #$iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
 ! ($iptablespath -wL FORWARD|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_d_static_trusted"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -o $external_net_interface -j poofitee_fw_d_static_trusted -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 ! ($iptablespath -wL FORWARD|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_d_whitelist"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -o $external_net_interface -j poofitee_fw_d_whitelist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
@@ -888,7 +888,7 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 ! ($iptablespath -wL FORWARD|$greppath -- "-i $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_d_privateIPs"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -i $external_net_interface -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 ! ($iptablespath -wL FORWARD|$greppath -- "-p all"|$greppath -- "-j LOG"|$greppath -- "prefix \"iptables INPUT chain termed \""|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -p all -j LOG --log-level 4 --log-prefix "iptables INPUT chain termed " -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 ! ($iptablespath -wL FORWARD|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -p all -j DROP -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
-BUILDIPTABLES.SH_END
+BUILDIPTABLES2.SH_END
 ) >> "$poofitee_home_dir/preparedness/buildiptables.sh"
 $sedpath -i 's/^.*$/& \nprintf ./g' "$poofitee_home_dir/preparedness/buildiptables.sh"
 chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
