@@ -157,7 +157,7 @@ else #somehow iptables has lost normal rules
                (cat <<EOF
 
 \$($crontabpath -l -u poofitee)
-*/5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/nul 2>&1
+*/5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/null 2>&1
 
 EOF
 )|$crontabpath -u poofitee -
