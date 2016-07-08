@@ -115,7 +115,7 @@ install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
 #!/bin/bash
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
 trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 email_subjectline_front="POOFITEE "
 recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
@@ -1386,21 +1386,9 @@ toemailadds=$( cat "$poofitee_home_dir/toemailadds" )
 #       on
 #       open
 #       allow
-mkdir /tmp/poofitee 2>&1
-until (set -o noclobber;echo "\$$" > "/tmp/poofitee\$0.lockfile");do ! [[ -f "/tmp/poofitee\$0.lockfile" ]] && break
-     inotifywait -q -e DELETE_SELF "/tmp/poofitee\$0.lockfile" --format %e 2>&1 \
-         |while read inotifywait_output;do
-              if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then 
-                   setting_home="\${inotifywait_output:: -2}"
-                   echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'`'}"
-                   [[ \$(( \$(cat "\${setting_home#*'`'}")))" -lt 600000 ]] && echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
-                   continue
-              fi
-              [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
-          done \
-             || sleep 1
-done
-trap 'rm /tmp/poofitee\$0.lockfile' INT TERM EXIT
+lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>&1|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 [[ \$- = *i* ]] && echo "Connecting to email...."
 port="${line#*:}";MAIL_PROT="${line%:*}"
 MAIL_FROM="$inemailacct@$inemailprovider"
@@ -1726,7 +1714,7 @@ fi
 #fill in the here-doc section below to produce your desired email notification
 (cat <<EOM
 $webpageprotocol://$ip_from_resolver
-\$($iptablespath -wnL PREROUTING -t nat|awk '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
+\$($iptablespath -wnL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
 ssh user@\$ip_from_resolver\
 hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver\
 #adjust the protocol to the targeted service
