@@ -443,7 +443,7 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
                               mstrlinenumber="$(( $mstrlinenumber + 1 ))"
                               move_cursor_to_next_entry_in_list
                           fi
-                      elif [[ -z "$1" ]];then
+                      elif [[ -z "$1" ]] || [[ "$2" == "optional" ]];then
 #                          printf "\033[K"  # if ever needed
                           break
                       fi
@@ -2257,9 +2257,9 @@ newemailconfigwarning="Installing a new configuration is\
 \nthis test and install a full, new configuration on this computer\
 \nfor sending emails from the command line.  $newemailconfigwarning"
                             echo
-                            get_sendto_emailadds onlyneed1
-                            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
+                            get_sendto_emailadds onlyneed1 optional
                             if [[ -z "$mailadd" ]]; then break;fi
+                            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
                             if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                                  continue
                             fi
