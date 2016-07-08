@@ -824,40 +824,44 @@ fi
 #!/bin/bash
 #  TODO: First we should remove already existing poofitee_fw rules as line below is supposed to do
 #$iptablespath -wnL INPUT --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
-j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
-for ((;j>0;j--)); do
-     [[ $($iptablespath -wnL INPUT $j 2>/dev/null) =~ poofitee_firewall ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee firewall ruleset" || printf "Failed 5")
-done
+# j=$(($($iptablespath -wnL INPUT --line-number|$awkpath 'END {print $1}')))
+# for ((;j>0;j--)); do
+#     [[ $($iptablespath -wnL INPUT $j 2>/dev/null) =~ poofitee_firewall ]] && ([[ $($iptablespath -wD INPUT $j 2>/dev/null;echo "$?") == "0" ]] && echo "Removed INPUT chain rule $j assuming it was from the previous, obsolete poofitee firewall ruleset" || printf "Failed 5")
+# done
 
 $iptablespath -wP INPUT DROP
+$iptablespath -wP OUTPUT ACCEPT
+$iptablespath -wN poofitee_fw_d_blacklist 2>&1
 $iptablespath -wN poofitee_fw_d_privateIPs 2>&1
 $iptablespath -wN poofitee_fw_d_static_trusted 2>&1
 $iptablespath -wN poofitee_fw_d_whitelist 2>&1
 $iptablespath -wN poofitee_fw_s_blacklist 2>&1
-$iptablespath -wN poofitee_fw_d_blacklist 2>&1
 $iptablespath -wN poofitee_fw_s_privateIPs 2>&1
 $iptablespath -wN poofitee_fw_s_static_trusted 2>&1
 $iptablespath -wN poofitee_fw_s_whitelist 2>&1
-$iptablespath -wA INPUT -i $external_net_interface -p all -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"
-$iptablespath -wA INPUT -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p all -j ACCEPT -m comment --comment "poofitee_firewall"
-$iptablespath -wA INPUT -p all -j poofitee_fw_s_static_trusted
-$iptablespath -wA INPUT -p all -j poofitee_fw_s_whitelist
-$iptablespath -wA INPUT -p all -j poofitee_fw_s_privateIPs
-$iptablespath -wA INPUT -p all -j poofitee_fw_s_blacklist
-$iptablespath -wA INPUT -p all -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_firewall"
-$iptablespath -wA INPUT -p all -j DROP -m comment --comment "poofitee_firewall"
-$iptablespath -wP OUTPUT ACCEPT
-$iptablespath -wA OUTPUT -p all -j poofitee_fw_d_blacklist
-$iptablespath -wA poofitee_fw_d_privateIPs -d 10.0.0.0/8 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_d_privateIPs -d 172.16.0.0/12 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_d_privateIPs -d 192.168.0.0/16 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_s_privateIPs -s 192.168.0.0/16 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_s_privateIPs -s 172.16.0.0/12 -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_s_privateIPs -s 10.0.0.0/8  -p all -m comment --comment "poofitee_firewall_private IPs" -j DROP
-$iptablespath -wA poofitee_fw_s_static_trusted -s 91.189.88.0/21 -p all -m comment --comment "poofitee_firewall Canonical" -j ACCEPT
-$iptablespath -wA poofitee_fw_s_static_trusted -i lo -p all -m comment --comment "poofitee_firewall we really have to trust localhost at this level" -j ACCEPT
-$iptablespath -wA poofitee_fw_s_static_trusted -m conntrack --ctstate RELATED,ESTABLISHED -p all -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT
-$iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -p all -m comment --comment "poofitee_firewall_local time server hosted by Monticello" -j ACCEPT
+
+# Only execute following if rules don't already exist, we don't want to remove existing set because we would lose all hard-obtained source and dest addresses
+# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
+#  TODO:  warn installer in that case
+! ($iptablespath -wL INPUT|$greppath -- "-i $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_s_privateIPs"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -i $external_net_interface -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! [ -z "$internal_net_interface" ] && ! ($iptablespath -wL INPUT|$greppath -- "-i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}')"|$greppath -- "-p all"|$greppath -- "-j ACCEPT"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -j ACCEPT -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL INPUT|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_s_static_trusted"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_static_trusted -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL INPUT|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_s_whitelist"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_whitelist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL INPUT|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_s_blacklist"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_blacklist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL INPUT|$greppath -- "-p all"|$greppath -- "-j LOG --log-level 4 --log-prefix \"INPUT chain termed \""|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL INPUT|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j DROP -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL OUTPUT|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_d_blacklist"|$greppath "poofitee_firewall") && ($iptablespath -wA OUTPUT -j poofitee_fw_d_blacklist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL OUTPUT|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j poofitee_fw_d_privateIPs"|$greppath "poofitee_firewall") && ($iptablespath -wA OUTPUT -o $external_net_interface -j poofitee_fw_d_privateIPs -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_d_privateIPs|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-d 10.0.0.0/8") && ($iptablespath -wA poofitee_fw_d_privateIPs -d 10.0.0.0/8 -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_d_privateIPs|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-d 172.16.0.0/12") && ($iptablespath -wA poofitee_fw_d_privateIPs -d 172.16.0.0/12 -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_d_privateIPs|$greppath -- "-o $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-d 192.168.0.0/16") && ($iptablespath -wA poofitee_fw_d_privateIPs -d 192.168.0.0/16 -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_privateIPs|$greppath -- "-i $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-s 10.0.0.0/8") && ($iptablespath -wA poofitee_fw_s_privateIPs -s 10.0.0.0/8  -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_privateIPs|$greppath -- "-i $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-s 172.16.0.0/12") && ($iptablespath -wA poofitee_fw_s_privateIPs -s 172.16.0.0/12 -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_privateIPs|$greppath -- "-i $external_net_interface"|$greppath -- "-p all"|$greppath -- "-j DROP"|$greppath "poofitee_firewall"|$greppath -- "-s 192.168.0.0/16") && ($iptablespath -wA poofitee_fw_s_privateIPs -s 192.168.0.0/16 -m comment --comment "poofitee_firewall_private IPs" -j DROP  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_static_trusted|$greppath -- "-s 91.189.88.0/21"|$greppath -- "-p all"|$greppath -- "-j ACCEPT"|$greppath "poofitee_firewall") && ($iptablespath -wA poofitee_fw_s_static_trusted -s 91.189.88.0/21 -m comment --comment "poofitee_firewall Canonical" -j ACCEPT  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_static_trusted|$greppath -- "-i lo"|$greppath -- "-p all"|$greppath -- "-j ACCEPT") && ($iptablespath -wA poofitee_fw_s_static_trusted -i lo -m comment --comment "poofitee_firewall we really have to trust localhost at this level" -j ACCEPT  2>/dev/null || printf "Failed")
+! ($iptablespath -wL poofitee_fw_s_static_trusted|$greppath -- "RELATED,ESTABLISHED"|$greppath -- "-p all"|$greppath -- "-j ACCEPT"|$greppath "poofitee_firewall") && ($iptablespath -wA poofitee_fw_s_static_trusted -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT  2>/dev/null || printf "Failed")
+# ! ($iptablespath -wL poofitee_fw_d_static_trusted|$greppath -- "-d 199.102.46.70"|$greppath -- "-p all"|$greppath -- "-j ACCEPT"|$greppath "poofitee_firewall") && ($iptablespath -wA poofitee_fw_d_static_trusted -d 199.102.46.70 -m comment --comment "poofitee_firewall_local time server hosted by Monticello" -j ACCEPT  2>/dev/null || printf "Failed")
 
 # BUILDIPTABLES.SH_END
 # ) > "$poofitee_home_dir/preparedness/buildiptables.sh"
@@ -879,7 +883,7 @@ if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward)
 #          || iptables_masquerading=false
 #  TODO: First we should remove already existing poofitee_fw rules as line below is supposed to do
 #$iptablespath -wnL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
-$iptablespath -wP FORWARD DROP
+$iptablespath -wP FORWARD ACCEPT
 $iptablespath -wA FORWARD -o $external_net_interface -p all -j ACCEPT -m comment --comment "poofitee_firewall"
 $iptablespath -wA FORWARD -p all -j poofitee_fw_d_static_trusted
 $iptablespath -wA FORWARD -p all -j poofitee_fw_s_static_trusted
