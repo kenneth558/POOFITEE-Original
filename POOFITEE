@@ -2333,13 +2333,10 @@ newemailconfigwarning="Installing a new configuration is\
 #                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
 #change the next line to a loop if need be
                   printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
-      fi
+        fi
 
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-
-#  TODO:  It will be better to have user account created before the next while loop, but I need a break right now...
-
-       while true ;do
+        while true ;do
             if ! ($getentpath passwd|$greppath -wc ^poofitee);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
             else
@@ -2369,21 +2366,21 @@ newemailconfigwarning="Installing a new configuration is\
             else
                  break
             fi
-       done
-       echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
+        done
+        echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
 #       chown poofitee "$poofitee_home_dir"
 #       chmod 770 "$poofitee_home_dir"
-       poofitee_home_dir="${poofitee_home_dir%%/}"
-       back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
+        poofitee_home_dir="${poofitee_home_dir%%/}"
+        back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
 \n\niptables-restore < \"$poofitee_home_dir/iptables_ruleset.$current_time\"\n\n" \
           || printf "Your current iptables ruleset did not get backed up as expected.  You should\
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
 #       amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
-       ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null
-       (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") >/dev/null 2>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk"  >/dev/null 2>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
-       $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab >/dev/null 2>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
+        ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null
+        (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") >/dev/null 2>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk"  >/dev/null 2>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
+        $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab >/dev/null 2>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
