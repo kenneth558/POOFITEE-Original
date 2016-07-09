@@ -109,7 +109,7 @@ set_notinstalled_var () {
 }
 press_a_key () {
 printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c aborts...";read -rsn 1;read -rst 0.001 -n3 discard
-"$REPLY" == "$1" && return 0 || return 1
+[[ "$REPLY" == "$1" ]] && return 0 || return 1
 }
 install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
@@ -2337,19 +2337,16 @@ newemailconfigwarning="Installing a new configuration is\
 
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
         while true ;do
-            if ! ($getentpath passwd|$greppath -wc ^poofitee);then
+            if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
             else
-                  poofitee_home_dir=$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "/home/poofitee")
+                  poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
+                  [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
                   printf "\nSpecify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
 \nlevel you will want:\n"
                   read -e -r -i "$poofitee_home_dir" poofitee_home_dir
-            fi
-            if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
-                 printf "\n\nUser poofitee needs to be created next.  "
-                 press_a_key
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
