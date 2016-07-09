@@ -1742,7 +1742,7 @@ fi
 #fill in the here-doc section below to produce your desired email notification
 (cat <<EOM
 $webpageprotocol://$ip_from_resolver
-\$($iptablespath -wnvL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
+\$($iptablespath -wnL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
 ssh user@\$ip_from_resolver\
 hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver\
 #adjust the protocol to the targeted service
