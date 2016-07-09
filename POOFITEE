@@ -214,11 +214,14 @@ fi
 # echo "\$(date) Done with all processing file" >> "\$0.log"
 SCRIPT_END
 ) > "$poofitee_home_dir/process_logfile_line"
+printf "."
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then 
     echo;echo "$poofitee_home_dir/process_logfile_line did not get created just now"
     exit
 fi
+printf "."
 chmod 500 "$poofitee_home_dir/process_logfile_line"
+printf "."
 install_firewall_cronentries
 }  
 back_up_iptables_ruleset () {
@@ -931,8 +934,11 @@ SANDBOX
 }
        install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
+printf "."
 date_for_cronentries_backup="poofitee_installer_$(date)"
+printf "."
 $crontabpath -u poofitee -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
+printf "."
 if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
      printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
@@ -2351,7 +2357,7 @@ newemailconfigwarning="Installing a new configuration is\
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
-                 $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
+                 $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
                       mkdir -p "$poofitee_home_dir" >/dev/null 2>/dev/null && chmod 700 "$poofitee_home_dir" >/dev/null 2>/dev/null
