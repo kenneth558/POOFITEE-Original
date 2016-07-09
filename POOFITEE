@@ -792,7 +792,8 @@ printf "\nServer-side port knocking installed.\n"
        install_buildiptablessh () {
 # TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
 REPLY=""
-if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]];then
+echo $internal_net_interface|while read likeliest_internal_net_interface;do
+if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]];then
      cat <<-EOF
 	This server is capable of being a firewall for an internal network, but you
 	haven't enabled the forwarding feature needed in Linux, at least persisently.
@@ -810,7 +811,7 @@ if ! [[ -z "$internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forwa
           [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
      fi
 fi
-echo $internal_net_interface|while read likeliest_internal_net_interface;do
+
             (cat <<-BUILDIPTABLES.SH_END
 	#!/bin/bash
 	$iptablespath -wP OUTPUT ACCEPT
@@ -2353,13 +2354,14 @@ newemailconfigwarning="Installing a new configuration is\
                  $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
-                 echo
-                 if [[ "$( read -n1 -p "Directory does not exist.  Create it? (y/n): " ans;echo "$ans" )" =~ [Yy] ]];then
                       mkdir -p "$poofitee_home_dir" >/dev/null 2>/dev/null && chmod 700 "$poofitee_home_dir" >/dev/null 2>/dev/null
+                      [[ "$?" == "0" ]] && break
+                      echo "Unable to use that path"
+            fi
+            if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
                       mkdir -p "$poofitee_home_dir/preparedness" >/dev/null 2>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" >/dev/null 2>/dev/null
                       [[ "$?" == "0" ]] && break
                       echo "Unable to use that path"
-                 fi
             else
                  break
             fi
