@@ -2340,7 +2340,7 @@ newemailconfigwarning="Installing a new configuration is\
 #  TODO:  It will be better to have user account created before the next while loop, but I need a break right now...
 
        while true ;do
-            if ! [[ "$($getentpath passwd|$greppath -wc ^poofitee)" == "0" ]];then
+            if ! ($getentpath passwd|$greppath -wc ^poofitee);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
             else
                   poofitee_home_dir=$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "/home/poofitee")
@@ -2349,6 +2349,14 @@ newemailconfigwarning="Installing a new configuration is\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
 \nlevel you will want:\n"
                   read -e -r -i "$poofitee_home_dir" poofitee_home_dir
+            fi
+            if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
+                 printf "\n\nUser poofitee needs to be created next.  "
+                 press_a_key
+                 echo
+                 echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
+                 sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
+                 $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
                  echo
@@ -2362,22 +2370,10 @@ newemailconfigwarning="Installing a new configuration is\
                  break
             fi
        done
-
-
-       if [[ $($getentpath passwd|$greppath -wc ^poofitee)  == "0" ]];then 
-            printf "\n\nUser poofitee needs to be created next.  "
-            press_a_key
-            echo
-            echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
-            sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
-            $adduserpath --home "$poofitee_home_dir" --shell /bin/bash --disabled-login --disabled-password poofitee
-       fi
        echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
-       chown poofitee "$poofitee_home_dir"
-       chmod 770 "$poofitee_home_dir"
+#       chown poofitee "$poofitee_home_dir"
+#       chmod 770 "$poofitee_home_dir"
        poofitee_home_dir="${poofitee_home_dir%%/}"
-
-
        back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
 \n\niptables-restore < \"$poofitee_home_dir/iptables_ruleset.$current_time\"\n\n" \
