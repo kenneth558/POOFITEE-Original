@@ -1,6 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
-# PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: CURRENTLY UNDERWAY: perfect the tail -f script line to ensure its installation in all cases needed.
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
@@ -814,26 +814,55 @@ if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv
           [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
      fi
 fi
-# in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited: 
-# insert line following load_rules() and { lines
-# $sedpath -i $($greppath --line-numb -m 1 "^load_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2}') /usr/share/netfilter-persistent/plugins.d/15-ip4tables
-#
-       if ! ($greppath -- "ipset restore -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables) && ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables <<-LOAD_RULES
-	"$($greppath --line-numb -m 1 "^load_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2"i";exit}')"
-	# load rules made with ipset
-	ipset restore -f /etc/iptables/ipset.sets
-	.
-	w
-	q
-	LOAD_RULES
-       if ! ($greppath -- "ipset save -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables) && ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables <<-SAVE_RULES
-	"$($greppath --line-numb -m 1 "^save_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2"i";exit}')"
-	# save rules made with ipset	
-	ipset save -f /etc/iptables/ipset.sets
+loadline=$($greppath --line-numb -m 1 "^load_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2;exit}')
+saveline=$($greppath --line-numb -m 1 "^save_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2;exit}')
+if [[ $((saveline)) -gt $((loadline)) ]];then
+     if ! ($greppath -- "$ipsetpath save -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
+        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-SAVE_RULES
+	$saveline$(printf "")i
+        # save rules made with ipset
+        $ipsetpath save -f /etc/iptables/ipset.sets
+
 	.
 	w
 	q
 	SAVE_RULES
+     fi
+     if ! ($greppath -- "$ipsetpath restore -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
+        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-LOAD_RULES
+	$loadline$(printf "")i
+        # load rules made with ipset
+        $ipsetpath restore -f /etc/iptables/ipset.sets
+
+	.
+	w
+	q
+	LOAD_RULES
+     fi
+else
+     if ! ($greppath -- "$ipsetpath restore -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
+        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-LOAD_RULES2
+	$loadline$(printf "")i
+        # load rules made with ipset
+        $ipsetpath restore -f /etc/iptables/ipset.sets
+
+	.
+	w
+	q
+	LOAD_RULES2
+     fi
+     if ! ($greppath -- "$ipsetpath save -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
+        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-SAVE_RULES2
+	$savelinei$(printf "")i
+        # save rules made with ipset
+        $ipsetpath save -f /etc/iptables/ipset.sets
+
+	.
+	w
+	q
+	SAVE_RULES2
+     fi
+fi
 
             (cat <<-BUILDIPTABLES.SH_END
 	#!/bin/bash
@@ -2050,7 +2079,7 @@ startscreen+="\n\n      (p) port knocking\
 \nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
 \njust plain ? with no letters, select all of the five services listed above that\
 \nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
-# POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else"
+# POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
 ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                              Helper Script Overview\
 \nThis set of Linux scripts can install several Internet security features useful\
@@ -2356,6 +2385,12 @@ newemailconfigwarning="Installing a new configuration is\
                   press_a_key;ackd="true"
              else
                   goahead="true"
+             fi
+             # in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited: 
+             if ! [[ -f /usr/share/netfilter-persistent/plugins.d/15-ip4tables ]];then
+                  printf "\n\nUnknown configuration.  Modify this script yourself to accomodate it:\
+\nDid not find the expected file /usr/share/netfilter-persistent/plugins.d/15-ip4tables.\n\n"
+                  exit
              fi
         done # this loops here once when installer pgm not found
         clear
