@@ -1,5 +1,5 @@
 # POOFITEE
-Linux Scripting "almost Perfect Owner Only linux Firewall - the system is Invisible To Everyone Else"
+Linux Scripting "Packet filtering Owner Only linux Firewall - the system is Invisible To Everyone Else"
 
 Linux iptables plus scripting firewall  "NOT COMPATIBLE WITH BSD NOR MAC SYSTEMS"
 
