@@ -2386,13 +2386,13 @@ newemailconfigwarning="Installing a new configuration is\
              else
                   goahead="true"
              fi
-             # in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited: 
-             if ! [[ -f /usr/share/netfilter-persistent/plugins.d/15-ip4tables ]];then
-                  printf "\n\nUnknown configuration.  Modify this script yourself to accomodate it:\
-\nDid not find the expected file /usr/share/netfilter-persistent/plugins.d/15-ip4tables.\n\n"
-                  exit
-             fi
         done # this loops here once when installer pgm not found
+        # in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited: 
+        if ! [[ -f /usr/share/netfilter-persistent/plugins.d/15-ip4tables ]];then
+             printf "\n\nUnknown configuration.  Modify this script yourself to accomodate it:\
+\nDid not find the expected file /usr/share/netfilter-persistent/plugins.d/15-ip4tables.\n\n"
+             exit
+        fi
         clear
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
                   printf "Installation of\n$notinstalled\n\nwill begin after you ";press_a_key
