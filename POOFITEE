@@ -1,6 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
-# PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: CURRENTLY UNDERWAY: perfect the tail -f script line to ensure its installation in all cases needed.
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
@@ -2050,12 +2050,12 @@ startscreen+="\n\n      (p) port knocking\
 \nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
 \njust plain ? with no letters, select all of the five services listed above that\
 \nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
-# POOFITEE: "Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else"
+# POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else"
 ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                              Helper Script Overview\
 \nThis set of Linux scripts can install several Internet security features useful\
 \nin homeowner and enterprise systems alike. Enterprise systems however, typically\
-\nare stranger-visible, while the POOFITEE ruleset is stranger-INvisible.  Gone\
+\nare stranger-visible, but POOFITEE ruleset produces stranger-INvisibility.  Gone\
 \nare the complex, buggy \"badguy detection\" algorithms of other firewalls.  More\
 \nunique still to POOFITEE is that the only continuously-running process it has is\
 \na \"tail -f\" bash script line monitoring kernel log events for the purpose of\
@@ -2067,14 +2067,14 @@ ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\
 \ntwo-way connection capable of stealing information is not really possible: the\
 \nlegitimate computer owning the spoofed trusted address will receive return\
 \ncommunications and, without a reason to be in collusion with the spoofer, not\
-\nrelay the information on to them.  The name \"POOFITEE\" is derived from the\
-\ndescriptive phrase \"almost Perfect Owner Only access linux Firewall - the system\
-\nis Invisible To Everyone Else\".  \"Almost\", you protest?  That is because\
-\nhackers commonly use deceitful email to convince the unsuspecting operator of a\
-\ntrusted computer to execute malicious email links.  POOFITEE does not block such\
-\ncommunications that are initiated by trusted computer addresses like that, but\
-\nagain, POOFITEE will allow you to improve the iptables rules manually, if you\
-\nare so inspired..."
+\nrelay the information on to them.  Where public services are hosted, POOFITEE is\
+\ncapable of adding pseudo application-layer/stateful protection to mere packet\
+\nfiltering by virtue of a combination of delayed blacklisting and log file\
+\nmonitoring: well-behaving, never-previously-blacklisted sources not inside\
+\nblacklisted network ranges can be whitelisted (non-persistent by default) if\
+\nthey generate log file activity you've specified within some number of minutes.\
+\n\"POOFITEE\" is derived from the descriptive phrase \"Packet filtering Owner Only\
+\naccess Firewall - Invisible To Everyone Else\"."
 ghscreen2="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n\nThe advantages of using scripting over a compiled program are significant:\
 \n - most importantly - robust operation in indefinitely continuous duty\
