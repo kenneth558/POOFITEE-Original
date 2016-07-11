@@ -587,9 +587,8 @@ HOLD_UNTIL_ABLE
 \nwill be irrelevant, and the 4 knocks must arrive in a total time frame of 12\
 \nseconds times the total number of port-protocol combinations you specify. Knocks\
 \non other ports during the knocking authentication period WILL BE ALLOWED.  The\
-\nsource IP address sending the knocks will be permanently authenticated until it\
-\nis removed from the iptables whitelist via separate, independent iptables rule\
-\nmanipulation.\
+\nsource IP address sending the knocks will be indefintely authenticated in the\
+\niptables whitelist until you manually remove it.\
 \n   s) strict knock rules are conventional port knock rules where every port-\
 \nprotocol knock must arrive in sequence with none missed.  NO OTHER PORT-PROTOCOL\
 \nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS,\
@@ -800,6 +799,10 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 
             fi
 printf "\nServer-side port knocking installed.\n"
+#Now install the cron script line and the shell script it launches.
+get_sendto_emailadds
+install_buildiptablessh
+install_firewall_cronentries
 } 
        install_buildiptablessh () {
 # TODO: CURRENTLY UNDERWAY: converting from the following shell script backup ruleset to iptables-type restore. 
