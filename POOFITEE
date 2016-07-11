@@ -167,7 +167,7 @@ cat << EOF
 YOU ARE NOT FINISHED YET.
 
 The present state and direction of the packet filtering packages providing
-persistency are different for different distros, are changing, and are not
+persistency are inconsistent between distros, are changing, and are not
 predictable.  PLEASE do due diligence in taking care of that aspect of this
 installation.
 
