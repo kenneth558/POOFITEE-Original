@@ -1,6 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
-# PROJECT NAME: POOFITEE: "almost Perfect Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: CURRENTLY UNDERWAY: perfect the tail -f script line to ensure its installation in all cases needed.
 # TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
 # TODO: make undo feature in case of merely testing or changes of heart
