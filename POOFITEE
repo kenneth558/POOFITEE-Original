@@ -742,6 +742,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 \ntroubleshoot the problem, correct it, and start this install over again.\n"; exit )
                  ################### HERE WOULD BE A DIFFERENT INSTALL AND LAUNCH THE CRON LINE, UNIQUE TO LOOSE RULES B/C THE WHITELIST ADDITION
                  install_openall
+                 install_firewall_cronentries
             else
                  echo "Setting strict rules here"
                  if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
