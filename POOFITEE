@@ -482,7 +482,7 @@ install_port_knocking () {
             REPLY=""
             until [[ "$REPLY" =~ [yn] ]]; do
                printf "The OTP feature is not yet finished.  Read how it will work and code it yourself\
-\nif you want to..."
+\nif you want to...\n"
                read -e -r -n1 -p "Use OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
                REPLY="${REPLY,}"
                [[ "$REPLY" =~ \? ]] && ( \
