@@ -108,10 +108,10 @@ if ! [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][
 fi
 poofitee_home_dir="$poofitee_home_dir"
 email_subjectline_front="Poofitee "
-recipient_list="$(cat "\$poofitee_home_dir/toemailadds")"
+recipient_list="\$(cat "\$poofitee_home_dir/toemailadds")"
 if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath  -cwm 1 "\$1") == "0" ];then # || [ "\$2x" != "-rx" ]; then
        if ! [ "\$2x" == "-rx" ];then
-             cmdline0="$iptablespath -wI poofitee_fw_s_whitelist 1 -i eth0 -s \$1 -p all -m comment --comment \\\"\$2 $(date)\\\" -j ACCEPT;$iptablespath -wI poofitee_fw_d_whitelist 1 -o eth0 -d \$1 -p all -m comment --comment \\\"\$2 $(date)\\\" -j ACCEPT"
+             cmdline0="$iptablespath -wI poofitee_fw_s_whitelist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2 \$(date)\" -j ACCEPT;$iptablespath -wI poofitee_fw_d_whitelist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2 \$(date)\" -j ACCEPT"
              echo "\$cmdline0"|$mailpath -s "\$email_subjectline_front""whitelist \$1" "\$recipient_list"
              until [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath  -cwm 1 "\$1") == "0" ] && [ \$($iptablespath -wnL poofitee_fw_d_blacklist|$greppath  -cwm 1 "\$1") == "0" ];do
                 cmdline0="[[ \$($iptablespath -wnL poofitee_fw_s_blacklist --line-num|$greppath -wm 1 \$1|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_blacklist \$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}');"
@@ -135,6 +135,7 @@ exit
 
 EOF
 ) > "$poofitee_home_dir/openall.sh"
+chmod 700 "$poofitee_home_dir/openall.sh"
 }
 adjust_for_private_ip () {
 IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
@@ -852,6 +853,7 @@ printf "\nServer-side port knocking installed.\n"
 #Now install the cron script line and the shell script it launches.
 echo "$postfix_already_conf";exit
 conf_postfix
+install_rc
 get_sendto_emailadds
 install_buildiptablessh
 install_firewall_cronentries
