@@ -800,6 +800,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
             fi
 printf "\nServer-side port knocking installed.\n"
 #Now install the cron script line and the shell script it launches.
+echo "$postfix_already_conf";exit
 conf_postfix
 get_sendto_emailadds
 install_buildiptablessh
