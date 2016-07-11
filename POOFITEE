@@ -1156,7 +1156,7 @@ if [[ -z $sendmail_works ]];then
 \nthat NEW account for this script's outgoing email authentication needs.)  Then\
 \nresume here and enter that account name and password.  That same account could\
 \nalso be dedicated for this scripting to read commands emailed from you for it to\
-\nbe remote controlled:/n"
+\nbe remote controlled:\n"
 
 (cat <<EOF1
 #!/bin/bash
