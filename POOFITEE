@@ -506,7 +506,7 @@ printf "\n  Client configuration is available under different licensing terms if
 \nremind you to distribute a new OTP list.  The old OTP list just recirculates\
 \nuntil replaced...used OTPs will get used again until you get time to generate a\
 \nnew OTP list and give everyone a copy of it. Thus, it will be YOUR\
-\nresponsibility to enforce a single-use-only policy on OTPs if you really need\
+\nresponsibility to enforce a single-use-only policy on OTPs, if you really need\
 \nthat extreme level of security.  With the encryption depth and options allowed,\
 \nyou may elect to let an OTP list be used more than once without serious risk of\
 \ncompromise, especially with unrecognizable OTPs.";press_a_key;\
