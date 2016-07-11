@@ -95,6 +95,47 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
+install_openall () {
+(cat <<EOF
+#!/bin/bash
+
+#This script will add or remove to iptables (IPv4) s_whitelist and d_whitelist chains
+
+#This test will allow CIDR-type consolidated IPv4 address ranges
+if ! [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]]; then
+    echo "This script requires a valid IP address besides the script name" >> "\$0.log";
+    exit;
+fi
+poofitee_home_dir="$poofitee_home_dir"
+email_subjectline_front="Poofitee "
+recipient_list="$(cat "\$poofitee_home_dir/toemailadds")"
+if [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath  -cwm 1 "\$1") == "0" ];then # || [ "\$2x" != "-rx" ]; then
+       if ! [ "\$2x" == "-rx" ];then
+             cmdline0="$iptablespath -wI poofitee_fw_s_whitelist 1 -i eth0 -s \$1 -p all -m comment --comment \\\"\$2 $(date)\\\" -j ACCEPT;$iptablespath -wI poofitee_fw_d_whitelist 1 -o eth0 -d \$1 -p all -m comment --comment \\\"\$2 $(date)\\\" -j ACCEPT"
+             echo "\$cmdline0"|$mailpath -s "\$email_subjectline_front""whitelist \$1" "\$recipient_list"
+             until [ \$($iptablespath -wnL poofitee_fw_s_blacklist|$greppath  -cwm 1 "\$1") == "0" ] && [ \$($iptablespath -wnL poofitee_fw_d_blacklist|$greppath  -cwm 1 "\$1") == "0" ];do
+                cmdline0="[[ \$($iptablespath -wnL poofitee_fw_s_blacklist --line-num|$greppath -wm 1 \$1|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_blacklist \$($iptablespath -wnL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}');"
+                cmdline0+="[[ \$($iptablespath -wnL poofitee_fw_d_blacklist --line-num|$greppath -wm 1 \$1|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_d_blacklist \$($iptablespath -wnL poofitee_fw_d_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}')"
+                until eval "\$cmdline0";
+                   do sleep 1;
+                done;
+             done
+       fi
+else
+    if [ "\$2x" == "-rx" ];then
+        until [ \$($iptablespath -wnL poofitee_fw_s_whitelist|$greppath  -cwm 1 "\$1") == "0" ] && [ \$($iptablespath -wnL poofitee_fw_d_whitelist|$greppath  -cwm 1 "\$1") == "0" ];do
+              cmdline0="[[ \$($iptablespath -wnL poofitee_fw_s_whitelist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_whitelist \$($iptablespath -wnL poofitee_fw_s_whitelist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}');"
+              cmdline0+="[[ \$($iptablespath -wnL poofitee_fw_d_whitelist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_d_whitelist \$($iptablespath -wnL poofitee_fw_d_whitelist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \$1}')"
+              until eval "\$cmdline0"; do sleep 1; done
+        done
+    fi
+fi
+if [ \$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnvL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then $iptablespath-save > /etc/iptables/rules.v4;fi
+exit
+
+EOF
+) > "$poofitee_home_dir/openall.sh"
+}
 adjust_for_private_ip () {
 IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
 if [[ "${octets[0]}" == "10" ]] || ([[ "${octets[0]}" == "192" ]] && [[ "${octets[1]}" == "168" ]]) || ([[ "${octets[0]}" == "172" ]] && [[ $((${octets[1]})) -ge 16 ]] && [[ $((${octets[1]})) -lt 32 ]]);then
@@ -677,7 +718,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_sophomorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 10"
                  [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --set -j LOG --log-prefix "poofitee knock freshman " -m comment --comment "poofitee_knock:This will schedule its blacklisting for couple mins from now" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 11"
                  [[ $($iptablespath -wA poofitee_knock_new_knock -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
-                 [[ $($iptablespath -wA poofitee_knock_authorize -m recent --name poofitee_knock_authorized --set -j LOG --log-prefix "poofitee knock authorized " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 13"
+                 [[ $($iptablespath -wA poofitee_knock_authorize -m recent --name poofitee_knock_authorized --set -j LOG --log-prefix "poofitee knock authorized whitelist" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 13"
                  [[ $($iptablespath -wA poofitee_knock_authorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 14"
                  [[ $($iptablespath -wA poofitee_knock_seniorize -m recent --name poofitee_knock_senior --set -j LOG --log-prefix "poofitee knock senior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 15"
                  [[ $($iptablespath -wA poofitee_knock_seniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 16"
@@ -696,9 +737,10 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -m comment --comment "poofitee_knock loose rule" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
                  back_up_iptables_ruleset new && \
                       printf "Note that the file name is different than the one saved before" || \
-                      printf "Your new iptables ruleset did NOT get backed up correctly.  You should\"
-                 fi
-\ntroubleshoot the problem, correct it, and start this install over again.\n"
+                      ( printf "Your new iptables ruleset did NOT get backed up correctly.  You should\"
+\ntroubleshoot the problem, correct it, and start this install over again.\n"; exit )
+                 ################### HERE WOULD BE A DIFFERENT INSTALL AND LAUNCH THE CRON LINE, UNIQUE TO LOOSE RULES B/C THE WHITELIST ADDITION
+                 install_openall
             else
                  echo "Setting strict rules here"
                  if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
@@ -803,6 +845,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  for ((j=1;j<=i;j++));do
                       [[ $($iptablespath -wA poofitee_knockerreap -m recent --name poofitee_knockstage$j --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 31"
                  done
+                 ################### HERE WOULD BE A DIFFERENT INSTALL AND LAUNCH THE CRON LINE, UNIQUE TO STRICT RULES B/C NO WHITELIST AND EMAIL FAILED AUTHS
 
             fi
 printf "\nServer-side port knocking installed.\n"
