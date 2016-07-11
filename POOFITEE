@@ -743,6 +743,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  ################### HERE WOULD BE A DIFFERENT INSTALL AND LAUNCH THE CRON LINE, UNIQUE TO LOOSE RULES B/C THE WHITELIST ADDITION
                  install_openall
                  install_firewall_cronentries
+                 conf_postfix
             else
                  echo "Setting strict rules here"
                  if_first_knock_is_ACK_message="If you intend for your server to be invisible to the world, at least beyond the\
@@ -853,7 +854,6 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
 printf "\nServer-side port knocking installed.\n"
 #Now install the cron script line and the shell script it launches.
 echo "$postfix_already_conf";exit
-conf_postfix
 install_rc
 get_sendto_emailadds
 install_buildiptablessh
@@ -1120,7 +1120,7 @@ fi
 printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
 }
        conf_postfix () {
-! [[ -z postfix_already_conf ]] && return
+! [[ -z "$postfix_already_conf" ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
 while true;do
      clear;printf "$( [[ -z $sendmail_works ]] && echo "Three" || echo "Two more" ) emailing functions need email addresses.  Provide at least one email\
