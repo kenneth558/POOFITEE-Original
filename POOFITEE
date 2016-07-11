@@ -293,7 +293,7 @@ printf "\nA copy of your $1 iptables ruleset is backed up in\
 return $(($backup_result))
 }
 find_first_reference_to_internal_interface () {
-if ! [[ -z "$internal_net_interface" ]];then
+if ! [[ -z "$likeliest_internal_net_interface" ]];then
      $iptablespath -wN poofitee_knockerstest 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed"
      [[ $($iptablespath -wF poofitee_knockerstest 2>/dev/null;echo "$?") == "0" ]] || printf "Failed to flush knockerstest chain rules"
      printf "\n"
@@ -354,7 +354,7 @@ if ! [[ -z "$internal_net_interface" ]];then
      linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
      [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
      if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
      fi
      line_number_for_authorized_rule=$linenumber_for_inserting_before
 fi
@@ -367,7 +367,7 @@ get_operator_knock_choices () {
                  while knockport[$i]="";printf "\n";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]] || [[ $(($i)) -le $(($minimum_number_of_knocks)) ]];do
                       [[ -z "${knockport[$i]}" ]] && printf " You need to specify at least $minimum_number_of_knocks knocks" && continue
                       if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]] || [[ -z "${knockport[$i]}" ]] ;then continue;fi
-                      if ! [[ -z "$internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
+                      if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
 '{printf $2}')")")" simply because it will\
 \ninterfere with you testing your sequence through an ssh session.  Do you still\
@@ -727,8 +727,8 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wA poofitee_knock_sophomorize -m recent --name poofitee_knock_sophomore --set -j LOG --log-prefix "poofitee knock sophomore " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 19"
                  [[ $($iptablespath -wA poofitee_knock_sophomorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
                  find_first_reference_to_internal_interface
-                 if ! [[ -z "$internal_net_interface" ]];then
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -j poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(($linenumber_for_inserting_before + 1)) || printf "Failed 22"
+                 if ! [[ -z "$likeliest_internal_net_interface" ]];then
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -j poofitee_knock_check 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(($linenumber_for_inserting_before + 1)) || printf "Failed 22"
                  fi
                  if [[ -z "$linenumber_for_inserting_before" ]];then
                       linenumber_for_inserting_before="1" #even though we may never use this var again
@@ -809,10 +809,10 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success whitelist" -m comment --comment "allows 1 time-limited attempt to establish a dialog" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
                  inchainoffset=0
                  find_first_reference_to_internal_interface
-                 if ! [[ -z "$internal_net_interface" ]];then
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
-#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $(echo "$internal_net_interface"|$awkpath '{print $1;exit 0}') -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
+                 if ! [[ -z "$likeliest_internal_net_interface" ]];then
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+#                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
                       $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "poofitee_knockertest fail "
                       $iptablespath -wA poofitee_knockerstest -m recent --rcheck --seconds 200 --reap --name poofitee_knocker --mask 255.255.255.255 --rsource
@@ -980,7 +980,7 @@ read -n3 -t 0.001 discard
 #  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
 if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && ! [[ $iptables_masquerading == false ]];then
 # TODO:  get next line working instead of line above
-#if ! [[ -z $internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && [[ $ifconfigpath == ]] && ! [[ $iptables_masquerading == false ]];then
+#if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && [[ $ifconfigpath == ]] && ! [[ $iptables_masquerading == false ]];then
 
 # TODO:  get next commented section working
 # if [[ $REPLY =~ [Yy] ]] || [[ "$(hostname -I)" =~ \  ]] #has more than one ip address, ask about enabling routing
@@ -989,7 +989,7 @@ if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/i
 #    $iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_firewall"
 
 #remove masquerading statement above
-#get the ip address of $internal_net_interface from ip route or ifconfig or ipconfig to see which ones need masquerading.  Either way, routing tables may need to be set up as well as ....
+#get the ip address of $likeliest_internal_net_interface from ip route or ifconfig or ipconfig to see which ones need masquerading.  Either way, routing tables may need to be set up as well as ....
 #     [[ "$($iptablespath -wnvL POSTROUTING -t nat)" =~ MASQUERADE.*$external_net_interface ]] && \
 #          iptables_masquerading=true \ 
 #          || iptables_masquerading=false
@@ -1070,11 +1070,6 @@ fi
 \nchanged which might affect the above entries if they send values out, contain\
 \nquotes, etc.\n"
 read -n1 -s -p "You will need to verify proper operation of current entries after this.")
-
-
-# TODO minimize the number of stdbuf's used
-
-
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
@@ -1444,7 +1439,14 @@ while true;do
                      [ -f "$poofitee_home_dir/successlogins" ] && break 2
           done # This loop is for when a password is under question
 done # This loop is to change the account
-toemailadds=$( cat "$poofitee_home_dir/toemailadds" )
+if [[ -f "$poofitee_home_dir/toemailadds" ]];then
+     toemailadds="$(cat "$poofitee_home_dir/toemailadds")"
+elif [[ -f "./toemailadds" ]];then
+     toemailadds="$(cat "./toemailadds")"
+fi
+until ! [[ -z $toemailadds ]];do
+     get_sendto_emailadds
+done
 #     printf "\n\nLet's look at the results:\n"
 #     cat fifo
 #     rm fifo 2>/dev/null
@@ -1533,6 +1535,11 @@ toemailadds=$( cat "$poofitee_home_dir/toemailadds" )
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
 until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
 trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
+if [[ -f "$poofitee_home_dir/toemailadds" ]];then
+     toemailadds="\$(cat "$poofitee_home_dir/toemailadds")"
+elif [[ -f "./toemailadds" ]];then
+     toemailadds="\$(cat "./toemailadds")"
+fi
 [[ \$- = *i* ]] && echo "Connecting to email...."
 port="${line#*:}";MAIL_PROT="${line%:*}"
 MAIL_FROM="$inemailacct@$inemailprovider"
@@ -1594,9 +1601,9 @@ if [ \$((numofemails)) -gt -1 ]; then
      do option=""
           [ \$($greppath -cwie "undo" -e "remove" -e "delete" -e "end" -e "stop" <(echo "\$line")) -gt 0 ] && option="-r"
           if [ \$($greppath -cwie "report" -e "send" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($iptablespath -wnvL poofitee_fw_s_whitelist|$awkpath '{print \$8}')\\"|mail -s \\"As you requested\\" \\"$toemailadds\\""
+              script="echo \\"\$($iptablespath -wnvL poofitee_fw_s_whitelist|$awkpath '{print \$8}')\\"|mail -s \\"As you requested\\" \\"\$toemailadds\\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"$toemailadds\\""
+              script="echo \\"\$($tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"\$toemailadds\\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
               script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
@@ -1665,7 +1672,7 @@ install_dynIPch () {
 # dhclient: /var/lib/NetworkManager/*.lease*, or /var/lib/dhcp/dhclient. or on FreeBSD /var/db/*lease*
 # /var/lib/dhcp3/dhclient.%iface%.leases
 #if [[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/lib/dhcpcd/*$external_net_interface* /var/db/*lease* 2>/dev/null|$greppath -w "$external_net_interface")|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l )) -eq 0 ]] && \
-#[[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/db/*lease* 2>/dev/null|$greppath -vw "$internal_net_interface")|$greppath -wC 3 $($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l  )) -eq 0 ]];then
+#[[ $(( cat $(ls /var/lib/dhclient/*.lease* /var/lib/dhcp/*.lease* /var/lib/dhcp3/*.lease* /var/lib/NetworkManager/*.lease* /var/db/*lease* 2>/dev/null|$greppath -vw "$likeliest_internal_net_interface")|$greppath -wC 3 $($ippath -o route get 8.8.8.8|$awkpath '{ print $5 }')|$greppath -w $($ippath -o route get 8.8.8.8|$awkpath '{ print $7 }')|$wcpath -l  )) -eq 0 ]];then
 #[[ $(( dhclient -v $external_net_interface|$wcpath -l 2>/dev/null )) -gt 0 ]]
 # get the ip address of $external_net_interface from ip route or ifconfig or ipconfig
 #   /etc/network/interfaces, grep for lines tno starting w/# and referencing googleinterface that say 'static' orf 'dhcp'
