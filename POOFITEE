@@ -1,13 +1,11 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
-# TODO: CURRENTLY UNDERWAY: perfect the tail -f script line to ensure its installation in all cases needed.
-# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore.  
+# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore. 
+#  This is extensive and requires thorough knowledge of how netfilter-persistent and iptables-persistent function and inter-relate
 # TODO: make undo feature in case of merely testing or changes of heart
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
-# TODO: Get remainder of menu options finished, started writing rules for loose knocking
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
-# TODO: Replicate not getting email even when port 1958 knocked, then fix
 # TODO: Firewalling options this install script should be able to alter from the script set defaults:
 # TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious - comment out the crontab entry and kill the process
 # TODO: -- Open specific ports to offer public services
@@ -17,16 +15,16 @@
 # TODO: WARNING -- NEVER PIPE THE OUTPUT OF 'IPTABLES -L' INTO 'LESS' OR YOU MAY LOSE ENTIRE CHAINS IN IPTABLES!
 # TODO: check for sufficient resources prior to executing, like disk space
 # TODO: fix postfix log errs about badly named email account if full install doesn't and make more secure with smtp_tls_per_site, 
-# TODO: make user poofitee that cron jobs run under, suggest /home/poofitee as the installation directory, but when user is made, use the home directory accepted by the installing operator
-# TODO: adduser --home $poofitee_home_dir --shell /bin/bash --ingroup sudo --disabled-login --disabled-password poofitee
 # TODO:  replace initd with systemd when referencing iptables-persistent and postfix
 # TODO: replace iptables with nftables
 # TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
-# TODO:  Explain why anyone would want a blacklist to accumulate:  1) differentiate between neutral and hostile when providing public services, 2) assist in selecting ports for knock sequence or email knock by which are least probed, 3) just to have a blacklist so admin/owner can blacklist their own choices of Internet addresses, 4) give to other firewall software in a multi-box environment, 5) sales, marketing, winning a bet, or other reasons to prove the point to self or others, 6) curiousity
-
-#You could possibly modify the sudoers file.
-#Run sudo visudo /etc/sudoers
-#poofitee ALL=NOPASSWD:ALL
+# TODO:  Explain why anyone would want a blacklist to accumulate:
+#  1) differentiate between neutral and hostile when providing public services,
+#  2) assist in selecting ports for knock sequence or email knock by which are least probed,
+#  3) just to have a blacklist so admin/owner can blacklist their own choices of Internet addresses,
+#  4) give to other firewall software in a multi-box environment,
+#  5) sales, marketing, winning a bet, or other reasons to prove the point to self or others,
+#  6) curiousity
 
 #/etc/postfix/main.cf
 #
@@ -93,13 +91,32 @@
 #
 # POOFITEE firewall install helper script layout
 #
-
+#####################          iptables-persistent               ##################
+#    copy the init.d script iptables-persistent to /etc/init.d/ and make it executable
+#    copy iptables-persistent.conf to /etc/default/iptables-persistent.conf and edit it to suit your needs
+#    copy rules to /etc/iptables/rules and edit it to suit your needs
+#    copy ipv6_rules to /etc/iptables/ipv6_rules and edit it to suit your needs (you can copy this file even if you don’t activate IPv6 support in the configuration, it will be ignored)
+#    make iptables-persistent to be lauched at startup
+#    update-rc.d iptables-persistent defaults
+#
+#Configuration variables
+#
+#Edit /etc/default/iptables-persistent.conf to set the following parameters:
+#
+#SAVE_NEW_RULES (default: 0) – if set different than 0 then the current iptables ruleset will be saved with iptables-save when iptables-persistent is stopped (or restarted)
+#
+#MODULES (default: “”) – a space-separated list of the modules that iptables-persistent should load/unload. Useful to activate FTP connection tracking for example.
+#
+#IPV6 (default: 0) – if set different than 0 it will additionnaly use ip6tables to handle the loading/unloading of the ruleset stored at /etc/iptables/ipv6_rules
+#
+#ENABLE_ROUTING (default: 0) – if set different than 0 then routing is enabled (in /proc/sys/net/ipv4/ip_forward and /proc/sys/net/ipv6/conf/all/forwarding), otherwise it’s not.
+#
 ################  FUNCTIONS FIRST, THEN MAIN:
 install_openall () {
 (cat <<EOF
 #!/bin/bash
 
-#This script will add or remove to iptables (IPv4) s_whitelist and d_whitelist chains
+#This script will add or remove to iptables (IPv4) poofitee_fw_s_whitelist and poofitee_fw_d_whitelist chains
 
 #This test will allow CIDR-type consolidated IPv4 address ranges
 if ! [[ \$1 =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]]; then
@@ -130,12 +147,13 @@ else
         done
     fi
 fi
-if [ \$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnvL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then $iptablespath-save > /etc/iptables/rules.v4;fi
+if [ \$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnvL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then $netfiltperspath save;fi
 exit
 
 EOF
 ) > "$poofitee_home_dir/openall.sh"
 chmod 700 "$poofitee_home_dir/openall.sh"
+printf "\nCreated whitelisting script\n"
 }
 adjust_for_private_ip () {
 IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
@@ -146,16 +164,25 @@ fi
 }
 advise_to_verify_persistency () {
 cat << EOF
-YOU ARE NOT FINISHED YET.  You must next twice or thrice verify functionality
-after reboots.  Especially check for iptables blacklist rules being persistent.
-The authors sincerely ask for feedback in cases where functionality becomes lost
-after NORMAL rebooting.
+YOU ARE NOT FINISHED YET.
+
+The present state and direction of the packet filtering packages providing
+persistency are different for different distros, are changing, and are not
+predictable.  PLEASE do due diligence in taking care of that aspect of this
+installation.
+
+You must next twice or thrice verify functionality after reboots.
+Especially check for iptables blacklist rules being persistent.
+
+Thank you.
+
+- The POOFITEE development team, Kenneth L. Anderson, lead developer
 EOF
 }
 set_notinstalled_var () {
 [[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
 [[ -z $iptablespath ]] && notinstalled+="iptables\n"
-[[ -z $iptabperspath ]] && notinstalled+="iptables-persistent\n"
+[[ -z $netfiltperspath ]] && notinstalled+="netfilter-persistent\n"
 [[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
 [[ -z $mailpath ]] && notinstalled+="mailutils\n"
 [[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
@@ -2353,8 +2380,6 @@ until ! [ -z $answer ];do
 #  packages required to install everything
                   inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
                   iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
-# TODO: the next line is very, very version dependent
-                  iptabperspath=$($findpath / -maxdepth 3 -name *persistent|$greppath -vw doc|$greppath -vw src|$greppath -vw sys|$greppath -e iptables -e netfilter|$greppath -m 1 -e init.d 2> /dev/null)
                   stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
                   crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                   sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
@@ -2369,6 +2394,7 @@ until ! [ -z $answer ];do
                   ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
                   visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
                   nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
+                  [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                   mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
                   [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
                   [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
