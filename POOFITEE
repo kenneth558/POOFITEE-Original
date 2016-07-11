@@ -574,7 +574,8 @@ HOLD_UNTIL_ABLE
              [[ "$REPLY" == \? ]] && \
 ( printf "\
 \n   Select 2-16 port-protocol combinations that you are demanding be \"knocked\" to\
-\nestablish communication to this server.\
+\nestablish communication to this server.  The blacklist aspect of POOFITEE's\
+\nfirewall records port-protocols that hackers probe your server with.  Avoid them\
 \n   l) loose knock rules are when you are permitting knocks to arrive here out of\
 \nsequence or not arrive at all, given at least 4 valid port-protocol knocks, all\
 \nunique from each other, do arrive.  Of course, to select this, you'll have to\
