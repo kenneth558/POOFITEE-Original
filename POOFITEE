@@ -199,16 +199,21 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
 #!/bin/bash
+
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
+
 until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;inotifywait -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'\`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
 trap 'rm "\$lockfile_dir/\$(printf "\${0\%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
+
 email_subjectline_front="POOFITEE "
 recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
 # amount_of_free_memory="\$($freepath -b|$awkpath '{if (\$1=="Mem:"){printf \$4;exit}}')"
 echo "\$(date) - Entering the script with \$1 \$2 \$3" >> "\$0.log"
+
 make_the_ramdisk_lookup_file () {
 $greppath -- "-A poofitee_fw_s_blacklist" < /etc/iptables/rules.v4 > "$poofitee_home_dir/ramdisk/blacklist.v4.addresses"
 }
+
 save_iptables () {
 # skip this if another instance of this script is waiting to run
 # echo "\$(date) - Entered save ruleset" >> "\$0.log"
@@ -218,7 +223,7 @@ save_iptables () {
 # if [[ \$(("\$pslinecount")) -lt 3 ]];then
 # :
 # else
-# echo "\$(date) - Passed first condition in save ruleset" >> "\$0.log"
+
 if [ \$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == "1" ] && [ \$($iptablespath -wnvL INPUT|$stdbufpath -o0 $greppath -m 1 -c poofitee_fw_s_static_trusted) == "1" ]; then
       $iptablespath-save > /etc/iptables/rules.v4 # this way takes too long, need to simply let a regular file in ramdrive /tmp/ hold the
       make_the_ramdisk_lookup_file
@@ -250,18 +255,15 @@ EOF
 fi
 # fi
 }
-echo "\$(date) - Entering the ip address test with \$1 \$2 \$3" >> "\$0.log"
+
 #This test will allow CIDR-type consolidated IPv4 address ranges
 if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
            if ! [[ -f "$poofitee_home_dir/ramdisk/blacklist.v4.addresses" ]];then
-# echo "\$(date) - No lookup file, making a new one" >> "\$0.log"
                  make_the_ramdisk_lookup_file
            fi
-# echo "\$(date) - Entering the zone with \$1 \$2 \$3" >> "\$0.log"
      if [[ "\$3x" =~ whitelist ]];then
            "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
      elif [[ "\$3x" =~ forcex ]] || ( [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ] && ! ($greppath -w "\$1" "$poofitee_home_dir/ramdisk/blacklist.v4.addresses")); then
-#echo "\$(date) - Not a duplicate per lookup file" >> "\$0.log"
            if ! [[ "\$3x" =~ knock ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ]; then
                  $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment "\$2" -j DROP
                  $iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment "\$2" -j DROP
@@ -269,9 +271,7 @@ if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]
                echo "if [ \\\$($iptablespath -wnvL poofitee_fw_s_whitelist|$greppath -cwm 1 \$1) -eq 0 ] && [ \\\$($iptablespath -wnvL poofitee_fw_s_blacklist|$greppath -cwm 1 \$1) -eq 0 ]; then $iptablespath -wI poofitee_fw_s_blacklist 1 -i eth0 -s \$1 -p all -m comment --comment \"\$2\" -j DROP;$iptablespath -wI poofitee_fw_d_blacklist 1 -o eth0 -d \$1 -p all -m comment --comment \"\$2\" -j DROP;if [ \\\$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppath -m 1 -c ESTABLISHED) == \"1\" ];then $iptablespath-save > /etc/iptables/rules.v4;fi;fi"|at now +2 minute
            fi
           printf "\$1\n" >> "$poofitee_home_dir/ramdisk/blacklist.v4.addresses"
-#echo "\$(date) - Saving iptables ruleset" >> "\$0.log"
            save_iptables
-#echo "\$(date) - Done saving iptables ruleset" >> "\$0.log"
      elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
           until [ \$($iptablespath -wnvL poofitee_fw_s_blacklist|$greppath  -cwm 1 "\$1") == "0" ] && ! ($iptablespath -wnvL poofitee_fw_d_blacklist|$greppath  -wm 1 "\$1");do
                cmdline0="[[ \\\$($iptablespath -wnvL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}') -gt 0 ]] && $iptablespath -wD poofitee_fw_s_blacklist \\\$($iptablespath -wnvL poofitee_fw_s_blacklist --line-numbers|$greppath -wm 1 \$1|$awkpath '{print \\\$1}');"
@@ -296,7 +296,7 @@ elif [[ "\$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
 else
      echo "This script requires a valid IP address besides the script name: \$1" >> "\$0.log"
 fi
-# echo "\$(date) Done with all processing file" >> "\$0.log"
+exit
 SCRIPT_END
 ) > "$poofitee_home_dir/process_logfile_line"
 printf "."
@@ -908,54 +908,49 @@ if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv
           [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
      fi
 fi
-loadline=$($greppath --line-numb -m 1 "^load_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2;exit}')
-saveline=$($greppath --line-numb -m 1 "^save_rules()" /usr/share/netfilter-persistent/plugins.d/15-ip4tables|$awkpath '{print $1+2;exit}')
-if [[ $((saveline)) -gt $((loadline)) ]];then
-     if ! ($greppath -- "$ipsetpath save -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
-        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-SAVE_RULES
-	$saveline$(printf "")i
-        # save rules made with ipset
-        $ipsetpath save -f /etc/iptables/ipset.sets
+if [ -d /usr/share/netfilter-persistent/plugins.d ];then
+     (cat <<-EOF
+	#!/bin/sh
 
-	.
-	w
-	q
-	SAVE_RULES
-     fi
-     if ! ($greppath -- "$ipsetpath restore -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
-        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-LOAD_RULES
-	$loadline$(printf "")i
-        # load rules made with ipset
-        $ipsetpath restore -f /etc/iptables/ipset.sets
+	set -e
 
-	.
-	w
-	q
-	LOAD_RULES
-     fi
-else
-     if ! ($greppath -- "$ipsetpath restore -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
-        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-LOAD_RULES2
-	$loadline$(printf "")i
-        # load rules made with ipset
-        $ipsetpath restore -f /etc/iptables/ipset.sets
+	rc=0
 
-	.
-	w
-	q
-	LOAD_RULES2
-     fi
-     if ! ($greppath -- "$ipsetpath save -f /etc/iptables/ipset.sets" /usr/share/netfilter-persistent/plugins.d/15-ip4tables);then
-        ed /usr/share/netfilter-persistent/plugins.d/15-ip4tables 2>/dev/null <<-SAVE_RULES2
-	$savelinei$(printf "")i
-        # save rules made with ipset
-        $ipsetpath save -f /etc/iptables/ipset.sets
+	load_rules()
+	{
+	        if [ ! -f /etc/iptables/ipset.sets ]; then
+	                echo "Warning: skipping ipset (no rules to load)"
+	        else
+	           # load rules made with ipset
+	           $ipsetpath restore -f /etc/iptables/ipset.sets
+	                if [ \$? -ne 0 ]; then
+	                        rc=1
+	                fi
+	        fi
+	}
 
-	.
-	w
-	q
-	SAVE_RULES2
-     fi
+	save_rules()
+	{
+	        # save rules made with ipset
+	        $ipsetpath save -f /etc/iptables/ipset.sets
+	                if [ \$? -ne 0 ]; then
+	                        rc=1
+	                fi
+	}
+
+	case "\$1" in
+	start|restart|reload|force-reload)
+	        load_rules
+	        ;;
+	save)
+	        save_rules
+	        ;;
+	esac
+
+	exit \$rc
+	EOF
+     ) > /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
+     chmod 711 /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
 fi
             (cat <<-BUILDIPTABLES.SH_END
 	#!/bin/bash
