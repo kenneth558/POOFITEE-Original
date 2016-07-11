@@ -204,7 +204,7 @@ if [ \$($iptablespath -wnvL poofitee_fw_s_static_trusted|$stdbufpath -o0 $greppa
 else #somehow iptables has lost normal rules
           echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email should say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall iptables ruleset" "\$recipient_list"
           $crontabpath -l -u poofitee > "$poofitee_home_dir/cronentries.bak"
-          if [[ \$((\$(\$wcpath -l < "$poofitee_home_dir/cronentries.bak"))) -gt 1 ]] && ! ($greppath "^\*/5\ \*\ \*\ \*\ \*\ \"$poofitee_home_dir/email_fetch_parse\"\ >/dev/null\ 2>&1$" "$poofitee_home_dir/cronentries.bak");then
+          if [[ \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) -gt 1 ]] && ! ($greppath "^\*/5\ \*\ \*\ \*\ \*\ \"$poofitee_home_dir/email_fetch_parse\"\ >/dev/null\ 2>&1$" "$poofitee_home_dir/cronentries.bak");then
                (cat <<EOF
 
 \$($crontabpath -l -u poofitee)
