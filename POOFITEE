@@ -592,7 +592,7 @@ HOLD_UNTIL_ABLE
 \n   s) strict knock rules are conventional port knock rules where every port-\
 \nprotocol knock must arrive in sequence with none missed.  NO OTHER PORT-PROTOCOL\
 \nCOMBINATION ATTEMPTS MAY OCCUR DURING THE STRICT KNOCK-AUTHENTICATION PROCESS,\
-\nbut youll be allowed to specify non-unique port-protocols, even consecutively.\
+\nbut you\'ll be allowed to specify non-unique port-protocols, even consecutively.\
 \nSeven seconds maximum is allowed between each knock.  After the knock sequence\
 \nis completed successfully, the knocking computer will be given only 17 seconds\
 \nin which to establish valid communication, and the knock sequence must be\
