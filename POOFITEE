@@ -95,6 +95,13 @@
 #
 
 ################  FUNCTIONS FIRST, THEN MAIN:
+adjust_for_private_ip () {
+IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
+if [[ "${octets[0]}" == "10" ]] || ([[ "${octets[0]}" == "192" ]] && [[ "${octets[1]}" == "168" ]]) || ([[ "${octets[0]}" == "172" ]] && [[ $((${octets[1]})) -ge 16 ]] && [[ $((${octets[1]})) -lt 32 ]]);then
+     $iptablespath -wF poofitee_fw_s_privateIPs  2>/dev/null
+     $iptablespath -wF poofitee_fw_d_privateIPs  2>/dev/null
+fi
+}
 advise_to_verify_persistency () {
 cat << EOF
 YOU ARE NOT FINISHED YET.  You must next twice or thrice verify functionality
@@ -924,13 +931,6 @@ fi
 	break
 done
 read -n3 -t 0.001 discard
-
-IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
-if [[ "${octets[0]}" == "10" ]] || ([[ "${octets[0]}" == "192" ]] && [[ "${octets[1]}" == "168" ]]) || ([[ "${octets[0]}" == "172" ]] && [[ $((${octets[1]})) -ge 16 ]] && [[ $((${octets[1]})) -lt 32 ]]);then
-	$iptablespath -wF poofitee_fw_s_privateIPs  2>/dev/null
-	$iptablespath -wF poofitee_fw_d_privateIPs  2>/dev/null
-     fi
-
 # "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
 # Flush privateIPs chains rules if external interface has private ip itself
 
@@ -970,6 +970,7 @@ fi
 $sedpath -i 's/^.*$/& \nprintf ./g' "$poofitee_home_dir/preparedness/buildiptables.sh" # insert friendly progress indicators
 chmod 700 "$poofitee_home_dir/preparedness/buildiptables.sh"
 "$poofitee_home_dir/preparedness/buildiptables.sh"
+adjust_for_private_ip
 echo
 <<SANDBOX
 $iptablespath -wN poofitee_fw_publics
