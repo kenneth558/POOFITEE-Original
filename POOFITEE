@@ -200,13 +200,17 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
 #!/bin/bash
-#if ! (
-$ipsetpath add blacklist \$1 comment \$2 >/dev/null 2>/dev/null
-# ); then
-# list too full, swap it out
-#find the highest blacklist number, make a new list one higher, then swap and save
-#     next_blacklist_number="$(/sbin/ipset list -t|/bin/grep -i "^name: blacklist"|/usr/bin/awk '{print substr($2,10)+1}')"
-#fi # By putting this here, we'll reduce number of duplicate calls to this script.  Port knocking may be adversely affected, however, for the knocks that need to get logged (example: whitelisting from loose rules) if they arrive before t$
+if ! ($ipsetpath add blacklist \$1 comment "\$2"  2>$poofitee_home_dir/ramdisk/returerr); then
+     if [[ "\$(cat returerr )" =~ is\ full ]];then # send the email notice out FIRST
+          echo "Increasing the size of the blacklist. Verify continued server operation NOW"|$mailpath -s "POOFITEE" "\$(cat $poofitee_home_dir/toemailadds)"
+          $ipsetpath create blacklisttmp hash:ip comment maxelem \$($ipsetpath list -t|$greppath -iA 3 "^name: blacklist"|$tailpath -n1|$awkpath '{printf \$7+65536}')
+          $ipsetpath list blacklist|$tailpath -n+8|while read ipadd comment;do
+              $ipsetpath add blacklisttmp "\$ipadd \$comment"
+          done
+          $ipsetpath w blacklist blacklisttmp && $ipsetpath x blacklisttmp
+     fi
+     rm returerr
+fi # By putting this here, we'll reduce number of duplicate calls to this script.  Port knocking may be adversely affected, however, for the knocks that need to get logged (example: whitelisting from loose rules) if they arrive before t$
 
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
 
@@ -982,7 +986,7 @@ fi
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " poofitee_fw_s_static_trusted  all  --  "                                                                |$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_static_trusted -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " poofitee_fw_s_whitelist  all  --  "                                                                     |$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_whitelist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " poofitee_fw_s_privateIPs  all  --  $external_net_interface"                                             |$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -i $external_net_interface -j poofitee_fw_s_privateIPs -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
-	! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  "                                           |$greppath -- " match-set blacklist src"|$greppath "poofitee_firewall") && ($iptablespath -wA PREROUTING -t raw -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
+	! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set blacklist src"|$greppath "poofitee_firewall") && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " poofitee_fw_s_blacklist  all  --  "                                                                     |$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -j poofitee_fw_s_blacklist -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " LOG        all  --  "                |$greppath -- " --log-level 4 --log-prefix \"INPUT chain termed \""|$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -i $external_net_interface -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
 	! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  "                                                                                   |$greppath "poofitee_firewall"|$greppath -v ) && ($iptablespath -wA INPUT -i $external_net_interface -j DROP -m comment --comment "poofitee_firewall"  2>/dev/null || printf "Failed")
