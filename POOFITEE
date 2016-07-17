@@ -990,12 +990,6 @@ printf "." # insert friendly progress indicators
 printf "." # insert friendly progress indicators
 read -n3 -t 0.001 discard
 printf "." # insert friendly progress indicators
-# "$(hostname -I|$sedpath 's/\ /\n/g'|$wcpath -l)"
-# Build privateIPs chains rules if external interface has non-private ip address
-# if ! [[ ]]
-
-
-#  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
 if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && ! [[ $iptables_masquerading == false ]];then
      printf "." # insert friendly progress indicators
      # TODO:  get next line working instead of line above
@@ -1037,6 +1031,7 @@ adjust_for_private_ip
      printf "." # insert friendly progress indicators
 echo
 #  TODO: assist-load static trusted list here
+#  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
 <<SANDBOX
 $iptablespath -wN poofitee_fw_publics
 $iptablespath -wA poofitee_fw_publics -p all -j poofitee_fw_s_reallybad
