@@ -1888,7 +1888,7 @@ ssh user@\$ip_from_resolver
 hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver
 #adjust the protocol to the targeted service
 http://"${ip_from_internal_interface[0]}"."${ip_from_internal_interface[1]}"."${ip_from_internal_interface[2]}"."$((${ip_from_internal_interface[0]}+1))"
-ssh user@\$ip_from_internal_interface
+ssh user@$ip_from_internal_interface
 EOM
 ) | $mailpath -s "\$emailsubjectline" \$emaildestination
 
