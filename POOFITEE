@@ -1852,10 +1852,6 @@ printf "In the email that will inform those recipients who you specified of the 
 \nxmpp://<new IP address>/sub/dir[s] and options:121\
 \n"
 IFS=. read -r -a ip_from_internal_interface <<< "$($ifconfigpath|$greppath -A4 ^$likeliest_internal_net_interface|$greppath -m 1 "inet addr:"|$awkpath '{print substr($2,6)}')"
-if [[ "${ip_from_internal_interface[0]}" == "10" ]] || ([[ "${ip_from_internal_interface[0]}" == "192" ]] && [[ "${ip_from_internal_interface[1]}" == "168" ]]) || ([[ "${ip_from_internal_interface[0]}" == "172" ]] && [[ $((${ip_from_internal_interface[1]})) -ge 16 ]] && [[ $((${ip_from_internal_interface[1]})) -lt 32 ]]);then
-:
-#
-fi
 (cat <<EOF
 #!/bin/bash
 # arg 1 is file name of modified file in same directory as leases
