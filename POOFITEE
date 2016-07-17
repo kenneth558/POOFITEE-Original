@@ -148,7 +148,7 @@ if ! [ "\$2x" == "-rx" ];then
 else
       $ipsetpath del whitelist $1 2>/dev/null
 fi
-######################## Decide which save method to use for ipset: save entier thing every save or just the specific chains matches
+######################## Decide which save method to use for ipset: save enter thing every save or just the specific chains matches
 $ipsetpath save > /etc/iptables/ipset.rules.v4
 exit
 
@@ -1851,25 +1851,30 @@ printf "In the email that will inform those recipients who you specified of the 
 \nssh homeowner@<new IP address>:122\
 \nxmpp://<new IP address>/sub/dir[s] and options:121\
 \n"
+IFS=. read -r -a ip_from_internal_interface <<< "$($ifconfigpath|$greppath -A4 ^$likeliest_internal_net_interface|$greppath -m 1 "inet addr:"|$awkpath '{print substr($2,6)}')"
+if [[ "${ip_from_internal_interface[0]}" == "10" ]] || ([[ "${ip_from_internal_interface[0]}" == "192" ]] && [[ "${ip_from_internal_interface[1]}" == "168" ]]) || ([[ "${ip_from_internal_interface[0]}" == "172" ]] && [[ $((${ip_from_internal_interface[1]})) -ge 16 ]] && [[ $((${ip_from_internal_interface[1]})) -lt 32 ]]);then
+:
+#
+fi
 (cat <<EOF
 #!/bin/bash
 # arg 1 is file name of modified file in same directory as leases
 # verify ending type is lease or leases
 # then parse backwards making sure no private ip range is referenced
-! [[ "\${1##*.}" == "lease" ]] && ! [[ "\${1##*.}" == "leases" ]] && ! [[ "\$1" =~ /etc/dhcpc/dhcpcd*.info ]] && ! [[ \"$1" =~ /usr/share/udhcpc/default.script ]] && ! [[ -z "$1" ]] && exit
+! [[ "\${1##*.}" == "lease" ]] && ! [[ "\${1##*.}" == "leases" ]] && ! [[ "\$1" =~ /etc/dhcpc/dhcpcd*.info ]] && ! [[ \"$1" =~ /usr/share/udhcpc/default.script ]] && ! [[ -z "\$1" ]] && exit
 #site-specific variables:
 webpageprotocol=https
-emailsubjectline="New IP address for $pcname: "
+emailsubjectline="New IP address for \$(hostname): "
 file_to_store_ip="$poofitee_home_dir/oldip"
 resolver="$digpath +short myip.opendns.com @resolver1.opendns.com"
 ip_from_resolver="\$(\$resolver)"
-if [[ \$ip_from_resolver =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\$ ]];
+if [[ \$ip_from_resolver =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];
 then
     if ( [ -f \$file_to_store_ip ] );
     then
-        if [[ \$(< \$file_to_store_ip) =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\$ ]] && [[ \$ip_from_resolver == \$(< \$file_to_store_ip) ]];
+        if [[ \$(< \$file_to_store_ip) =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]] && [[ \$ip_from_resolver == \$(< \$file_to_store_ip) ]];
         then
-echo "IP address is <\$ip_from_resolver> and not new, old ip = <\$(< \$file_to_store_ip)>"
+echo "IP address is <\$ip_from_resolver> and not new, old ip = <\$(cat \$file_to_store_ip)>"
             exit
         fi
     else
@@ -1879,17 +1884,17 @@ else
 echo "IP address is <\$ip_from_resolver> and not acceptable"
     exit
 fi
-#fill in the here-doc section below to produce your desired email notification
+#modify the here-doc section below to produce your desired email notification
 (cat <<EOM
-$webpageprotocol://$ip_from_resolver
+\$webpageprotocol://$ip_from_resolver
 \$($iptablespath -wnL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
-ssh user@\$ip_from_resolver\
-hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver\
+ssh user@\$ip_from_resolver
+hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver
 #adjust the protocol to the targeted service
-http://$ip_from_internal_interface+1\
-ssh user@\$ip_from_internal_interface\
+http://"${ip_from_internal_interface[0]}"."${ip_from_internal_interface[1]}"."${ip_from_internal_interface[2]}"."$((${ip_from_internal_interface[0]}+1))"
+ssh user@\$ip_from_internal_interface
 EOM
-) | mail -s "\$emailsubjectline" \$emaildestination
+) | $mailpath -s "\$emailsubjectline" \$emaildestination
 
 echo \$ip_from_resolver > \$file_to_store_ip
 echo "IP address is <\$ip_from_resolver>"
