@@ -1010,16 +1010,16 @@ if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/i
      #$iptablespath -wnvL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
      # using ipsets without spec-ing the interface has not been tested
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                 |$greppath -- " match-set static_trusted src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set static_trusted src,dst -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                  |$greppath -- " match-set static_trusted src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set static_trusted src,dst -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      #! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
      ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                       |$greppath -- " match-set whitelist src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set whitelist src,dst -j ACCEPT -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
      ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"            |$greppath -- " match-set privateIPs dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"           |$greppath -- " match-set privateIPs dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                               |$greppath -- " match-set blacklist src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set blacklist src,dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set blacklist src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set blacklist src,dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
      ! ($iptablespath -wnvL FORWARD                       |$greppath -- " LOG        all  --  "              |$greppath -- " --log-level 4 --log-prefix \"FORWARD chain termed \""|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -j LOG --log-level 4 --log-prefix "FORWARD chain termed " -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
@@ -1225,7 +1225,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]] \
              && rm "$poofitee_home_dir/$outemailprovider.outconnects.txt" 2>/dev/null
           printf  "\rYou selected address $outemailadd \033[K\n"
-          while ! [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+          while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                 printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
           done
           for MAIL_PROT in smtp mail;do
@@ -1363,7 +1363,7 @@ while true;do
               [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]] \
                  && rm "$poofitee_home_dir/$inemailprovider.inconnects.txt" 2>/dev/null
               printf  "\rYou selected address $inemailadd \033[K\n"
-              while ! [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+              while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                   printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
               done
               while ! [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];do # this loop re-tries if no connection file is created in the loop
@@ -1744,14 +1744,14 @@ fi
 printf "The notification email you'd receive should refer to this computer by what name?"
 pcname=$(while read -e -r -i "$(hostname)" sysname;do if ! [[ -z "$sysname" ]];then echo "$sysname";break;fi;done)
 echo
-if [[ "$(dig +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then 
+if [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then 
      printf "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
 default is shown below.  Press enter to keep it; otherwise, change it\nto suit you:"
 else 
      printf "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
 default is shown below, but is NOT WORKING now.  Change it to suit you:"
 fi
-resolver="$(while read -e -i "dig +short myip.opendns.com @resolver1.opendns.com" resolver;do 
+resolver="$(while read -e -i "$digpath +short myip.opendns.com @resolver1.opendns.com" resolver;do 
      echo "$resolver";break;
 done)"
 
@@ -1861,7 +1861,7 @@ printf "In the email that will inform those recipients who you specified of the 
 webpageprotocol=https
 emailsubjectline="New IP address for $pcname: "
 file_to_store_ip="$poofitee_home_dir/oldip"
-resolver="dig +short myip.opendns.com @resolver1.opendns.com"
+resolver="$digpath +short myip.opendns.com @resolver1.opendns.com"
 ip_from_resolver="\$(\$resolver)"
 if [[ \$ip_from_resolver =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\$ ]];
 then
@@ -2069,6 +2069,7 @@ sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
 headpath="$($whereispath $binaryflag head)"
 headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
 filepath="$($whereispath $binaryflag file)";filepath="${filepath#*:}";filepath="${filepath# }";filepath="${filepath%% *}"
+digpath="$($whereispath $binaryflag dig)";digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
 
 # The reject and exit notices should be in order of how extensive of upgrades would be required.  Entire computer first, then OS, then executable version
 #  I haven't yet sorted them in that order
