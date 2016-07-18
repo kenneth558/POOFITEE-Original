@@ -30,7 +30,7 @@
 #  6) curiousity
 # Why use DROP instead of REJECT:
 # -- minimize cost in terms of cpu and interface load.  These costs more often than not correlate, at least indirectly, to a financial cost.
-# -- stranger invisbility not only means less cost but fewer hacking options are available to hackers
+# -- stranger invisbility not only means less cost but fewer hacking options are available to hackers. Security is improved
 
 
 #/etc/postfix/main.cf
