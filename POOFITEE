@@ -31,7 +31,7 @@
 # Why use DROP instead of REJECT:
 # -- minimize cost in terms of cpu and interface load.  These costs more often than not correlate, at least indirectly, to a financial cost.
 # -- stranger invisbility not only means less cost but fewer hacking options are available to hackers. Security is improved
-
+#  investigate how/if sort and/or uniq commands properly account for all digits in ip v4 address.  Noticed once that some digits/places were getting ignored
 
 #/etc/postfix/main.cf
 #
@@ -166,6 +166,7 @@ else
      $ipsetpath add privateIPs  172.16.0.0/12 2>/dev/null
      $ipsetpath add privateIPs 192.168.0.0/16 2>/dev/null
 fi
+$greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add static_trusted $ipaddr comment "needed to acquire address via DHCP";done
 }
 advise_to_verify_persistency () {
 cat << EOF
@@ -933,7 +934,7 @@ printf "." # insert friendly progress indicators
           printf "." # insert friendly progress indicators
           [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]] && echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
           printf "." # insert friendly progress indicators
-          [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_firewall installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
+          [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_fw installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
           printf "." # insert friendly progress indicators
      fi
      printf "." # insert friendly progress indicators
@@ -943,9 +944,11 @@ $ipsetpath create blacklist hash:ip comment >/dev/null 2>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create whitelist hash:ip comment >/dev/null 2>/dev/null
 printf "." # insert friendly progress indicators
-$ipsetpath create static_trusted hash:ip comment >/dev/null 2>/dev/null
+$ipsetpath create static_trusted hash:net comment >/dev/null 2>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create privateIPs hash:net maxelem 3 hashsize 64 >/dev/null 2>/dev/null
+printf "." # insert friendly progress indicators
+$ipsetpath create publicports6000-7999  bitmap:port range 6000-7999 comment >/dev/null 2>/dev/null # for servers hosting irc, servers not hosting irc won't have the log file
 printf "." # insert friendly progress indicators
 $iptablespath -wP OUTPUT ACCEPT
 printf "." # insert friendly progress indicators
@@ -953,24 +956,24 @@ printf "." # insert friendly progress indicators
 	# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
 	#  TODO:  warn installer in that case
 
-#	! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -wnvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                           |$greppath "poofitee_firewall") && ($iptablespath -wA INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null 2>/dev/null || printf "Failed a")
-! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -wnvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                           |$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null 2>/dev/null || printf "Failed a")
+#	! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -wnvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                           |$greppath "poofitee_fw") && ($iptablespath -wA INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null 2>/dev/null || printf "Failed a")
+! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -wnvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                           |$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null 2>/dev/null || printf "Failed a")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  lo  "                                                                                                             ) >/dev/null && ($iptablespath -wA INPUT -i lo -m comment --comment "poofitee_firewall we really have to trust localhost at this level" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed b")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  lo  "                                                                                                             ) >/dev/null && ($iptablespath -wA INPUT -i lo -m comment --comment "poofitee_fw we really have to trust localhost at this level" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed b")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed c")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed c")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"               |$greppath -- " match-set static_trusted src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set static_trusted src -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed d")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"               |$greppath -- " match-set static_trusted src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set static_trusted src -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed d")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed e")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed e")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed f")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed f")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set blacklist src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed g")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " LOG        all  --  "                |$greppath -- " --log-level 4 --log-prefix \"INPUT chain termed \""|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed h")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " LOG        all  --  "                |$greppath -- " --log-level 4 --log-prefix \"INPUT chain termed \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j LOG --log-level 4 --log-prefix "INPUT chain termed " -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed h")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  "                                                        |$greppath -v " match-set "|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j DROP -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed i")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  "                                                        |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed i")
 printf "." # insert friendly progress indicators
 #The below lines are for templates the owner/admin can copy techjnique
 $ipsetpath add static_trusted 91.189.88.0/21 comment "Canonical"   >/dev/null  2>/dev/null
@@ -978,15 +981,15 @@ printf "." # insert friendly progress indicators
 $ipsetpath add static_trusted 199.102.46.70 comment "local time server hosted by Monticello"   >/dev/null  2>/dev/null
 printf "." # insert friendly progress indicators
 
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_firewall existing dialogs traffic presumed trusted" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed j")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed j")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  \*      $external_net_interface"|$greppath -- " match-set static_trusted dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set static_trusted dst -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed k")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  \*      $external_net_interface"|$greppath -- " match-set static_trusted dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set static_trusted dst -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed k")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  \*      $external_net_interface"       |     $greppath -- " match-set whitelist dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set whitelist dst -j ACCEPT -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed l")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  \*      $external_net_interface"       |     $greppath -- " match-set whitelist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set whitelist dst -j ACCEPT -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed l")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                           |$greppath -- " match-set blacklist dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set blacklist dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed m")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                           |$greppath -- " match-set blacklist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set blacklist dst -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed m")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"          |$greppath -- " match-set privateIPs dst "|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed n")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"          |$greppath -- " match-set privateIPs dst "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed n")
 printf "." # insert friendly progress indicators
 read -n3 -t 0.001 discard
 printf "." # insert friendly progress indicators
@@ -999,7 +1002,7 @@ if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/i
      # if [[ $REPLY =~ [Yy] ]] || [[ "$(hostname -I)" =~ \  ]] #has more than one ip address, ask about enabling routing
      # "$(hostname -I|$sedpath 's/\ /\n/g')" see if any are private range
      #  hostname -I enumerates and outs space-delimited list of all configured addresses of all network interfaces
-     #    $iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_firewall"
+     #    $iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_fw"
 
      #remove masquerading statement above
      #get the ip address of $likeliest_internal_net_interface from ip route or ifconfig or ipconfig to see which ones need masquerading.  Either way, routing tables may need to be set up as well as ....
@@ -1010,27 +1013,27 @@ if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/i
      #$iptablespath -wnvL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
      # using ipsets without spec-ing the interface has not been tested
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                  |$greppath -- " match-set static_trusted src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set static_trusted src,dst -j ACCEPT -m comment --comment "poofitee_firewall"  >/dev/null   2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
-     #! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_firewall") && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                  |$greppath -- " match-set static_trusted src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set static_trusted src,dst -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     #! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_fw") && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                       |$greppath -- " match-set whitelist src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set whitelist src,dst -j ACCEPT -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                       |$greppath -- " match-set whitelist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set whitelist src,dst -j ACCEPT -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"           |$greppath -- " match-set privateIPs dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"           |$greppath -- " match-set privateIPs dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set blacklist src,dst"|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set blacklist src,dst -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set blacklist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set blacklist src,dst -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " LOG        all  --  "              |$greppath -- " --log-level 4 --log-prefix \"FORWARD chain termed \""|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA FORWARD -j LOG --log-level 4 --log-prefix "FORWARD chain termed " -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " LOG        all  --  "              |$greppath -- " --log-level 4 --log-prefix \"FORWARD chain termed \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -j LOG --log-level 4 --log-prefix "FORWARD chain termed " -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  "                                                        |$greppath -v " match-set "|$greppath "poofitee_firewall") >/dev/null && ($iptablespath -wA INPUT -j DROP -m comment --comment "poofitee_firewall"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  "                                                        |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed");printf "." # insert friendly progress indicators
      printf "." # insert friendly progress indicators
 fi
      printf "." # insert friendly progress indicators
 adjust_for_private_ip
      printf "." # insert friendly progress indicators
 echo
-#  TODO: assist-load static trusted list here
+#  TODO: assist-load current ACCEPT lines list here
 #  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
 <<SANDBOX
 $iptablespath -wN poofitee_fw_publics
@@ -1089,9 +1092,9 @@ fi
 read -n1 -s -p "You will need to verify proper operation of current entries after this.")
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -u poofitee -l|$greppath -v poofitee_firewall|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
+$($crontabpath -u poofitee -l|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
 
-# lines below are from poofitee_firewall
+# lines below are from poofitee_fw
 @reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
 @reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
 
@@ -2240,9 +2243,8 @@ fwscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nthe iptables ruleset.\
 \nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
-\n  -- Open specific ports to offer public services\
+\n  -- Open specific ports to allow http, irc and/or other public services hosting\
 \n  -- Force single-interface firewalling even though two interfaces exist\
-\n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
 rcscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                  REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET\
