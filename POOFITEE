@@ -32,6 +32,7 @@
 # -- minimize cost in terms of cpu and interface load.  These costs more often than not correlate, at least indirectly, to a financial cost.
 # -- stranger invisbility not only means less cost but fewer hacking options are available to hackers. Security is improved
 #  investigate how/if sort and/or uniq commands properly account for all digits in ip v4 address.  Noticed once that some digits/places were getting ignored
+# ensure $poofitee_home_dir/email_fetch_parse cannot collect in processes
 
 #/etc/postfix/main.cf
 #
@@ -149,7 +150,7 @@ else
       $ipsetpath del whitelist $1 2>/dev/null
 fi
 ######################## Decide which save method to use for ipset: save enter thing every save or just the specific chains matches
-$ipsetpath save > /etc/iptables/ipset.rules.v4
+$netfiltperspath save
 exit
 
 EOF
@@ -169,6 +170,10 @@ fi
 $greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add static_trusted $ipaddr comment "needed to acquire address via DHCP";done
 }
 advise_to_verify_persistency () {
+
+# /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
+# $netfiltperspath save
+
 cat << EOF
 YOU ARE NOT FINISHED YET.
 
@@ -178,7 +183,8 @@ predictable.  PLEASE exercise due diligence in taking care of that aspect of
 this installation.
 
 You must next twice or thrice verify functionality after reboots.  Especially
-check for iptables black and whitelist rules being persistent.
+check for iptables black and whitelist rules in ipset being persistent.  At a
+minimum, ipset and iptables both need to be made persistent.
 
 Note: if you need the pseudo-application layer firewalling, you'll next need to
 code the "process_logfile_line" script to your needs.  Then modify the iptables
@@ -241,8 +247,8 @@ until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf 
 trap 'rm "\$lockfile_dir/\$(printf "\${0\%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 
 save_iptables () {
-if ! ($ipsetpath save > /etc/iptables/ipset.rules.v4);then
-      echo "Error saving ruleset in ipset: \$1 \$2"|$mailpath -s "email_subjectline_front" "\$recipient_list"
+if ! ($netfiltperspath save);then
+      echo "Error saving ruleset in ipset/iptables: \$1 \$2"|$mailpath -s "email_subjectline_front" "\$recipient_list"
 fi
 }
 
@@ -252,7 +258,7 @@ if [[ "\$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
 elif ! [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
      echo "This script requires a valid IP address besides the script name: \$1" >> "\$0.log"
 elif [[ "\$3x" =~ whitelist ]];then
-           echo "if ! (\\\$($ipsetpath test whitelist \$1); then $ipsetpath add blacklist \$1 comment \"\$2\"\;$ipset save > /etc/iptables/ipset.rules.v4"|at now +2 minute
+           echo "if ! (\\\$($ipsetpath test whitelist \$1); then $ipsetpath add blacklist \$1 comment \"\$2\"\;$netfiltperspath save"|at now +2 minute
            "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
 elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
 # TODO: The following line has not been tested
@@ -287,6 +293,7 @@ while current_time="$(date)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
+$netfiltperspath save
 backup_result="$?"
 printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
@@ -864,44 +871,44 @@ printf "." # insert friendly progress indicators
 if [ -d /usr/share/netfilter-persistent/plugins.d ];then
      printf "." # insert friendly progress indicators
      (cat <<-EOF
-	#!/bin/sh
+#!/bin/sh
 
-	set -e
+set -e
 
-	rc=0
+rc=0
 
-	load_rules()
-	{
-	        if [ ! -f /etc/iptables/ipset.sets ]; then
-	                echo "Warning: skipping ipset (no rules to load)"
-	        else
-	           # load rules made with ipset
-	           $ipsetpath restore -f /etc/iptables/ipset.sets
-	                if [ \$? -ne 0 ]; then
-	                        rc=1
-	                fi
-	        fi
-	}
+load_rules()
+{
+        if [ ! -f /etc/iptables/ipset.sets ]; then
+                echo "Warning: skipping IPv4 (no rules to load)"
+        else
+           # load rules made with ipset
+           /sbin/ipset restore -f /etc/iptables/ipset.sets 1>restor 2>restorerr 2>&1 ||  grep "already exists" < restorerr ||  grep "already exists" < restor
+		if [ \$? -ne 0 ]; then
+			rc=1
+		fi
+        fi
+}
 
-	save_rules()
-	{
-	        # save rules made with ipset
-	        $ipsetpath save -f /etc/iptables/ipset.sets
-	                if [ \$? -ne 0 ]; then
-	                        rc=1
-	                fi
-	}
+save_rules()
+{
+        # save rules made with ipset
+        /sbin/ipset save -f /etc/iptables/ipset.sets
+		if [ \$? -ne 0 ]; then
+			rc=1
+		fi
+}
 
-	case "\$1" in
-	start|restart|reload|force-reload)
-	        load_rules
-	        ;;
-	save)
-	        save_rules
-	        ;;
-	esac
+case "\$1" in
+start|restart|reload|force-reload)
+	load_rules
+	;;
+save)
+	save_rules
+	;;
+esac
 
-	exit \$rc
+exit \$rc
 	EOF
      ) > /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
      printf "." # insert friendly progress indicators
@@ -950,6 +957,8 @@ $ipsetpath create privateIPs hash:net maxelem 3 hashsize 64 >/dev/null 2>/dev/nu
 printf "." # insert friendly progress indicators
 $ipsetpath create publicports6000-7999  bitmap:port range 6000-7999 comment >/dev/null 2>/dev/null # for servers hosting irc, servers not hosting irc won't have the log file
 printf "." # insert friendly progress indicators
+$ipsetpath create blacklistcidr hash:net comment >/dev/null 2>/dev/null
+printf "." # insert friendly progress indicators
 $iptablespath -wP OUTPUT ACCEPT
 printf "." # insert friendly progress indicators
 
@@ -968,6 +977,8 @@ printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set whitelist src -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed e")
 printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed f")
+printf "." # insert friendly progress indicators
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                |$greppath -- " match-set blacklistcidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklistcidr src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
