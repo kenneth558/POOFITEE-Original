@@ -2459,7 +2459,7 @@ until ! [ -z $answer ];do
          echo
          until false;do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
             until [ "$goahead" == "true" ];do
-                  installers=(apt-get "install --fix-missing" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
+                  installers=(apt-get "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
                   for installer in {0..10};do
                       installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}"
                       [[ -z "$installerpath" ]] && continue
@@ -2484,7 +2484,8 @@ until ! [ -z $answer ];do
                   ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
                   visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
                   nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-                  [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                  netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                  # [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                   mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
                   [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
                   [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
@@ -2560,10 +2561,11 @@ newemailconfigwarning="Installing a new configuration is\
                   fi
              [[ -z $notinstalled ]] && break 2
              notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
-             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
+             if ! [[ -z $notinstalled ]] ;then
+#             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
                   printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
-\n\nThis helper script version is not advanced enough to install needed programs on\
-\nsystems such as yours that don't use a common installer to install programs.\
+\n\nThis helper script version is not advanced enough to install needed programs$(! [[ -z "$not_advanced_enough" ]] && printf" on\
+\nsystems such as yours that don\'t use a common installer to install programs").\
 \nFor this install script to serve its purpose for you, you'll need to install all\
 \nnecessary programs yourself before anything referenced hereafter can succeed.\
 \nConsider yourself lucky if this script does anything at all for you beyond this\
@@ -2579,21 +2581,22 @@ newemailconfigwarning="Installing a new configuration is\
              fi
         done # this loops here once when installer pgm not found
         # in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited and properly referenced elsewhere: 
-        need_file="/usr/share/netfilter-persistent/plugins.d/15-ip4tables"
-        if ! [[ -f $need_file ]];then
-             printf "\n\nUnknown configuration.  Modify this script yourself to accomodate it:\
-\nDid not find the expected file $need_file.\n\n"
-             exit
-        fi
+#        need_file="/usr/share/netfilter-persistent/plugins.d/15-ip4tables"
+#        if ! [[ -f $need_file ]];then
+#             printf "\n\nUnknown configuration.  Modify this script yourself to accomodate it:\
+#\nDid not find the expected file $need_file.\n\n"
+#             exit
+#        fi
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
         clear
+<<NOT_DEVELOPED_WELL
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
                   printf "Installation of\n$notinstalled\n\nwill begin after you ";press_a_key
 #                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
 #change the next line to a loop if need be
                   printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
         fi
-
+NOT_DEVELOPED_WELL
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
         while true ;do
             if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
@@ -2605,7 +2608,7 @@ newemailconfigwarning="Installing a new configuration is\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
 \nlevel you will want:\n"
-                  read -e -r -i "$poofitee_home_dir" poofitee_home_dir
+                 read -e -r -i "$poofitee_home_dir" poofitee_home_dir
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
