@@ -235,9 +235,9 @@ if ! ($ipsetpath add blacklist \$1 comment "\$2"  2>returerr); then
 fi
 # By putting this here, we'll reduce number of duplicate calls to this script.  Port knocking may be adversely affected, however, for the knocks that need to get logged (example: whitelisting from loose rules) if they arrive before this gets reversed below.  That risk should be minimal.
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>&1)
-do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break
-     $inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format %e 2>&1|while read inotifywait_output
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\${0##*/}.lockfile" 2>&1)
+do ! [[ -f "\$lockfile_dir/\${0##*/}.lockfile" ]] && break
+     $inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\${0##*/}.lockfile" --format %e 2>&1|while read inotifywait_output
           do 
                if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then 
                     setting_home="\${inotifywait_output:: -2}"
@@ -248,7 +248,7 @@ do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] 
                [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
           done || sleep 1
 done
-trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
+trap 'rm "\$lockfile_dir/\${0##*/}.lockfile"' INT TERM EXIT
 email_subjectline_front="POOFITEE "
 recipient_list="\$(cat $poofitee_home_dir/toemailadds)"
 # amount_of_free_memory="\$($freepath -b|$awkpath '{if (\$1=="Mem:"){printf \$4;exit}}')"
