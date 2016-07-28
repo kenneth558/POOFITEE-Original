@@ -21,6 +21,7 @@
 # TODO:  replace initd with systemd when referencing iptables-persistent and postfix
 # TODO: replace iptables with nftables
 # TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
+# installing postfix is different for different distros, may not be "postmap"
 # Why anyone would want a blacklist to accumulate:
 #  1) differentiate between neutral and hostile when providing public services,
 #  2) assist in selecting ports for knock sequence or email knock by which are least probed,
@@ -210,7 +211,8 @@ set_notinstalled_var () {
 [[ -z $bcpath ]] && notinstalled+="bc\n"
 [[ -z $atpath ]] && notinstalled+="at\n"
 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
-[[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\n"
+[[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
+[[ -z $ipsetpath ]] && [[ notinstalled+="ipset\n"
 }
 
 press_a_key () {
@@ -2537,8 +2539,8 @@ newemailconfigwarning="Installing a new configuration is\
                                           continue
                                       fi
                                  fi
-                                 printf "\nThe email command appears to have failed.  This means a full, new email sending\
-\nconfiguration will be set up on this computer. $newemailconfigwarning"
+                                 printf "\nBased on your answer, a full, new email sending configuration will be set up on\
+\nthis computer.  $newemailconfigwarning"
                                  printf "\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
                                  press_a_key
                                  echo
