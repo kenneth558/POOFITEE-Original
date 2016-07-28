@@ -21,6 +21,7 @@
 # TODO:  replace initd with systemd when referencing iptables-persistent and postfix
 # TODO: replace iptables with nftables
 # TODO: before anything that requires iptables to be persistent is started, make sure iptables is persistently configured
+# TODO:  before installing on Raspbian, set up /etc/apt/sources.list with some valid repository like: deb http://mirror.glennmcgurrin.com/raspbian/ jessie main contrib non-free rpi
 # installing postfix is different for different distros, may not be "postmap"
 # Why anyone would want a blacklist to accumulate:
 #  1) differentiate between neutral and hostile when providing public services,
@@ -34,7 +35,7 @@
 # -- stranger invisbility not only means less cost but fewer hacking options are available to hackers. Security is improved
 #  investigate how/if sort and/or uniq commands properly account for all digits in ip v4 address.  Noticed once that some digits/places were getting ignored
 # ensure $poofitee_home_dir/email_fetch_parse cannot collect in processes
-
+#
 #/etc/postfix/main.cf
 #
 #. . .
@@ -931,6 +932,10 @@ install_buildiptablessh
 install_firewall_cronentries
 } 
        install_buildiptablessh () {
+printf "." # insert friendly progress indicators
+if ! [ -d /etc/iptables ];then
+     mkdir /etc/iptables
+fi
 printf "." # insert friendly progress indicators
 if [ -d /usr/share/netfilter-persistent/plugins.d ];then
      printf "." # insert friendly progress indicators
