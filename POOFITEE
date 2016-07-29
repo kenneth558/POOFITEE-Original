@@ -213,7 +213,7 @@ set_notinstalled_var () {
 [[ -z $atpath ]] && notinstalled+="at\n"
 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
-[[ -z $ipsetpath ]] && [[ notinstalled+="ipset\n"
+[[ -z $ipsetpath ]] && notinstalled+="ipset\n"
 }
 
 press_a_key () {
