@@ -2466,9 +2466,11 @@ until ! [ -z $answer ];do
          echo
          until false;do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
             until [ "$goahead" == "true" ];do
-                  installers=(apt-get "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
+                  installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman -S pkg install  pkg_add "" xbps-install -Sy brew install port install)
+
+#                  installers=("DEBIAN_FRONTEND=noninteractive apt-get" "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
                   for installer in {0..10};do
-                      installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}"
+                      installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
                       [[ -z "$installerpath" ]] && continue
                       installerpath+="  ${installers[$(($installer * 2 + 1))]}"
                       break
@@ -2568,8 +2570,9 @@ newemailconfigwarning="Installing a new configuration is\
                   fi
              [[ -z $notinstalled ]] && break 2
              notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
-             if ! [[ -z $notinstalled ]] ;then
-#             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
+#             if ! [[ -z $notinstalled ]] ;then
+
+             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
                   printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
 \n\nThis helper script version is not advanced enough to install needed programs$(! [[ -z "$not_advanced_enough" ]] && printf" on\
 \nsystems such as yours that don\'t use a common installer to install programs").\
@@ -2596,14 +2599,17 @@ newemailconfigwarning="Installing a new configuration is\
 #        fi
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
         clear
-<<NOT_DEVELOPED_WELL
+# <<NOT_DEVELOPED_WELL
         if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-                  printf "Installation of\n$notinstalled\n\nwill begin after you ";press_a_key
-#                  echo "Executing $installerpath $notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'
-#change the next line to a loop if need be
-                  printf "$notinstalled"|$sedpath -e ':a' -e 'N' -e '$!ba' -e 's/\\n/ /g'|sudo $xargspath sh -c 'exec "$installerpath $@" < /dev/tty' sh
+              printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
+              if (press_a_key u "<other-letter-or-number>");then
+                   apt-get update
+              fi
+              not_installed_single_line="$(printf $notinstalled|$awkpath '{gsub("\\n"," ");printf $0" "}')"
+              eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
+#              $xargspath -a <(printf $notinstalled|$awkpath '{gsub("\\n"," ");printf $0" "}') -r -- sudo "$installerpath"
         fi
-NOT_DEVELOPED_WELL
+# NOT_DEVELOPED_WELL
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
         while true ;do
             if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
