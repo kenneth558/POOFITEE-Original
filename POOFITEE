@@ -122,6 +122,109 @@
 #ENABLE_ROUTING (default: 0) – if set different than 0 then routing is enabled (in /proc/sys/net/ipv4/ip_forward and /proc/sys/net/ipv6/conf/all/forwarding), otherwise it’s not.
 #
 ################  FUNCTIONS FIRST, THEN MAIN:
+what_needs_to_be_installed () {
+inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
+iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
+stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
+crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
+ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
+ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
+datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
+bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
+bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
+wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
+freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
+atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
+ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
+visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
+nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
+netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+# [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
+[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
+[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
+mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
+postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
+postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
+notinstalled=""
+if [[ $answer =~ f ]];then
+     set_notinstalled_var # during development, just install everything
+fi
+if [[ $answer =~ e ]];then
+     set_notinstalled_var # during development, just install everything
+fi
+if [[ $answer =~ d ]];then
+     set_notinstalled_var # during development, just install everything
+fi
+if [[ $answer =~ p ]];then
+     set_notinstalled_var # during development, just install everything
+fi
+notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
+not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
+[ -z "$not_installed_single_line" ] && return 0
+return "$(printf "$notinstalled"|wc -l)"
+}
+sendmail_works_or_not () {
+#functionize the following, name it 
+sendmail_works=""
+if ! [[ -z $mailpath ]];then
+     mailadd=""
+     mailcmd="echo $0 \"test.  Press y\"|$mailpath"
+#    printf "\nOne aspect of an option you selected will be to send you alert notices to your\
+     cat <<-EOF
+			One aspect of an option you selected will be to send you alert notices to your
+			email account.  For emailing alerts to you, specialized configuration is
+			required so this computer can send emails from the command line.  We'll send a
+			test email now to see if it can send from the command line already if you'll
+			please enter an email address to finish the following mail command, choosing an
+			address that you can immediately receive a test email through and verify
+			reception of it on a different computing device:
+	EOF
+	newemailconfigwarning="Installing a new configuration is\
+definitely NOT what you want if this computer is already or will be in use in a\
+business email service role, like MTA, MDA, email relay, or email server because\
+the settings that this installation script will change will most certainly be\
+incompatible with said role.  If you need to avoid installing the emailing\
+configuration, you should manually get the command line email sending to work\
+with whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
+this scripting has found to currently exist on your system."
+     until false;do
+          ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
+\nthis test and install a full, new configuration on this computer\
+\nfor sending emails from the command line.  $newemailconfigwarning"
+          echo
+          get_sendto_emailadds onlyneed1 optional
+          if [[ -z "$mailadd" ]]; then break;fi
+          read -e -r -i "$mailadd" -p "$mailcmd " mailadd
+          if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
+               continue
+          fi
+          if ! [[ -z "$mailadd" ]];then
+               printf "Sending a test email to $mailadd..."
+               eval "$mailcmd $mailadd"
+               wait
+               if [[ "$?" == "0" ]];then
+                    printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
+                    read -r -n1
+                    if [[ $REPLY =~ y ]];then 
+                          sendmail_works="AnyNon-ZeroLengthStringMeansTrue"
+                          echo
+                          break
+                    elif [[ $REPLY =~ [at] ]];then
+                         continue
+                    fi
+               fi
+               printf "\nBased on your answer, a full, new email sending configuration will be set up on\
+\nthis computer.  $newemailconfigwarning"
+               printf "\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
+               press_a_key
+               echo
+               break
+          fi
+     done
+fi
+}
 install_openall () {
 (cat <<EOF
 #!/bin/bash
@@ -151,8 +254,12 @@ if ! [ "\$2x" == "-rx" ];then
 else
       $ipsetpath del whitelist $1 2>/dev/null
 fi
-######################## Decide which save method to use for ipset: save enter thing every save or just the specific chains matches
-$netfiltperspath save
+# This next statement will fail if netfilter-persistent package was not available for this distro.  Poofitee was designed
+# to need it because it utilizes /usr/share/netfilter-persistent/plugins.d/ for allowing saves of both iptables and ipset
+# with a single call which iptables-persistent alone does not allow.
+#  You're on your own if you choose to depend on some other iptables + ipset persistence technique.
+# If you come up with something that works well for you, please share it on the POOFITEE wiki forum
+$netfiltperspath save >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 exit
 
 EOF
@@ -163,18 +270,18 @@ printf "\nCreated whitelisting script\n"
 adjust_for_private_ip () {
 IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
 if [[ "${octets[0]}" == "10" ]] || ([[ "${octets[0]}" == "192" ]] && [[ "${octets[1]}" == "168" ]]) || ([[ "${octets[0]}" == "172" ]] && [[ $((${octets[1]})) -ge 16 ]] && [[ $((${octets[1]})) -lt 32 ]]);then
-    $ipsetpath flush privateIPs 2>/dev/null
+    $ipsetpath flush privateIPs    >/dev/null  2>/dev/null
 else
-     $ipsetpath add privateIPs  10.0.0.0/8 2>/dev/null
-     $ipsetpath add privateIPs  172.16.0.0/12 2>/dev/null
-     $ipsetpath add privateIPs 192.168.0.0/16 2>/dev/null
+     $ipsetpath add privateIPs  10.0.0.0/8    >/dev/null  2>/dev/null
+     $ipsetpath add privateIPs  172.16.0.0/12    >/dev/null  2>/dev/null
+     $ipsetpath add privateIPs 192.168.0.0/16    >/dev/null  2>/dev/null
 fi
-$greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add static_trusted $ipaddr comment "needed to acquire address via DHCP";done
+$greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add static_trusted $ipaddr comment "needed to acquire address via DHCP"   >/dev/null  2>/dev/null;done
 }
 advise_to_verify_persistency () {
 
 # /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
-# $netfiltperspath save
+# $netfiltperspath save >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 
 cat << EOF
 YOU ARE NOT FINISHED YET.
@@ -279,7 +386,7 @@ echo "\$$" > "$poofitee_home_dir/ramdisk/psnum"
 
 save_iptables () {
 if ($iptablespath -wnL INPUT|$greppath ESTABLISHED >/dev/null) && ($iptablespath -wnL INPUT|$greppath static_trusted >/dev/null); then
-     $netfiltperspath save >/dev/null
+     $netfiltperspath save >/dev/null || $ipsetpath save > /etc/iptables/ipset.sets
 else
 	(cat <<-EOF
 	\$($crontabpath -l|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse >/dev/null 2>&1/d')
@@ -358,7 +465,7 @@ while current_time="$(date)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-$netfiltperspath save
+$netfiltperspath save >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 backup_result="$?"
 printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
@@ -1029,7 +1136,7 @@ printf "." # insert friendly progress indicators
 $ipsetpath create blacklistcidr hash:net comment >/dev/null 2>/dev/null
 printf "." # insert friendly progress indicators
 $iptablespath -wP OUTPUT ACCEPT
-printf "." # insert friendly progress indicators
+printf "," # insert friendly progress indicators
 
 	# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
 	#  TODO:  warn installer in that case
@@ -1059,7 +1166,7 @@ printf "." # insert friendly progress indicators
 $ipsetpath add static_trusted 91.189.88.0/21 comment "Canonical"   >/dev/null  2>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath add static_trusted 199.102.46.70 comment "local time server hosted by Monticello"   >/dev/null  2>/dev/null
-printf "." # insert friendly progress indicators
+printf "," # insert friendly progress indicators
 
 ! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT  >/dev/null   2>/dev/null || printf "Failed j")
 printf "." # insert friendly progress indicators
@@ -1072,7 +1179,7 @@ printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"          |$greppath -- " match-set privateIPs dst "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed n")
 printf "." # insert friendly progress indicators
 read -n3 -t 0.001 discard
-printf "." # insert friendly progress indicators
+printf "," # insert friendly progress indicators
 if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && ! [[ $iptables_masquerading == false ]];then
      printf "." # insert friendly progress indicators
      # TODO:  get next line working instead of line above
@@ -2463,133 +2570,53 @@ until ! [ -z $answer ];do
         [[ $answer =~ r ]] || [[ $answer$char == "?" ]] && (clear;printf "$restorescreen\n";press_a_key;echo)
         answer=""
      else
+#  1.  Accept selections from main screen
+#  2.  determine if any packages need installing, warn if no known installer found
+#  3.  Install the packages needed by the particular selections, except for mail
+#      -- if an installer is not found, inform operator to install listed programs
+# In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to go
+#  packages required to install everything
          echo
-         until false;do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-            until [ "$goahead" == "true" ];do
+         notinstalled="."
+         until [ -z "$notinstalled" ];do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
+            until ! [ -z "$goahead" ] && ! [ -z "$ackd" ] && [ "$goahead" == "true" ] || [ "$ackd" == "true" ];do
+                  what_needs_to_be_installed
+#                  printf "There are $(what_needs_to_be_installed;echo "$?") things needing to be installed";read -srn1
+                  [[ "$?" == "0" ]] && break 2
+
                   installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman -S pkg install  pkg_add "" xbps-install -Sy brew install port install)
 
 #                  installers=("DEBIAN_FRONTEND=noninteractive apt-get" "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
                   for installer in {0..10};do
-                      installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
-                      [[ -z "$installerpath" ]] && continue
-                      installerpath+="  ${installers[$(($installer * 2 + 1))]}"
-                      break
+                       installerpath=$($whereispath $binaryflag ${installers[$(($installer * 2))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
+                       [[ -z "$installerpath" ]] && continue
+                       installerpath+="  ${installers[$(($installer * 2 + 1))]}"
+                       break
                   done
-# In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to go
-#  packages required to install everything
-                  inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
-                  iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
-                  stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
-                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
-                  sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
-                  ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
-                  ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
-                  datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
-                  bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
-                  bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
-                  wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-                  freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
-                  atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
-                  ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
-                  visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
-                  nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-                  netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
-                  # [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
-                  mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
-                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
-                  [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
-                  mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
-                  postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
-                  postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
-                  sendmail_works=""
-                  if ! [[ -z $mailpath ]];then
-                       mailadd=""
-                       mailcmd="echo $0 \"test.  Press y\"|$mailpath"
-                       printf "\nOne aspect of an option you selected will be to send you alert notices to your\
-\nemail account.  For emailing alerts to you, specialized configuration is\
-\nrequired so this computer can send emails from the command line.  We'll send a\
-\ntest email now to see if it can send from the command line already if you'll\
-\nplease enter an email address to finish the following mail command, choosing an\
-\naddress that you can immediately receive a test email through and verify\
-\nreception of it on a different computing device:\n"
-newemailconfigwarning="Installing a new configuration is\
-\ndefinitely NOT what you want if this computer is already or will be in use in a\
-\nbusiness email service role, like MTA, MDA, email relay, or email server because\
-\nthe settings that this installation script will change will most certainly be\
-\nincompatible with said role.  If you need to avoid installing the emailing\
-\nconfiguration, you should manually get the command line email sending to work\
-\nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
-\nthis scripting has found to currently exist on your system."
-                       until false;do
-                            ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
-\nthis test and install a full, new configuration on this computer\
-\nfor sending emails from the command line.  $newemailconfigwarning"
-                            echo
-                            get_sendto_emailadds onlyneed1 optional
-                            if [[ -z "$mailadd" ]]; then break;fi
-                            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
-                            if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
-                                 continue
-                            fi
-                            if ! [[ -z "$mailadd" ]];then
-                                 printf "Sending a test email to $mailadd..."
-                                 eval "$mailcmd $mailadd"
-                                 wait
-                                 if [[ "$?" == "0" ]];then
-                                      printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
-                                      read -r -n1
-                                      if [[ $REPLY =~ y ]];then 
-                                          sendmail_works="AnyNon-ZeroLengthStringMeansTrue"
-                                          echo
-                                          break
-                                      elif [[ $REPLY =~ [at] ]];then
-                                          continue
-                                      fi
-                                 fi
-                                 printf "\nBased on your answer, a full, new email sending configuration will be set up on\
-\nthis computer.  $newemailconfigwarning"
-                                 printf "\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
-                                 press_a_key
-                                 echo
-                                 break
-                            fi
-                       done
-                  fi
-                  notinstalled=""
-                  if [[ $answer =~ f ]];then
-                      set_notinstalled_var # during development, just install everything
-                  fi
-                  if [[ $answer =~ e ]];then
-                      set_notinstalled_var # during development, just install everything
-                  fi
-                  if [[ $answer =~ d ]];then
-                      set_notinstalled_var # during development, just install everything
-                  fi
-                  if [[ $answer =~ p ]];then
-                      set_notinstalled_var # during development, just install everything
-                  fi
-             [[ -z $notinstalled ]] && break 2
-             notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)"
-#             if ! [[ -z $notinstalled ]] ;then
-
-             if ! [[ -z $notinstalled ]] && [[ -z $installerpath ]] && ! [[ "$ackd" == "true" ]];then
-                  printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
-\n\nThis helper script version is not advanced enough to install needed programs$(! [[ -z "$not_advanced_enough" ]] && printf" on\
-\nsystems such as yours that don\'t use a common installer to install programs").\
-\nFor this install script to serve its purpose for you, you'll need to install all\
+                  if [[ -z "$installerpath" ]] && ! [[ "$ackd" == "true" ]];then
+                       not_advanced_enough="1"
+                       printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
+\n\nThis POOFITEE installer version is not advanced enough to install needed\
+\nprograms$(! [[ -z "$not_advanced_enough" ]] && printf \
+" on systems such as yours that don\'t use one of the more common package\
+\ninstallers to install packages").\
+\n\nFor this install script to serve its purpose,  you'll need to install all\
 \nnecessary programs yourself before anything referenced hereafter can succeed.\
 \nConsider yourself lucky if this script does anything at all for you beyond this\
 \npoint, but do understand that the programs most certainly won't get installed.\
 \n\nThe necessary programs that won't get installed until you install them are:\
 \n$notinstalled\
-\n\nYou may install them in another terminal and resume here, or press Ctrl-c to\
-\nterminate here, or press any other key to proceed as-is\
+\n\nYou may install those packages OR a more common package installer for this\
+\ninstaller to work with (in another terminal window, of course) and resume here.\
 \n\n"
-                  press_a_key;ackd="true"
-             else
-                  goahead="true"
-             fi
-        done # this loops here once when installer pgm not found
+                       press_a_key
+                       ackd="true"
+                  elif [[ -z "$installerpath" ]];then
+                       goahead="true"
+                  else
+                       break
+                  fi
+            done # this loops here once when installer pgm not found
         # in Ubuntu 15.10 and in /usr/share/netfilter-persistent/plugins.d there is a file called 15-ip4tables that needs to be edited and properly referenced elsewhere: 
 #        need_file="/usr/share/netfilter-persistent/plugins.d/15-ip4tables"
 #        if ! [[ -f $need_file ]];then
@@ -2598,23 +2625,29 @@ newemailconfigwarning="Installing a new configuration is\
 #             exit
 #        fi
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
-        clear
-# <<NOT_DEVELOPED_WELL
-        if ! [[ -z "$installerpath" ]] && ! [[ -z "$notinstalled" ]];then # install what is needed
-              printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
-              if (press_a_key u "<other-letter-or-number>");then
-                   apt-get update
-              fi
-              not_installed_single_line="$(printf $notinstalled|$awkpath '{gsub("\\n"," ");printf $0" "}')"
-              eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
-#              $xargspath -a <(printf $notinstalled|$awkpath '{gsub("\\n"," ");printf $0" "}') -r -- sudo "$installerpath"
-        fi
-# NOT_DEVELOPED_WELL
-        done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-        while true ;do
-            if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
-                  poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
+            clear
+            if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
+                 printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
+                 if (press_a_key u "<other-letter-or-number>");then
+                      apt-get update
+                 fi
+                 eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
+                 what_needs_to_be_installed
+                 if [ $? != "0" ];then
+                      printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\npress R to retry, any other alpha-numeric key to ignore:"
+                      press_a_key r "<other-letter-or-number>" || break
+                 fi
             else
+                 break
+            fi
+         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
+# printf "line 2656, $notinstalled";read -rsn1
+# echo "$not_installed_single_line";read -srn1
+# printf "\nnetfilter-persistent is found at $netfiltperspath";press_a_key
+         while true ;do
+             if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
+                  poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
+             else
                   poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
                   [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
                   printf "\nSpecify a home directory which will be created for user poofitee, which is where\
@@ -2626,35 +2659,35 @@ newemailconfigwarning="Installing a new configuration is\
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
-            fi
-            if ! [[ -d "$poofitee_home_dir" ]];then
+             fi
+             if ! [[ -d "$poofitee_home_dir" ]];then
                       mkdir -p "$poofitee_home_dir" >/dev/null 2>/dev/null && chmod 700 "$poofitee_home_dir" >/dev/null 2>/dev/null
                       [[ "$?" == "0" ]] && break
                       echo "Unable to use that path"
-            fi
-            if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
+             fi
+             if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
                       mkdir -p "$poofitee_home_dir/preparedness" >/dev/null 2>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" >/dev/null 2>/dev/null
                       [[ "$?" == "0" ]] && break
                       echo "Unable to use that path"
-            else
+             else
                  break
-            fi
-        done
-        echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
+             fi
+         done
+         echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
 #       chown poofitee "$poofitee_home_dir"
 #       chmod 770 "$poofitee_home_dir"
-        poofitee_home_dir="${poofitee_home_dir%%/}"
-        back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
+         poofitee_home_dir="${poofitee_home_dir%%/}"
+         back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
 \nwhat you wanted, restore the current ruleset by running\
 \n\niptables-restore < \"$poofitee_home_dir/iptables_ruleset.$current_time\"\n\n" \
           || printf "Your current iptables ruleset did not get backed up as expected.  You should\
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
 #       amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
-        ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null
-        (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") >/dev/null 2>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk"  >/dev/null 2>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
-        $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab >/dev/null 2>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
-        if [[ "$answer" =~ f ]];then
+         ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" >/dev/null 2>/dev/null
+         (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") >/dev/null 2>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk"  >/dev/null 2>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
+         $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab >/dev/null 2>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
+         if [[ "$answer" =~ f ]];then
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
@@ -2669,21 +2702,35 @@ newemailconfigwarning="Installing a new configuration is\
              fi
              conf_postfix
              advise_to_verify_persistency
-        fi
-        if [[ "$answer" =~ e ]];then
+         fi
+         if [[ "$answer" =~ e ]];then
 #             printf "remote controlling"
              install_rc
-        fi
-        if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
+         fi
+         if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
              install_rc
              install_dynIPch
-        fi
-        if [[ "$answer" =~ p ]];then
+         fi
+         if [[ "$answer" =~ p ]];then
              install_port_knocking
              advise_to_verify_persistency
-        fi
+         fi
      fi
 done
-
+# SAMPLE USER INPUT REQUEST FROM LINUX MINT UPGRADE SCREEN:
+# Setting up base-files (7.2ubuntu5.4) ...
+#
+# Configuration file '/etc/issue'
+#  ==> Modified (by you or by a script) since installation.
+#  ==> Package distributor has shipped an updated version.
+#    What would you like to do about it ?  Your options are:
+#     Y or I  : install the package maintainer's version
+#     N or O  : keep your currently-installed version
+#       D     : show the differences between the versions
+#       Z     : start a shell to examine the situation
+#  The default action is to keep your current version.
+# *** issue (Y/I/N/O/D/Z) [default=N] ? 
+# 
+# grub-install.real: warning: Sector 32 is already in use by the program `FlexNet'; avoiding it.  This software may cause boot or other problems in future.  Please ask its authors not to store data in the boot track.
 exit
