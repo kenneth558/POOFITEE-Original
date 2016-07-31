@@ -1,8 +1,6 @@
 #! /bin/bash
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
-# TODO: CURRENTLY UNDERWAY: converting from shell script backup ruleset to iptables-type save/restore. 
-#  This is extensive and requires thorough knowledge of how netfilter-persistent and iptables-persistent function and inter-relate
 # TODO: make undo feature in case of merely testing or changes of heart
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
@@ -2718,19 +2716,4 @@ until ! [ -z $answer ];do
          fi
      fi
 done
-# SAMPLE USER INPUT REQUEST FROM LINUX MINT UPGRADE SCREEN:
-# Setting up base-files (7.2ubuntu5.4) ...
-#
-# Configuration file '/etc/issue'
-#  ==> Modified (by you or by a script) since installation.
-#  ==> Package distributor has shipped an updated version.
-#    What would you like to do about it ?  Your options are:
-#     Y or I  : install the package maintainer's version
-#     N or O  : keep your currently-installed version
-#       D     : show the differences between the versions
-#       Z     : start a shell to examine the situation
-#  The default action is to keep your current version.
-# *** issue (Y/I/N/O/D/Z) [default=N] ? 
-# 
-# grub-install.real: warning: Sector 32 is already in use by the program `FlexNet'; avoiding it.  This software may cause boot or other problems in future.  Please ask its authors not to store data in the boot track.
 exit
