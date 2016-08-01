@@ -160,6 +160,7 @@ if [[ $answer =~ p ]];then
 fi
 notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
+not_installed_single_line="${not_installed_single_line:: -1}"
 [ -z "$not_installed_single_line" ] && return 0
 return "$(printf "$notinstalled"|wc -l)"
 }
@@ -1406,7 +1407,7 @@ chmod 700 "timeouttry.sh"
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
           get_1_addr_from_bunch $toemailadds
-          outemailadd="emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
+          outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
@@ -1419,7 +1420,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
                     printf "\rChecking $MAIL_PROT.$outemailprovider:$port\033[K";
-                    (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                    (./timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                done  2> /dev/null
           done
           if [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]];then
@@ -1559,8 +1560,9 @@ while true;do
                   exec 5>&-;wait
                   for MAIL_PROT in pop pop3 mail;do
                        for port in 465 995 110 993;do
-                            printf "\rChecking $MAIL_PROT.$inemailprovider:$port\033[K";
-                            (./timeout.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                            printf "\rChecking $MAIL_PROT.$inemailprovider:$port\033[K"
+#The following script file does not exist
+                            (./timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                        done  2> /dev/null
                   done
                   if [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];then
