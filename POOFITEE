@@ -321,7 +321,7 @@ set_notinstalled_var () {
 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z $ipsetpath ]] && notinstalled+="ipset\n"
-[[ -z $digpath ]] && notinstalled+="dnsutils\n"
+[[ -z $digpath ]] && notinstalled+="dnsutils\nldns\n"
 }
 
 press_a_key () {
@@ -2635,6 +2635,15 @@ until ! [ -z $answer ];do
                  fi
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
                  what_needs_to_be_installed
+                 if [[ "$not_installed_single_line" =~ dnsutils ]];then
+                      digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+                      if [[ -z "$digpath" ]];then
+#                            not_installed_single_line=$(printf "$not_installed_single_line"|$sedpath 's/dnsutils/ldns/1')
+                            eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
+                            digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+                            what_needs_to_be_installed
+                      fi
+                 fi
                  if [ $? != "0" ];then
                       printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\npress R to retry, any other alpha-numeric key to ignore:"
                       press_a_key r "<other-letter-or-number>" || break
