@@ -137,6 +137,7 @@ atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }"
 ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
 visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
 nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
+digpath=$($whereispath $binaryflag dig);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
 netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
 # [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
 mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
@@ -320,6 +321,7 @@ set_notinstalled_var () {
 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z $ipsetpath ]] && notinstalled+="ipset\n"
+[[ -z $digpath ]] && notinstalled+="dnsutils\n"
 }
 
 press_a_key () {
@@ -1554,7 +1556,6 @@ while true;do
               printf  "\rYou selected address $inemailadd \033[K\n"
               while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                   printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
-                  digpath="$($whereispath $binaryflag dig)";digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
               done
               while ! [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];do # this loop re-tries if no connection file is created in the loop
                   exec 5>&-;wait
