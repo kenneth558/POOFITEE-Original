@@ -1420,7 +1420,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
                     printf "\rChecking $MAIL_PROT.$outemailprovider:$port\033[K";
-                    (./timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                    (./timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                done  2> /dev/null
           done
           if [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]];then
