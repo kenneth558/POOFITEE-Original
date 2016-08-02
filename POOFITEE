@@ -2632,16 +2632,22 @@ until ! [ -z $answer ];do
                  if [ -z $been_here_before ];then
                       printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
                       if (press_a_key u "<other-letter-or-number>");then
-                           printf "\nUpdating..."
+                           printf "\nUpdating"
+                           while true;do printf ".";sleep 1;done &
+                           progress_dots="$!"
                            apt-get update >/dev/null
+                           kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                       fi
                       been_here_before="."
                  fi
-                 eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
-                 what_needs_to_be_installed
+                 while true;do printf ".";sleep 1;done &
+                 progress_dots="$!"
+                 eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath" 2>/dev/null
+                 what_needs_to_be_installed 2>/dev/null >/dev/null
+                 kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                  if [[ "$not_installed_single_line" =~ dnsutils ]];then
                       digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-                      printf "...Not a problem...\n"
+#                      printf "...Not a problem...\n"
                       if [[ -z $digpath ]];then
                             eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
                             digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
@@ -2657,6 +2663,7 @@ until ! [ -z $answer ];do
 \nretries), any other alpha-numeric key to ignore:"
                       press_a_key r "<other-letter-or-number>" || break                 
                  fi
+#                 kill $progress_dots; trap 'kill $progress_dots' SIGTERM
             else
                  break
             fi
