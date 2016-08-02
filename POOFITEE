@@ -137,12 +137,12 @@ atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }"
 ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
 visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
 nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-digpath=$($whereispath $binaryflag dig);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+[[ -z $digpath ]] && digpath=$($whereispath $binaryflag dig);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
 netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
 # [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
 mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
-[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
-[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
+[[ -z $mailpath ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
+[[ -z $mailpath ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
 postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
 postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
@@ -321,7 +321,7 @@ set_notinstalled_var () {
 [[ -z $nicepath ]] && notinstalled+="coreutils\n"
 [[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z $ipsetpath ]] && notinstalled+="ipset\n"
-[[ -z $digpath ]] && notinstalled+="dnsutils\nldns\n"
+[[ -z $digpath ]] && notinstalled+="dnsutils\n"
 }
 
 press_a_key () {
@@ -390,11 +390,11 @@ if ($iptablespath -wnL INPUT|$greppath ESTABLISHED >/dev/null) && ($iptablespath
      $netfiltperspath save >/dev/null || $ipsetpath save > /etc/iptables/ipset.sets
 else
 	(cat <<-EOF
-	\$($crontabpath -l|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse >/dev/null 2>&1/d')
+	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse >/dev/null 2>&1/d')
 	*/5 * * * * "$poofitee_home_dir/email_fetch_parse" >/dev/null 2>&1
 	EOF
 	)|$crontabpath  -u poofitee -
-        if ! [[ \$((\$($crontabpath -l -u poofitee |$wcpath -l))) -gt \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
+        if ! [[ \$((\$($crontabpath -l -u poofitee 2>/dev/null|$wcpath -l))) -gt \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
             cat "$poofitee_home_dir/cronentries.bak"|$crontabpath -u poofitee  -
             echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will work."|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
        else
@@ -1263,35 +1263,35 @@ SANDBOX
 printf "."
 date_for_cronentries_backup="poofitee_installer_$(date)"
 printf "."
-$crontabpath -u poofitee -l > "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
+$crontabpath -u poofitee -l 2>/dev/null> "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
 printf "."
 if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
      printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
-\nIf you are certain it is rightfully empty,\n\npress 'p' to proceed anyway,\n\notherwise press ctrl-c and troubleshoot the problem..."
+\nIf you are certain it is rightfully empty, press 'p' to proceed anyway, otherwise press ctrl-c and troubleshoot the problem..."
      read -rsn1;read -rsn3 -t 0.001 discard
      ! [[ $REPLY =~ [Pp] ]] && return 1
 fi
-! [[ $($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
-(printf "$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
+! [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
+(printf "$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
 \n\nConfirm you understand that the shell in POOFITEE's crontab is now getting\
 \nchanged which might affect the above entries if they send values out, contain\
 \nquotes, etc.\n"
 read -n1 -s -p "You will need to verify proper operation of current entries after this.")
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -u poofitee -l|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
+$($crontabpath -u poofitee -l 2>/dev/null|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
 
 # lines below are from poofitee_fw
-@reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
+@reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} printf "\\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
 @reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1
 
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
 # output of a grep -c is numeric below.  Tested good
-[[ $($crontabpath -u poofitee -l|$greppath -c "^SHELL=") -eq 0 ]] && \
-printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l)\n"|$crontabpath -u poofitee - || \
-$crontabpath -u poofitee -l|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
+[[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -c "^SHELL=") -eq 0 ]] && \
+printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l 2>/dev/null)\n"|$crontabpath -u poofitee - || \
+$crontabpath -u poofitee -l 2>/dev/null|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
 #couldn't launch the process until receiving script is there
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have long before now."
@@ -1302,12 +1302,12 @@ if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} printf "\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
+	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} printf "\\""}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 
 	SCRIPT_END
-	) > /tmp/poofitee/launch_complex_cron_line
-	chmod 777 /tmp/poofitee/launch_complex_cron_line
-	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
+	) > /tmp/poofitee/launch_complex_cron_line1
+	chmod 777 /tmp/poofitee/launch_complex_cron_line1
+	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line1
 fi
 if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "auth.log");then
 	mkdir /tmp/poofitee 2>/dev/null
@@ -1317,9 +1317,9 @@ if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir
 	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
 
 	SCRIPT_END
-	) > /tmp/poofitee/launch_complex_cron_line
-	chmod 777 /tmp/poofitee/launch_complex_cron_line
-	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line
+	) > /tmp/poofitee/launch_complex_cron_line2
+	chmod 777 /tmp/poofitee/launch_complex_cron_line2
+	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line2
 fi
 
 printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
@@ -1831,7 +1831,7 @@ if [ \$((numofemails)) -gt -1 ]; then
                       cp "\$(ls -slt \$poofitee_home_dir/preparedness/rules*|$awkpath '{if (\$1>4) {print \$NF;exit}}')" "/etc/iptables/rules.v4"
                 fi
                 $netfiltperspath restore
-                $crontabpath -l|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse >\\/dev\\/null 2>&1\/d' > "\$poofitee_home_dir/cronentries"
+                $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse >\\/dev\\/null 2>&1\/d' > "\$poofitee_home_dir/cronentries"
                 [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|$crontabpath -
           else
               script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
@@ -2101,12 +2101,12 @@ EOF
 ) > "$poofitee_home_dir/newdynip.sh"
 
 #  Only need to confirm if there are entries in crontab
-! [[ "$(eval $crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "$(eval $crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+! [[ "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
+     (printf "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -u poofitee -l)
+$($crontabpath -u poofitee -l 2>/dev/null)
 # line below is from poofitee_DynAddChangeNotify
 @reboot "$poofitee_home_dir/newdynip.sh" >/dev/null 2>&1
 ##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
@@ -2126,8 +2126,8 @@ $($crontabpath -u poofitee -l)
 @reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done >/dev/null 2>&1 # *.lease*
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
-[[ "$(eval "$crontabpath -u poofitee -l|$greppath -c \"SHELL=\"")" == "0" ]] && \
-  printf "SHELL=/bin/bash\n$($crontabpath -u poofitee -l)"|$crontabpath -u poofitee - || \
+[[ "$(eval "$crontabpath -u poofitee -l 2>/dev/null|$greppath -c \"SHELL=\"")" == "0" ]] && \
+  printf "SHELL=/bin/bash\n$($crontabpath -u poofitee -l 2>/dev/null)"|$crontabpath -u poofitee - || \
   eval "$crontabpath -u poofitee -l|$sedpath \"/SHELL=/c\SHELL=/bin/bash\"|$crontabpath -u poofitee -"
 echo "crontab set up..."
 }
@@ -2288,7 +2288,7 @@ if ! [[ "$($filepath "/bin/bash")" =~ ^/bin/bash:\ ELF ]];then
     cat <<EOF
 This version of POOFITEE is unable to run on non-ELF platforms such as yours
 simply because the cron 'tail -F ... /var/log/syslog' entry uses stdbuf, which
-is only available on OS platforms using ELF.  Sorry..."
+is available only on OS platforms using ELF.  Sorry..."
 EOF
     exit
 fi
@@ -2629,24 +2629,33 @@ until ! [ -z $answer ];do
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
             clear
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
-                 printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
-                 if (press_a_key u "<other-letter-or-number>");then
-                      apt-get update
+                 if [ -z $been_here_before ];then
+                      printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
+                      if (press_a_key u "<other-letter-or-number>");then
+                           printf "\nUpdating..."
+                           apt-get update >/dev/null
+                      fi
+                      been_here_before="."
                  fi
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath"
                  what_needs_to_be_installed
                  if [[ "$not_installed_single_line" =~ dnsutils ]];then
                       digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-                      if [[ -z "$digpath" ]];then
-#                            not_installed_single_line=$(printf "$not_installed_single_line"|$sedpath 's/dnsutils/ldns/1')
+                      printf "...Not a problem...\n"
+                      if [[ -z $digpath ]];then
                             eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
                             digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
                             what_needs_to_be_installed
                       fi
                  fi
-                 if [ $? != "0" ];then
-                      printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\npress R to retry, any other alpha-numeric key to ignore:"
-                      press_a_key r "<other-letter-or-number>" || break
+                 if [ $? != "0" ] && ([ -z "$previous_not_installed" ] || [ "$previous_not_installed" != $(what_needs_to_be_installed;echo "$?") ]);then
+                      : # keep looping as long as progress is being detected
+                      previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
+                 elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "0" ];then
+                      printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
+\npress R to retry (recommended as long as progress is being made with repeated\
+\nretries), any other alpha-numeric key to ignore:"
+                      press_a_key r "<other-letter-or-number>" || break                 
                  fi
             else
                  break
