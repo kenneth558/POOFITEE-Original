@@ -1134,7 +1134,7 @@ $ipsetpath create privateIPs hash:net maxelem 3 hashsize 64 >/dev/null 2>/dev/nu
 printf "." # insert friendly progress indicators
 $ipsetpath create publicports6000-7999  bitmap:port range 6000-7999 comment >/dev/null 2>/dev/null # for servers hosting irc, servers not hosting irc won't have the log file
 printf "." # insert friendly progress indicators
-$ipsetpath create blacklistcidr hash:net comment >/dev/null 2>/dev/null
+$ipsetpath create blacklist_cidr hash:net comment >/dev/null 2>/dev/null
 printf "." # insert friendly progress indicators
 $iptablespath -wP OUTPUT ACCEPT
 printf "," # insert friendly progress indicators
@@ -1155,7 +1155,7 @@ printf "." # insert friendly progress indicators
 printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set privateIPs src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set privateIPs src -j DROP -m comment --comment "poofitee_fw"  >/dev/null   2>/dev/null || printf "Failed f")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                |$greppath -- " match-set blacklistcidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklistcidr src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                |$greppath -- " match-set blacklistcidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist_cidr src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set blacklist src -j DROP -m comment --comment "poofitee_fw"   >/dev/null  2>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
@@ -2629,7 +2629,7 @@ until ! [ -z $answer ];do
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
             clear
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
-                 if [ -z $been_here_before ];then
+                 if [ -z $been_here_before ] && [[ "$installerpath" =~ apt-get ]];then
                       printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
                       if (press_a_key u "<other-letter-or-number>");then
                            printf "\nUpdating"
