@@ -2633,7 +2633,7 @@ until ! [ -z $answer ];do
                       printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
                       if (press_a_key u "<other-letter-or-number>");then
                            printf "\nUpdating"
-                           while true;do printf ".";sleep 1;done &
+                           while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get update >/dev/null
                            apt-get autoremove -y
@@ -2641,7 +2641,7 @@ until ! [ -z $answer ];do
                       fi
                       been_here_before="."
                  fi
-                 while true;do printf ".";sleep 1;done &
+                 while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
                  progress_dots="$!"
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath" 2>/dev/null
                  what_needs_to_be_installed 2>/dev/null >/dev/null
