@@ -2636,7 +2636,7 @@ until ! [ -z $answer ];do
                            while true;do printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get update >/dev/null
-                           apt-get autoremove
+                           apt-get autoremove -y
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                       fi
                       been_here_before="."
