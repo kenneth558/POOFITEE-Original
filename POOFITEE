@@ -2636,6 +2636,7 @@ until ! [ -z $answer ];do
                            while true;do printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get update >/dev/null
+                           apt-get autoremove
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                       fi
                       been_here_before="."
@@ -2657,6 +2658,8 @@ until ! [ -z $answer ];do
                  if [ $? != "0" ] && ([ -z "$previous_not_installed" ] || [ "$previous_not_installed" != $(what_needs_to_be_installed;echo "$?") ]);then
                       : # keep looping as long as progress is being detected
                       previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
+                 elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
+                      :
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "0" ];then
                       printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \npress R to retry (recommended as long as progress is being made with repeated\
@@ -2719,10 +2722,11 @@ until ! [ -z $answer ];do
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
 #             echo "going off to installbuildiptables"
-             printf "\nConfiguring..."
+#             printf "\nConfiguring..."
              install_buildiptablessh
 #             echo "going off to tail f lines and recvg script"
              install_tail_f_lines_and_receiving_script
+             sendmail_works_or_not
              if [[ -z $sendmail_works ]];then
                   outemail_warnings
                   press_a_key
@@ -2732,14 +2736,32 @@ until ! [ -z $answer ];do
          fi
          if [[ "$answer" =~ e ]];then
 #             printf "remote controlling"
+             sendmail_works_or_not
+             if [[ -z $sendmail_works ]];then
+                  outemail_warnings
+                  press_a_key
+             fi
+             conf_postfix
              install_rc
          fi
          if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
+             sendmail_works_or_not
+             if [[ -z $sendmail_works ]];then
+                  outemail_warnings
+                  press_a_key
+             fi
+             conf_postfix
              install_rc
              install_dynIPch
          fi
          if [[ "$answer" =~ p ]];then
+             sendmail_works_or_not
+             if [[ -z $sendmail_works ]];then
+                  outemail_warnings
+                  press_a_key
+             fi
+             conf_postfix
              install_port_knocking
              advise_to_verify_persistency
          fi
