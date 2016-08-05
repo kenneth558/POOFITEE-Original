@@ -2306,7 +2306,7 @@ printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \n - This copyright message includes the statement\
 \n\n\"       Jesus Christ is Lord of all  ... press a key to acknowledge\"\
 \n\ndisplayed on its own line with blank lines adjacently both above and below\
-\nsaid nstatement and rendered statically without attempt made to render said\
+\nsaid statement and rendered statically without attempt made to render said\
 \nstatement transiently.\
 \n\n2.  Arrangement for your freedom from copyright display obligation, or to\
 \ncontribute, see the comments within the source code of this script"
