@@ -2763,7 +2763,7 @@ until ! [ -z $answer ];do
              conf_postfix
              install_port_knocking
          fi
-         if [[ "$answer =~ [fp] ]] && advise_to_verify_persistency
+         [[ "$answer =~ [fp] ]] && advise_to_verify_persistency
      fi
 done
 exit
