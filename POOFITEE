@@ -182,13 +182,13 @@ if ! [[ -z $mailpath ]];then
 			reception of it on a different computing device:
 	EOF
 	newemailconfigwarning="Installing a new configuration is\
-definitely NOT what you want if this computer is already or will be in use in a\
-business email service role, like MTA, MDA, email relay, or email server because\
-the settings that this installation script will change will most certainly be\
-incompatible with said role.  If you need to avoid installing the emailing\
-configuration, you should manually get the command line email sending to work\
-with whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
-this scripting has found to currently exist on your system."
+\ndefinitely NOT what you want if this computer is already or will be in use in a\
+\nbusiness email service role, like MTA, MDA, email relay, or email server because\
+\nthe settings that this installation script will change will most certainly be\
+\nincompatible with said role.  If you need to avoid installing the emailing\
+\nconfiguration, you should manually get the command line email sending to work\
+\nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
+\nthis scripting has found to currently exist on your system."
      until false;do
           ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
 \nthis test and install a full, new configuration on this computer\
@@ -2732,7 +2732,6 @@ until ! [ -z $answer ];do
                   press_a_key
              fi
              conf_postfix
-             advise_to_verify_persistency
          fi
          if [[ "$answer" =~ e ]];then
 #             printf "remote controlling"
@@ -2763,8 +2762,8 @@ until ! [ -z $answer ];do
              fi
              conf_postfix
              install_port_knocking
-             advise_to_verify_persistency
          fi
+         if [[ "$answer =~ [fp] ]] && advise_to_verify_persistency
      fi
 done
 exit
