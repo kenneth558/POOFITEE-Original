@@ -2381,7 +2381,7 @@ if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcp
      startscreen+=" NOT for your configuration";notdhcp="notdhcp"
 fi
 startscreen+="\n\n      (p) port knocking\
-\n\n      (s) save configuration FUTURE\
+\n\n      (s) save configuration to a storage medium FUTURE\
 \n\n      (r) restore the previously saved configuration FUTURE\
 \n\n      (?) context helpful information\
 \n\n
