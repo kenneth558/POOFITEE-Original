@@ -2505,6 +2505,21 @@ pkscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
+listscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
+\n                       BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS\
+\nThese lists are specific to an iptables extention called ipset.  This menu\
+\noption allows you to enter, archive or transfer the ip address lists that you\
+\nmay have compiled from using POOFITEE or through another means.  Each list is of\
+\nip addresses is handled in two forms not intended to be mixed: CIDR &\
+\nindividual.  If entering a list or lists, you will actually enter the addresses\
+\nas a single compilation of both address types, and the two types will get\
+\nseparated for you.  Each list entry can include a comment that conforms to the\
+\nstyle required by ipset, including the fact that any and all double-quote marks\
+\nwill be discarded before saving the entry to the destination list.  You will be\
+\nasked to indicate whether you are configuring ipset to utilize the list or lists\
+\nof your choice inputted from stdin (keyboard or a normal file), displaying the\
+\nlists active in ipset as currently running, or saving to storage the list or\
+\nlists of your choice from ipset as currently configured."
 savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                       SAVING YOUR INSTALLED CONFIGURATION\
 \nSelecting this is only meaningful if one or more of the above selections is also\
@@ -2527,21 +2542,6 @@ singinterf="\nBased on finding only one pluggable network interface, your intent
 \nfirewalling you'll set up next to apply only to this computer.  If instead you\
 \nwant this firewalling computer to protect other devices with its firewalling\
 \nservices, select"
-listscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
-\n                       BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS\
-\nThese lists are specific to an iptables extention called ipset.  This menu\
-\noption allows you to enter, archive or transfer the ip address lists that you\
-\nmay have compiled from using POOFITEE or through another means.  Each list is of\
-\nip addresses is handled in two forms not intended to be mixed: CIDR &\
-\nindividual.  If entering a list or lists, you will actually enter the addresses\
-\nas a single compilation of both address types, and the two types will get\
-\nseparated for you.  Each list entry can include a comment that conforms to the\
-\nstyle required by ipset, including the fact that any and all double-quote marks\
-\nwill be discarded before saving the entry to the destination list.  You will be\
-\nasked to indicate whether you are configuring ipset to utilize the list or lists\
-\nof your choice inputted from stdin (keyboard or a normal file), displaying the\
-\nlists active in ipset as currently running, or saving to storage the list or\
-\nlists of your choice from ipset as currently configured."
 postfix_already_conf=""
 until ! [ -z $answer ];do
      clear
@@ -2765,6 +2765,18 @@ until ! [ -z $answer ];do
               clear;printf "lists (white, black, & static_trusted) to/from storage\
 \nThis menu option is under development\n"
                   press_a_key
+              while printf "\nEnter the directory name where you want the ipset sets to be saved into:\n";read -er -i "$PWD" directory_for_list_files;do
+                   [[ -d "$directory_for_list_files" ]] && break
+                   printf "\nNot a valid directory. "
+                   press_a_key
+              done
+              ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
+              ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+              ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+              ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+              ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+              ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+              printf "The files are now saved to $directory_for_list_files"
          fi
          if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
