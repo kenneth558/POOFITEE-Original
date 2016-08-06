@@ -2381,7 +2381,7 @@ if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcp
      startscreen+=" NOT for your configuration";notdhcp="notdhcp"
 fi
 startscreen+="\n\n      (p) port knocking\
-\n\n      (l) lists (white, black, & static_trusted) to/from storage\
+\n\n      (l) lists (white, black, & static_trusted) to/from storage FUTURE\
 \n\n      (c) copy current configuration to a storage medium FUTURE\
 \n\n      (r) restore the previously saved configuration FUTURE\
 \n\n      (?) context helpful information\
@@ -2762,7 +2762,9 @@ until ! [ -z $answer ];do
          fi
          if [[ "$answer" =~ l ]];then
               :
-              clear;printf "This menu option is under development\n"
+              clear;printf "lists (white, black, & static_trusted) to/from storage\
+\nThis menu option is under development\n"
+                  press_a_key
          fi
          if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
