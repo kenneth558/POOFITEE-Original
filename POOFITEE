@@ -1332,8 +1332,7 @@ if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 & &>/dev/null
-
+	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line" &>/dev/null
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line2
 	chmod 777 /tmp/poofitee/launch_complex_cron_line2
