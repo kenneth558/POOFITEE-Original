@@ -124,11 +124,13 @@ ensure_connection () {
 [[ -z "$digpath" ]] && digpath=""
 digpathstored="$digpath"
 [[ -z "$digpath" ]] && digpath=dig
-while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com &>/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
 [[ -z "$digpathstored" ]] && digpath=drill
-     while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
-          printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
-          break
+     while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com &>/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+          while ! [[ "$(ping -c1 opendns.com &>/dev/null;echo "$?")" == "0" ]];do
+               printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
+               break
+          done
      done
      [[ -z "$digpathstored" ]] && digpath=dig
 done
