@@ -2140,7 +2140,7 @@ outemail_warnings () {
 \nprograms you have previously installed.  Only proceed if you agree with this\
 \nnotion.  In contrast, INBOUND emailing is not expected to be affected because\
 \nthis scripting does not rely on, nor change the settings of, any email client\
-\nprogram for inbound email."
+\nprogram for inbound email.  "
 }
 
 end_warnings () {
@@ -2761,22 +2761,51 @@ until ! [ -z $answer ];do
              install_rc
          fi
          if [[ "$answer" =~ l ]];then
-              :
-              clear;printf "lists (white, black, & static_trusted) to/from storage\
-\nThis menu option is under development\n"
-                  press_a_key
-              while printf "\nEnter the directory name where you want the ipset sets to be saved into:\n";read -er -i "$PWD" directory_for_list_files;do
-                   [[ -d "$directory_for_list_files" ]] && break
-                   printf "\nNot a valid directory. "
-                   press_a_key
-              done
-              ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
-              ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
-              ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
-              ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
-              ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
-              ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
-              printf "The files are now saved to $directory_for_list_files"
+              clear;printf -- "       lists (white, black, & static_trusted) to/from storage\
+\n\nThis menu option is under development.\
+\n\n   s -- Save ipset sets (blacklist, blacklist_cidr, whitelist, whitelist_cidr,\
+\n        static_trusted, and static_trusted_cidr) of this firewall's current\
+\n        configuration to files in a directory you will choose\
+\n\n   e -- Enter ipset sets into this firewall's configuration through the keyboard\
+\n        or from files that conform to ipset \'save\' conventions\
+\n\n"
+              if (press_a_key s e);then
+                  if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
+                       directory_for_list_files="$([[ -f "$poofitee_home_dir/directory_for_list_files" ]] && cat "$poofitee_home_dir/directory_for_list_files")"
+                       [[ -z "$directory_for_list_files" ]] && directory_for_list_files="$PWD"
+                   fi
+                   while printf "\nEnter the directory name where you want the firewall ipset sets to be saved to:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
+                        [[ -d "$directory_for_list_files" ]] && break
+                        printf "\nNot a valid directory. Try again.  "
+                        press_a_key
+                   done
+                   echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
+                   ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
+                   ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+                   ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+                   ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+                   ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+                   ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   printf "The files are now saved to $directory_for_list_files"
+               else
+                  if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
+                       directory_for_list_files="$([[ -f "$poofitee_home_dir/directory_for_list_files" ]] && cat "$poofitee_home_dir/directory_for_list_files")"
+                       [[ -z "$directory_for_list_files" ]] && directory_for_list_files="$PWD"
+                   fi
+                   while printf "\nEnter the directory name containing the files that you want the firewall ipset sets to be configured from:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
+                        [[ -d "$directory_for_list_files" ]] && break
+                        printf "\nNot a valid directory. Try again.  "
+                        press_a_key
+                   done
+                   echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
+                   ipset restore blacklist -file "$directory_for_list_files/poofitee_blacklist"
+                   ipset restore blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+                   ipset restore whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+                   ipset restore whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+                   ipset restore static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+                   ipset restore static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   printf "The ipset sets are now restored from $directory_for_list_files"
+               fi
          fi
          if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
