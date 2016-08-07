@@ -2678,32 +2678,21 @@ until ! [ -z $answer ];do
                             what_needs_to_be_installed
                       fi
                  fi
-printf "Line 2681";read -sn1 discard
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
-printf "Line 2683";read -sn1 discard
                       : # keep looping as long as progress is being detected
                       previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
-printf "Line 2687";read -sn1 discard
                       :
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "0" ];then
-printf "Line 2690";read -sn1 discard
                       printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \npress R to retry (recommended as long as progress is being made with repeated\
 \nretries), any other alpha-numeric key to ignore:"
-printf "Line 2694";read -sn1 discard
                       press_a_key r "<other-letter-or-number>" || break                 
-printf "Line 2696";read -sn1 discard
                  fi
-printf "Line 2698";read -sn1 discard
             else
-printf "Line 2700";read -sn1 discard
                  break
-printf "Line 2702";read -sn1 discard
             fi
-printf "Line 2704";read -sn1 discard
          done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-printf "Line 2706";read -sn1 discard
 # printf "line 2656, $notinstalled";read -rsn1
 # echo "$not_installed_single_line";read -srn1
 # printf "\nnetfilter-persistent is found at $netfiltperspath";press_a_key
