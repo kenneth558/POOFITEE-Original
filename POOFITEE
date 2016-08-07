@@ -193,9 +193,10 @@ if ! [[ -z $mailpath ]];then
 			email account.  For emailing alerts to you, specialized configuration is
 			required so this computer can send emails from the command line.  We'll send a
 			test email now to see if it can send from the command line already if you'll
-			please enter an email address to finish the following mail command, choosing an
-			address that you can immediately receive a test email through and verify
-			reception of it on a different computing device:
+			please enter an email address to which a subsequent mail command will send a
+			test email.  For this test, you should choose an email address that you can
+			immediately receive a test email through and verify reception of it, possibly
+			on a different computing device:
 	EOF
 	newemailconfigwarning="Installing a new configuration is\
 \ndefinitely NOT what you want if this computer is already or will be in use in a\
@@ -1284,7 +1285,8 @@ printf "."
 if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
      printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
-\nIf you are certain it is rightfully empty, press 'p' to proceed anyway, otherwise press ctrl-c and troubleshoot the problem..."
+\nIf you are certain it is rightfully empty, press 'p' to proceed anyway, otherwise\
+\npress ctrl-c and troubleshoot the problem..."
      read -rsn1;read -rsn3 -t 0.001 discard
      ! [[ $REPLY =~ [Pp] ]] && return 1
 fi
