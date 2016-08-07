@@ -120,6 +120,11 @@
 #ENABLE_ROUTING (default: 0) – if set different than 0 then routing is enabled (in /proc/sys/net/ipv4/ip_forward and /proc/sys/net/ipv6/conf/all/forwarding), otherwise it’s not.
 #
 ################  FUNCTIONS FIRST, THEN MAIN:
+ensure_connection () {
+while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+     printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
+done
+}
 what_needs_to_be_installed () {
 inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
 iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
@@ -1294,7 +1299,7 @@ printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l 2>/dev/null)\n"|$crontabp
 $crontabpath -u poofitee -l 2>/dev/null|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
 #couldn't launch the process until receiving script is there
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
-     echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have long before now."
+     echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have well before now."
      exit
 fi
 if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "kern.log");then
@@ -1416,9 +1421,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]] \
              && rm "$poofitee_home_dir/$outemailprovider.outconnects.txt" 2>/dev/null
           printf  "\rYou selected address $outemailadd \033[K\n"
-          while ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
-                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
-          done
+          ensure_connection
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
                     printf "\rChecking $MAIL_PROT.$outemailprovider:$port\033[K";
@@ -2602,7 +2605,6 @@ until ! [ -z $answer ];do
                   what_needs_to_be_installed
 #                  printf "There are $(what_needs_to_be_installed;echo "$?") things needing to be installed";read -srn1
                   [[ "$?" == "0" ]] && break 2
-
                   installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman -S pkg install  pkg_add "" xbps-install -Sy brew install port install)
 
 #                  installers=("DEBIAN_FRONTEND=noninteractive apt-get" "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
@@ -2647,7 +2649,9 @@ until ! [ -z $answer ];do
             clear
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
                  if [ -z $been_here_before ] && [[ "$installerpath" =~ apt-get ]];then
-                      printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number key not to update first.  "
+                      ensure_connection
+                      printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number\
+\nkey not to update first.  "
                       if (press_a_key u "<other-letter-or-number>");then
                            printf "\nUpdating"
                            while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
