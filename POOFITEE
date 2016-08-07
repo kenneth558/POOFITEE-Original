@@ -2780,12 +2780,13 @@ until ! [ -z $answer ];do
                         press_a_key
                    done
                    echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
-                   ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
-                   ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
-                   ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
-                   ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
-                   ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
-                   ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   ipset save -file "$directory_for_list_files/ipset.sets"
+#                   ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
+#                   ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+#                   ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+#                   ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+#                   ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+#                   ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
                    printf "The files are now saved to $directory_for_list_files"
                else
                   if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
@@ -2798,12 +2799,13 @@ until ! [ -z $answer ];do
                         press_a_key
                    done
                    echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
-                   ipset restore blacklist -file "$directory_for_list_files/poofitee_blacklist"
-                   ipset restore blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
-                   ipset restore whitelist  -file "$directory_for_list_files/poofitee_whitelist"
-                   ipset restore whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
-                   ipset restore static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
-                   ipset restore static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   ipset restore -file "$directory_for_list_files/ipset.sets"
+#                   ipset restore blacklist -file "$directory_for_list_files/poofitee_blacklist"
+#                   ipset restore blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+#                   ipset restore whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+#                   ipset restore whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+#                   ipset restore static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+#                   ipset restore static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
                    printf "The ipset sets are now restored from $directory_for_list_files"
                fi
          fi
