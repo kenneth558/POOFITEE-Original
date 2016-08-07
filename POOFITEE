@@ -439,7 +439,7 @@ if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9
      #  The lines below this are for detecting the knock and launching email fetch when the email-reader triggering port is knocked
      #  Notice that the email-reader triggering port is gotten from iptables INPUT chain rule with email-reader in its comment
      #  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
-     #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
+     #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI PREROUTING 7 -t raw -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
 #     [[ \$($greppath -c "#running" <\($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
 #     if [ \$(printf "\$3"|$greppath -c "fetch email") -gt 0 ];then
 #             nohup "$poofitee_home_dir/email_fetch_parse" &
@@ -1855,11 +1855,18 @@ EOF
 chmod 700 "$poofitee_home_dir/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
 # belongs inserted just before both whitelist and blacklist - use the lower line number of them both
-line_number_for_email_reader="$($iptablespath -wnvL INPUT --line-number|$awkpath 'NR>2 {print $1" "$4}'|$greppath -e s_whitelist -e s_blacklist|$sortpath -k1n|$awkpath 'NR==1 {print $1}')"
 until read -erp "Enter a port number you will knock to initiate email to be read" emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( $emailport )) -le 65535 ]];do
     printf "\nThe port number must be a number between 0 and 65535 inclusive\n"
 done
-[[ $($iptablespath -wI INPUT $line_number_for_email_reader -p all --dpt $emailport -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-prefix "fetch email " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+emailproto="tcp"
+if [ -f "/etc/protocols" ];then
+     until read -erp "Enter the protocol you will use in that knock" emailproto; [[ "$($awkpath '{print $1" "$2" "$3}' < "/etc/protocols"|$greppath -wcm 1 "$emailproto")" != "1" ]];do
+         printf "\nThe protocol must be available in /etc/protocols\n"
+     done
+else
+:
+fi
+[[ $($iptablespath -wI PREROUTING 1 -t raw -p $emailproto --dpt $emailport -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-prefix "fetch email " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
           }
 install_dynIPch () {
 #dhcp_lease_path
