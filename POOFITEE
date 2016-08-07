@@ -1315,7 +1315,7 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have well before now."
      exit
 fi
-if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "kern.log");then
+if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
 	mkdir /tmp/poofitee 2>/dev/null
 	(cat <<-SCRIPT_END
 
@@ -1332,7 +1332,7 @@ if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 &
+	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  >/dev/null 2>&1 & &>/dev/null
 
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line2
