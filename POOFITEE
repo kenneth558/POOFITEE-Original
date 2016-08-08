@@ -2667,22 +2667,32 @@ until ! [ -z $answer ];do
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
                  ensure_connection
                  if [ -z $been_here_before ] && [[ "$installerpath" =~ apt-get ]];then
-                      printf "Installation of\n$notinstalled\n\nnext.  Press u to update the installer first, press b to both update the installer & have it run autoremove, any other letter or number\
-\nkey not to update first.  \n"
-                      if (press_a_key u b "<other-letter-or-number>");then
+                      printf "Installation of\n$notinstalled\n\nnext.  Press u to update your system's package installer first, press b to both\
+\nupdate your system's package installer & have it run autoremove, any other\
+\nletter or number key not to update the installer first.  \n"
+                      press_a_key u b
+                      if [[ "$REPLY" =~ [Bb];then
                            clear
-                           printf "Cleanup\n"
-                           while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
+                           installeranswer="$REPLY"
+                           printf "Cleaning up with apt-get autoremove\n"
+                           while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
-                           apt-get autoremove -y
-                           printf "\nUpdating"
-                           apt-get update >/dev/null
+                           apt-get autoremove -y &>/dev/null
+                           kill $progress_dots; trap 'kill $progress_dots' SIGTERM
+                           REPLY="$installeranswer"
+                      fi
+                      if [[ "$REPLY" =~ [UuBb];then
+                           clear
+                           printf "Updating your system\'s package installer\n"
+                           while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
+                           progress_dots="$!"
+                           apt-get update &>/dev/null
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                       fi
                       been_here_before="."
                  fi
                  printf "\nInstalling\n"
-                 while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
+                 while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
                  progress_dots="$!"
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
