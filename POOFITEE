@@ -1284,7 +1284,7 @@ if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cron
      printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
 \nIf you are certain it is rightfully empty, press 'p' to proceed anyway,\
-\notherwise press ctrl-c and troubleshoot the problem..."
+\notherwise press ctrl-c and troubleshoot the problem...\n"
      read -rsn1;read -rsn3 -t 0.001 discard
      ! [[ $REPLY =~ [Pp] ]] && return 1
 fi
@@ -1313,8 +1313,8 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have well before now."
      exit
 fi
-if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
-	mkdir /tmp/poofitee 2>/dev/null
+if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
+	mkdir /tmp/poofitee &>/dev/null
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
@@ -1325,8 +1325,8 @@ if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir
 	chmod 777 /tmp/poofitee/launch_complex_cron_line1
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line1
 fi
-if ! (sudo -u poofitee ps u|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" && sudo -u poofitee ps u|$greppath "auth.log");then
-	mkdir /tmp/poofitee 2>/dev/null
+if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "auth.log" &>/dev/null);then
+	mkdir /tmp/poofitee &>/dev/null
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
