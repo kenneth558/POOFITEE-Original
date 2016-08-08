@@ -1113,7 +1113,7 @@ printf "." # insert friendly progress indicators
 REPLY=""
 printf "." # insert friendly progress indicators
 if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]];then
-printf "." # insert friendly progress indicators
+printf "\n"
      cat <<-EOF
 	This server is capable of being a firewall for an internal network, but you
 	haven't enabled the forwarding feature needed in Linux, at least persisently.
@@ -1123,7 +1123,6 @@ printf "." # insert friendly progress indicators
 	development.  Would you like to enable IP forwarding persistently and have
 	iptables masquerade your internal network so it has Internet access? y/n:
 	EOF
-     printf "." # insert friendly progress indicators
      read -rn1;read -rsn3 -t 0.001 discard
      printf "." # insert friendly progress indicators
      if [[ $REPLY =~ [Yy] ]];then
@@ -1284,8 +1283,8 @@ printf "."
 if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
      printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
-\nIf you are certain it is rightfully empty, press 'p' to proceed anyway, otherwise\
-\npress ctrl-c and troubleshoot the problem..."
+\nIf you are certain it is rightfully empty, press 'p' to proceed anyway,\
+\notherwise press ctrl-c and troubleshoot the problem..."
      read -rsn1;read -rsn3 -t 0.001 discard
      ! [[ $REPLY =~ [Pp] ]] && return 1
 fi
@@ -2668,12 +2667,13 @@ until ! [ -z $answer ];do
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
                  ensure_connection
                  if [ -z $been_here_before ] && [[ "$installerpath" =~ apt-get ]];then
-                      printf "Installation of\n$notinstalled\n\nnext.  Pressing u will update the installer first, any other letter or number\
-\nkey not to update first.  "
-                      if (press_a_key u "<other-letter-or-number>");then
+                      printf "Installation of\n$notinstalled\n\nnext.  Press u to update the installer first, press b to both update the installer & have it run autoremove, any other letter or number\
+\nkey not to update first.  \n"
+                      if (press_a_key u b "<other-letter-or-number>");then
+                           clear
+                           printf "Cleanup\n"
                            while true;do ps a|grep -v grep|grep preconfigure > /dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
-                           printf "\nCleanup\n"
                            apt-get autoremove -y
                            printf "\nUpdating"
                            apt-get update >/dev/null
