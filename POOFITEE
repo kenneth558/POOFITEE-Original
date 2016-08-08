@@ -2671,7 +2671,7 @@ until ! [ -z $answer ];do
 \nupdate your system's package installer & have it run autoremove, any other\
 \nletter or number key not to update the installer first.  \n"
                       press_a_key u b
-                      if [[ "$REPLY" =~ [Bb];then
+                      if [[ "$REPLY" =~ [Bb] ]];then
                            clear
                            installeranswer="$REPLY"
                            printf "Cleaning up with apt-get autoremove\n"
@@ -2681,7 +2681,7 @@ until ! [ -z $answer ];do
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                            REPLY="$installeranswer"
                       fi
-                      if [[ "$REPLY" =~ [UuBb];then
+                      if [[ "$REPLY" =~ [UuBb] ]];then
                            clear
                            printf "Updating your system\'s package installer\n"
                            while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
