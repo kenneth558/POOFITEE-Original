@@ -5,7 +5,7 @@
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
 # TODO: Firewalling options this install script should be able to alter from the script set defaults:
-# TODO: -- Stop probe logging/blacklisting to save space or if you're just not curious - comment out the crontab entry and kill the process
+# TODO: -- Stop probe logging/blacklisting to save resources or if you're just not curious - comment out the crontab entry and kill the process
 # TODO: -- Open specific ports to offer public services
 # TODO: -- Force single-interface firewalling even though two interfaces exist
 # TODO: -- Alter the IP address of the private-side interface from 192.168.3.1
@@ -1153,7 +1153,7 @@ printf "." # insert friendly progress indicators
 $ipsetpath create blacklist_cidr hash:net comment &>/dev/null
 printf "." # insert friendly progress indicators
 $iptablespath -wP OUTPUT ACCEPT
-printf "," # insert friendly progress indicators
+printf "." # insert friendly progress indicators
 
 	# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
 	#  TODO:  warn installer in that case
@@ -1183,7 +1183,7 @@ printf "." # insert friendly progress indicators
 $ipsetpath add static_trusted 91.189.88.0/21 comment "Canonical"   >/dev/null  2>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath add static_trusted 199.102.46.70 comment "local time server hosted by Monticello"   >/dev/null  2>/dev/null
-printf "," # insert friendly progress indicators
+printf "." # insert friendly progress indicators
 
 ! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                               |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT &>/dev/null || printf "Failed j")
 printf "." # insert friendly progress indicators
@@ -1196,7 +1196,7 @@ printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"          |$greppath -- " match-set privateIPs dst "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set privateIPs dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed n")
 printf "." # insert friendly progress indicators
 read -n3 -t 0.001 discard
-printf "," # insert friendly progress indicators
+printf "." # insert friendly progress indicators
 if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && ! [[ $iptables_masquerading == false ]];then
      printf "." # insert friendly progress indicators
      # TODO:  get next line working instead of line above
