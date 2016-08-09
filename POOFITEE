@@ -187,25 +187,29 @@ sendmail_works=""
 if ! [[ -z $mailpath ]];then
      mailadd=""
      mailcmd="echo $0 \"test.  Press y\"|$mailpath"
-#    printf "\nOne aspect of an option you selected will be to send you alert notices to your\
+#    printf "\n\nOne aspect of an option you selected will be to send you alert notices to your\
      cat <<-EOF
 			One aspect of an option you selected will be to send you alert notices to your
 			email account.  For emailing alerts to you, specialized configuration is
 			required so this computer can send emails from the command line.  We'll send a
 			test email now to see if it can send from the command line already if you'll
 			please enter an email address to which a subsequent mail command will send a
-			test email.  For this test, you should choose an email address that you can
-			immediately receive a test email through and verify reception of it, possibly
-			on a different computing device:
+			test email.
+
+			For this test, provide an email address here that you can immediately receive
+			a test email through and verify reception of it, possibly on a different
+			computing device.
+
+			Enter that email address: 
 	EOF
-	newemailconfigwarning="Installing a new configuration is\
-\ndefinitely NOT what you want if this computer is already or will be in use in a\
-\nbusiness email service role, like MTA, MDA, email relay, or email server because\
-\nthe settings that this installation script will change will most certainly be\
-\nincompatible with said role.  If you need to avoid installing the emailing\
-\nconfiguration, you should manually get the command line email sending to work\
-\nwith whichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\" that\
-\nthis scripting has found to currently exist on your system."
+	newemailconfigwarning="Installing a new configuration is definitely NOT what you want if this computer\
+\nis already or will be in use in a business email service role, like MTA, MDA,\
+\nemail relay, or email server because the settings that this installation script\
+\nwill change will most certainly be incompatible with said role.  If you need to\
+\navoid installing the emailing configuration, you should manually get the email\
+\nsending to function via the command line  to work with whichever mail command is\
+\nshown above, \"mail\", \"mailx\", or \"sendmail\", that this scripting has found to\
+\ncurrently exist on your system."
      until false;do
           ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
 \nthis test and install a full, new configuration on this computer\
@@ -473,6 +477,7 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
     exit
 fi
 printf "."
+chown poofitee "$poofitee_home_dir/process_logfile_line"
 chmod 500 "$poofitee_home_dir/process_logfile_line"
 printf "."
 install_firewall_cronentries
@@ -1311,7 +1316,7 @@ printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l 2>/dev/null)\n"|$crontabp
 $crontabpath -u poofitee -l 2>/dev/null|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
 #couldn't launch the process until receiving script is there
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
-     echo;echo "$poofitee_home_dir/process_logfile_line did not get created,\.  It should have well before now."
+     echo;echo "$poofitee_home_dir/process_logfile_line did not get created.  It should have well before now."
      exit
 fi
 if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
@@ -1323,7 +1328,8 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line1
-	chmod 777 /tmp/poofitee/launch_complex_cron_line1
+        chown poofitee /tmp/poofitee/launch_complex_cron_line1
+	chmod 700 /tmp/poofitee/launch_complex_cron_line1
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line1
 fi
 if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "auth.log" &>/dev/null);then
@@ -1334,7 +1340,8 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line2
-	chmod 777 /tmp/poofitee/launch_complex_cron_line2
+        chown poofitee /tmp/poofitee/launch_complex_cron_line2
+	chmod 700 /tmp/poofitee/launch_complex_cron_line2
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line2
 fi
 
@@ -2765,6 +2772,7 @@ until ! [ -z $answer ];do
           || printf "Your current iptables ruleset did not get backed up as expected.  You should\
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
+         chown poofitee "$poofitee_home_dir/iptables_ruleset.$current_time"
 #       amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
          ! [[ -d "$poofitee_home_dir/ramdisk" ]] && sudo -u poofitee mkdir "$poofitee_home_dir/ramdisk" &>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" &>/dev/null
          (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
