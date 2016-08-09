@@ -1059,6 +1059,7 @@ install_firewall_cronentries
 printf "." # insert friendly progress indicators
 if ! [ -d /etc/iptables ];then
      mkdir /etc/iptables
+     chmod 755 /etc/iptables
 fi
 printf "." # insert friendly progress indicators
 if [ -d /usr/share/netfilter-persistent/plugins.d ];then
@@ -1314,7 +1315,7 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      exit
 fi
 if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
-	mkdir /tmp/poofitee &>/dev/null
+	sudo -u poofitee mkdir /tmp/poofitee &>/dev/null
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
@@ -1326,7 +1327,7 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line1
 fi
 if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "auth.log" &>/dev/null);then
-	mkdir /tmp/poofitee &>/dev/null
+	sudo -u poofitee mkdir /tmp/poofitee &>/dev/null
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
@@ -2730,7 +2731,8 @@ until ! [ -z $answer ];do
              else
                   poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
                   [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
-                  printf "\nSpecify a home directory which will be created for user poofitee, which is where\
+                  clear
+                  printf "Specify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
 \nlevel you will want:\n"
@@ -2741,12 +2743,12 @@ until ! [ -z $answer ];do
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
              fi
              if ! [[ -d "$poofitee_home_dir" ]];then
-                      mkdir -p "$poofitee_home_dir" &>/dev/null && chmod 700 "$poofitee_home_dir" &>/dev/null
+                      sudo -u poofitee mkdir -p "$poofitee_home_dir" &>/dev/null && chmod 700 "$poofitee_home_dir" &>/dev/null
                       [[ "$?" == "0" ]] && break
                       echo "Unable to use that path"
              fi
              if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
-                      mkdir -p "$poofitee_home_dir/preparedness" &>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" &>/dev/null
+                      sudo -u poofitee mkdir -p "$poofitee_home_dir/preparedness" &>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" &>/dev/null
                       [[ "$?" == "0" ]] && break
                       echo "Unable to use that path"
              else
@@ -2764,7 +2766,7 @@ until ! [ -z $answer ];do
 \npress ctl-c now and fix that, or you could be in a frustrating situation if\
 \nsomething goes awry with this install.\n"
 #       amount_of_free_memory="$($freepath -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
-         ! [[ -d "$poofitee_home_dir/ramdisk" ]] && mkdir "$poofitee_home_dir/ramdisk" &>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" &>/dev/null
+         ! [[ -d "$poofitee_home_dir/ramdisk" ]] && sudo -u poofitee mkdir "$poofitee_home_dir/ramdisk" &>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" &>/dev/null
          (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
          $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
          if [[ "$answer" =~ f ]];then
