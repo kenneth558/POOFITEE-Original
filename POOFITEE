@@ -1130,8 +1130,8 @@ printf "\n"
 	nat table configurations are left completely to you at this stage of POOFITEE
 	development.
 
-	Would you like to enable IP forwarding persistently and have
-	iptables masquerade your internal network so it has Internet access? y/n:
+	Would you like to enable IP forwarding persistently and have iptables masquerade 
+	your internal network so it has Internet access? y/n:
 	EOF
      read -rn1;read -rsn3 -t 0.001 discard
      printf "." # insert friendly progress indicators
@@ -1322,8 +1322,6 @@ CRONTAB_ENTRIES_END
 [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -c "^SHELL=") -eq 0 ]] && \
 printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l 2>/dev/null)\n"|$crontabpath -u poofitee - || \
 $crontabpath -u poofitee -l 2>/dev/null|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
-mv toemailadds "$poofitee_home_dir/toemailadds"
-chown poofitee "$poofitee_home_dir/toemailadds"
 #couldn't launch the process until receiving script and other files are there
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created.  It should have well before now."
@@ -1340,6 +1338,9 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	) > /tmp/poofitee/launch_complex_cron_line1
         chown poofitee /tmp/poofitee/launch_complex_cron_line1
 	chmod 700 /tmp/poofitee/launch_complex_cron_line1
+	# Cannot proceed until "$poofitee_home_dir/toemailadds" is created
+      # mv toemailadds "$poofitee_home_dir/toemailadds"
+      # chown poofitee "$poofitee_home_dir/toemailadds"
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line1
 fi
 if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "auth.log" &>/dev/null);then
@@ -1352,6 +1353,9 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	) > /tmp/poofitee/launch_complex_cron_line2
         chown poofitee /tmp/poofitee/launch_complex_cron_line2
 	chmod 700 /tmp/poofitee/launch_complex_cron_line2
+	# Cannot proceed until "$poofitee_home_dir/toemailadds" is created
+      # mv toemailadds "$poofitee_home_dir/toemailadds"
+      # chown poofitee "$poofitee_home_dir/toemailadds"
 	sudo -u poofitee /tmp/poofitee/launch_complex_cron_line2
 fi
 
@@ -2796,13 +2800,13 @@ until ! [ -z $answer ];do
 #             printf "\nConfiguring..."
              install_buildiptablessh
 #             echo "going off to tail f lines and recvg script"
-             install_tail_f_lines_and_receiving_script
              sendmail_works_or_not
              if [[ -z $sendmail_works ]];then
                   outemail_warnings
                   press_a_key
              fi
              conf_postfix
+             install_tail_f_lines_and_receiving_script
          fi
          if [[ "$answer" =~ e ]];then
 #             printf "remote controlling"
