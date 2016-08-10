@@ -189,6 +189,7 @@ if ! [[ -z $mailpath ]];then
      mailcmd="echo $0 \"test.  Press y\"|$mailpath"
 #    printf "\n\nOne aspect of an option you selected will be to send you alert notices to your\
      cat <<-EOF
+
 			One aspect of an option you selected will be to send you alert notices to your
 			email account.  For emailing alerts to you, specialized configuration is
 			required so this computer can send emails from the command line.  We'll send a
@@ -1127,7 +1128,9 @@ printf "\n"
 	If you'd like, that $( [[ $iptables_masquerading == false ]] && printf "and the iptables MASQUERADE ")can be easily enough done for
 	you right now, but IP address, routing tables, and DNAT in iptables POSTROUTING
 	nat table configurations are left completely to you at this stage of POOFITEE
-	development.  Would you like to enable IP forwarding persistently and have
+	development.
+
+	Would you like to enable IP forwarding persistently and have
 	iptables masquerade your internal network so it has Internet access? y/n:
 	EOF
      read -rn1;read -rsn3 -t 0.001 discard
@@ -1280,20 +1283,24 @@ nickserv
 anope
 SANDBOX
 }
-       install_firewall_cronentries () {
+
+install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
 printf "."
 date_for_cronentries_backup="poofitee_installer_$(date)"
 printf "."
 $crontabpath -u poofitee -l 2>/dev/null> "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
 printf "."
-if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
-     printf "\n\nPOOFITEE's cron file isn't being saved right to\
+# the next few lines not executed for when user poofitree is newly created this run
+if [[ -z "$user_poofitee_created_this_run" ]];then
+     if ! [[ $(($(echo "$?"))) -eq 0 ]] || ! [[ $(($(wc -l < "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"))) -gt 0 ]];then
+          printf "\n\nPOOFITEE's cron file isn't being saved right to\
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
 \nIf you are certain it is rightfully empty, press 'p' to proceed anyway,\
 \notherwise press ctrl-c and troubleshoot the problem...\n"
-     read -rsn1;read -rsn3 -t 0.001 discard
-     ! [[ $REPLY =~ [Pp] ]] && return 1
+          read -rsn1;read -rsn3 -t 0.001 discard
+          ! [[ $REPLY =~ [Pp] ]] && return 1
+     fi
 fi
 ! [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
 (printf "$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
@@ -1315,7 +1322,9 @@ CRONTAB_ENTRIES_END
 [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -c "^SHELL=") -eq 0 ]] && \
 printf "SHELL=$bashpath\n$($crontabpath -u poofitee -l 2>/dev/null)\n"|$crontabpath -u poofitee - || \
 $crontabpath -u poofitee -l 2>/dev/null|$sedpath '/SHELL=/c\SHELL=/bin/bash'|$crontabpath -u poofitee -
-#couldn't launch the process until receiving script is there
+mv toemailadds "$poofitee_home_dir/toemailadds"
+chown poofitee "$poofitee_home_dir/toemailadds"
+#couldn't launch the process until receiving script and other files are there
 if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created.  It should have well before now."
      exit
@@ -2679,9 +2688,9 @@ until ! [ -z $answer ];do
             if ! [[ -z "$installerpath" ]] && ! [[ -z "$not_installed_single_line" ]];then # install what is neededpress 
                  ensure_connection
                  if [ -z $been_here_before ] && [[ "$installerpath" =~ apt-get ]];then
-                      printf "Installation of\n$notinstalled\n\nnext.  Press u to update your system's package installer first, press b to both\
-\nupdate your system's package installer & have it run autoremove, any other\
-\nletter or number key not to update the installer first.  \n"
+                      printf "Installation of\n$notinstalled\n\nis required next.  Press u to update your system's package installer first,\
+\npress b to both update your system's package installer & have it run autoremove,\
+\nany other letter or number key not to update the installer first.  \n"
                       press_a_key u b
                       if [[ "$REPLY" =~ [Bb] ]];then
                            clear
@@ -2749,6 +2758,7 @@ until ! [ -z $answer ];do
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
+                 user_poofitee_created_this_run="."
              fi
              if ! [[ -d "$poofitee_home_dir" ]];then
                       sudo -u poofitee mkdir -p "$poofitee_home_dir" &>/dev/null && chmod 700 "$poofitee_home_dir" &>/dev/null
