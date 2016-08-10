@@ -203,14 +203,14 @@ if ! [[ -z $mailpath ]];then
 
 			Enter that email address: 
 	EOF
-	newemailconfigwarning="Installing a new configuration is definitely NOT what you want if this computer\
-\nis already or will be in use in a business email service role, like MTA, MDA,\
-\nemail relay, or email server because the settings that this installation script\
-\nwill change will most certainly be incompatible with said role.  If you need to\
-\navoid installing the emailing configuration, you should manually get the email\
-\nsending to function via the command line  to work with whichever mail command is\
-\nshown above, \"mail\", \"mailx\", or \"sendmail\", that this scripting has found to\
-\ncurrently exist on your system."
+	newemailconfigwarning="Installing a new configuration is definitely NOT what you want\
+\nif this computer is already or will be in use in a business email service role,\
+\nlike MTA, MDA, email relay, or email server because the settings that this\
+\ninstallation script will change will most certainly be incompatible with said\
+\nrole.  If you need to avoid installing the emailing configuration, you should\
+\nmanually get the email sending to function via the command line  to work with\
+\nwhichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\", that this\
+\nscripting has found to currently exist on your system."
      until false;do
           ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
 \nthis test and install a full, new configuration on this computer\
