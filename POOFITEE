@@ -120,6 +120,22 @@
 #ENABLE_ROUTING (default: 0) – if set different than 0 then routing is enabled (in /proc/sys/net/ipv4/ip_forward and /proc/sys/net/ipv6/conf/all/forwarding), otherwise it’s not.
 #
 ################  FUNCTIONS FIRST, THEN MAIN:
+switch_from_more_common_package_to_less_common_package () {
+# args are: #1=more common package name, #2=more common binary name, #3=less common package name, #4=less common binary name
+                 if [[ "$not_installed_single_line" =~ ^dnsutils ]];then
+                      if ! [[ -z "$dnsutils_already_given_a_chance" ]];then
+                           digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+#                           printf "...Not a problem...\n"
+                           if [[ -z $digpath ]];then
+                                 eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
+                                 digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+                                 what_needs_to_be_installed
+                           fi
+                      else
+                           dnsutils_already_given_a_chance="anyvaluewillwork"
+                      fi
+                 fi
+}
 ensure_connection () {
 [[ -z "$digpath" ]] && digpath=""
 
@@ -237,9 +253,9 @@ if ! [[ -z $mailpath ]];then
                          continue
                     fi
                fi
-               printf "\nBased on your answer, a full, new email sending configuration will be set up on\
+               printf "\n\nBased on your answer, a full, new email sending configuration will be set up on\
 \nthis computer.  $newemailconfigwarning"
-               printf "\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
+               printf "\n\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
                press_a_key
                echo
                break
@@ -262,7 +278,7 @@ email_subjectline_front="Poofitee "
 recipient_list="\$(cat "\$poofitee_home_dir/toemailadds")"
 if ! [ "\$2x" == "-rx" ];then
       if ! (sudo $ipsetpath add whitelist \$1 comment "\$(date) \$2 \$3" 2>"$poofitee_home_dir/ramdisk/returerr"); then
-          if [[ "\$(cat returerr )" =~ is\ full ]];then # send the email notice out FIRST
+          if [[ "\$(cat "$poofitee_home_dir/ramdisk/returerr" )" =~ is\ full ]];then # send the email notice out FIRST
                echo "Increasing the size of the whitelist. Verify continued server operation NOW"|$mailpath -s "\$email_subjectline_front" "\$recipient_list"
                sudo $ipsetpath create whitelisttmp hash:ip comment maxelem \$(sudo $ipsetpath list -t|$greppath -iA 3 "^name: whitelist"|$tailpath -n1|$awkpath '{printf \$7+65536}')
                sudo $ipsetpath list whitelist|$tailpath -n+8|while read ipadd comment;do
@@ -299,6 +315,23 @@ else
      $ipsetpath add privateIPs  172.16.0.0/12 &>/dev/null
      $ipsetpath add privateIPs 192.168.0.0/16 &>/dev/null
 fi
+<<-EOF
+other CIDRs to blacklist in some fashion on a specific interface in most, but not all, scenarios.
+0.0.0.0/8
+100.64.0.0/10
+127.0.0.0/8
+169.254.0.0/16
+192.0.0.0/24
+192.0.2.0/24
+198.18.0.0/15
+198.51.100.0/24
+203.0.113.0/24
+224.0.0.0/4
+240.0.0.0/4
+
+a bogon test file updated often : http://www.team-cymru.org/Services/Bogons/fullbogons-ipv4.txt, but private ip range[s] must be removed if the external-facing interface is a private ip
+
+EOF
 $greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add static_trusted $ipaddr comment "needed to acquire address via DHCP" &>/dev/null;done
 }
 advise_to_verify_persistency () {
@@ -355,21 +388,21 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
 #!/bin/bash
-if ! (sudo $ipsetpath add blacklist \$1 comment "\$2"  2>returerr); then
-     if [[ "\$(cat returerr )" =~ is\ full ]];then # send the email notice out FIRST
+if ! (sudo $ipsetpath add blacklist \$1 comment "\$2"  2>"$poofitee_home_dir/ramdisk/returerr"); then
+     if [[ "\$(cat "$poofitee_home_dir/ramdisk/returerr" )" =~ is\ full ]];then # send the email notice out FIRST
           echo "Increasing the size of the blacklist. Verify continued server operation NOW"|$mailpath -s "Increasing the size of the blacklist. Verify continued server operation NOW" "\$(cat "$poofitee_home_dir/toemailadds")"
 # list too full, make a larger new one, then swap it out and destroy old
           sudo $ipsetpath create blacklisttmp hash:ip comment maxelem \$(sudo $ipsetpath list -t|$greppath -iA 3 "^name: blacklist"|$tailpath -n1|$awkpath '{printf \$7+65536}')
           sudo $ipsetpath list blacklist|$tailpath -n+8|while read ipadd comment;do
-              $ipsetpath add blacklisttmp "\$ipadd \$comment"
+              sudo $ipsetpath add blacklisttmp "\$ipadd \$comment"
           done
           sudo $ipsetpath w blacklist blacklisttmp >/dev/null 2>/dev/null && sudo $ipsetpath x blacklisttmp &>/dev/null
      fi
-     rm returerr
+     rm "$poofitee_home_dir/ramdisk/returerr"
 fi
 # By putting this here, we'll reduce number of duplicate calls to this script.  Port knocking may be adversely affected, however, for the knocks that need to get logged (example: whitelisting from loose rules) if they arrive before this gets reversed below.  That risk should be minimal.
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\${0##*/}.lockfile" 2>&1)
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\${0##*/}.lockfile" &>/dev/null)
 do ! [[ -f "\$lockfile_dir/\${0##*/}.lockfile" ]] && break
      $inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\${0##*/}.lockfile" --format %e 2>&1|while read inotifywait_output
           do 
@@ -416,9 +449,9 @@ else
 	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>/dev/null/d')
 	*/5 * * * * "$poofitee_home_dir/email_fetch_parse" &>/dev/null
 	EOF
-	)|$crontabpath  -u poofitee -
+	)|sudo $crontabpath  -u poofitee -
         if ! [[ \$((\$($crontabpath -l -u poofitee 2>/dev/null|$wcpath -l))) -gt \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
-            cat "$poofitee_home_dir/cronentries.bak"|$crontabpath -u poofitee  -
+            cat "$poofitee_home_dir/cronentries.bak"|sudo $crontabpath -u poofitee  -
             echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will work."|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
        else
             echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
@@ -658,6 +691,8 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
            line="$(cat "$poofitee_home_dir/toemailadds")"
      elif [[ -f "./toemailadds" ]];then
            line="$(cat "./toemailadds")"
+     elif ! [[ -z $mailadd ]];then
+           line="$mailadd"
      fi
      toemailaddsmaster="$line"
      mstrlinenumber=1
@@ -1313,8 +1348,8 @@ read -n1 -s -p "You will need to verify proper operation of current entries afte
 $($crontabpath -u poofitee -l 2>/dev/null|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
 
 # lines below are from poofitee_fw
-@reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  &>/dev/null
-@reboot $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  &>/dev/null
+@reboot sudo $nicepath -n-15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffer ' SRC='|$greppath --line-buffer -v 'SRC=10\.'|$greppath --line-buffer -v 'SRC=0\.0\.0\.0'|$greppath --line-buffer -v 'SRC=127\.0\.0\.1'|$greppath --line-buffer -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null
+@reboot sudo $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null
 
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
@@ -1332,7 +1367,7 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffered ' SRC='|$stdbufpath -o0 $greppath -v 'SRC=10\.'|$stdbufpath -o0 $greppath -v 'SRC=0\.0\.0\.0'|$stdbufpath -o0 $greppath -v 'SRC=127\.0\.0\.1'|$stdbufpath -o0 $greppath -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -l "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
+	nohup sudo $nicepath -n-15 sudo $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffer ' SRC='|$greppath --line-buffer -v 'SRC=10\.'|$greppath --line-buffer -v 'SRC=0\.0\.0\.0'|$greppath --line-buffer -v 'SRC=127\.0\.0\.1'|$greppath --line-buffer -v 'SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line1
@@ -1348,7 +1383,7 @@ if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -l "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
+	nohup sudo $nicepath -n15 sudo $tailpath -F -n 0 /var/log/auth.log|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 	SCRIPT_END
 	) > /tmp/poofitee/launch_complex_cron_line2
         chown poofitee /tmp/poofitee/launch_complex_cron_line2
@@ -1452,7 +1487,7 @@ while true;do  #this loop allows user to change the email account for outbound s
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
           [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]] \
              && rm "$poofitee_home_dir/$outemailprovider.outconnects.txt" 2>/dev/null
-          printf  "\rYou selected address $outemailadd \033[K\n"
+          printf  "\rYou selected address $outemailadd \033[K\nPlease wait for analysis of the best port and protocol setting...\n"
           ensure_connection
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
@@ -1461,7 +1496,8 @@ while true;do  #this loop allows user to change the email account for outbound s
                done  2> /dev/null
           done
           if [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]];then
-               printf "\rThe possibilities are\033[K\n$(<"$poofitee_home_dir/$outemailprovider.outconnects.txt")"
+               printf "\rThe possibilities are\033[K\n$(<"$poofitee_home_dir/$outemailprovider.outconnects.txt")\
+\nplease wait...\n"
                break
           else
                printf "\r\033[K\033[1ASelected email provider doesn't allow logins.  Enter a different account...\n"
@@ -1523,7 +1559,7 @@ while true;do  #this loop allows user to change the email account for outbound s
                printf "$( $postqueuepath -f )"
           fi
           printf "\nNext, suitability test notifications will be sent out to all email addresses you\
-\nindicated should receive notifications.  Press a key to send them..."
+\nindicated should receive notifications.  Press a key to send them...\n"
           read -rsn 1;read -rst 0.001 -n3
           notemsg=""
           [[ $answer =~ f ]] && notemsg+="Firewalling\n"
@@ -1778,7 +1814,7 @@ done
 #       open
 #       allow
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" 2>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" &>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
 trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 if [[ -f "$poofitee_home_dir/toemailadds" ]];then
      recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
@@ -1850,7 +1886,7 @@ if [ \$((numofemails)) -gt -1 ]; then
           if [ \$($greppath -cwie "report" -e "send" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
               script="echo \\"\$(sudo $ipsetpath list whitelist|$awkpath 'NR>7 {print \$1}')\\"|$mailpath -s \\"As you requested\\" \\"\$recipient_list\\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"\$recipient_list\\""
+              script="echo \\"\$(sudo $tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"\$recipient_list\\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
               script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
@@ -1868,7 +1904,7 @@ if [ \$((numofemails)) -gt -1 ]; then
                 fi
                 sudo $netfiltperspath restore
                 $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null\/d' > "\$poofitee_home_dir/cronentries"
-                [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|$crontabpath -
+                [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|sudo $crontabpath -
           else
               script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
           fi
@@ -2155,20 +2191,20 @@ $($crontabpath -u poofitee -l 2>/dev/null)
 # line below is from poofitee_DynAddChangeNotify
 @reboot "$poofitee_home_dir/newdynip.sh" &>/dev/null
 ##The following lines are from poofitee_DynAddChangeNotify and intentionally redundant to allow owner/sysadmin to change dhcp client package and still get notified of dhcp change
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhcpcd*.info        DO MONITOR, make separate entry for each file found
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$poofitee_home_dir/newdynip.sh";done &>/dev/null # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/db/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhclient*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhcpd.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhclient*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpcd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhclient/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/misc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # udhcpc*.lease*
-@reboot $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/dhclient.$external_net_interface.leases|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /etc/dhcpc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhcpcd*.info        DO MONITOR, make separate entry for each file found
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event access /usr/share/udhcpc/default.script|while read filename;do "$poofitee_home_dir/newdynip.sh";done &>/dev/null # NEED TO INOTIFYWAIT MONITOR FOR "ACCESS" THE SCRIPT FILE THAT GETS EXECUTED ON CHANGE
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/db/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhclient*.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhcpd.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # dhclient*.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcp3/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhcpcd/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/dhclient/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/misc/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # udhcpc*.lease*
+@reboot sudo $nicepath -n19 $inotifywaitpath --format \\%w\\%f --quiet --monitor --event modify /var/lib/NetworkManager/|while read filename;do "$poofitee_home_dir/newdynip.sh" "\$filename";done &>/dev/null # *.lease*
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
 [[ "$(eval "$crontabpath -u poofitee -l 2>/dev/null|$greppath -c \"SHELL=\"")" == "0" ]] && \
@@ -2419,7 +2455,7 @@ likeliest_internal_net_interface="$(printf "$internal_net_interfaces"|$headpath 
 # Introduction and what we'll do
 startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
 \n                SELECT DESIRED OPTIONS FOR THIS INSTALLATION\
-\n\n\n      (f) firewalling\
+\n\n      (f) firewalling\
 \n\n      (e) email remote control\
 \n\n      (d) dynamic IP address change notifier"
 if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
@@ -2430,7 +2466,7 @@ startscreen+="\n\n      (p) port knocking\
 \n\n      (c) copy current configuration to a storage medium FUTURE\
 \n\n      (r) restore the previously saved configuration FUTURE\
 \n\n      (?) context helpful information\
-\n\n
+\n
 \nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
 \njust plain ? with no letters, select all of the five services listed above that\
 \nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
@@ -2719,25 +2755,52 @@ until ! [ -z $answer ];do
                  printf "\nInstalling\n"
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
-                 if [[ "$not_installed_single_line" =~ dnsutils ]];then
-                      digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-#                      printf "...Not a problem...\n"
-                      if [[ -z $digpath ]];then
-                            eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
-                            digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-                            what_needs_to_be_installed
+#make the following into a function
+#switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
+#switch_from_more_common_package_to_less_common_package netfilter-persistent netfilter-persistent iptables-persistent iptables-persistent
+# might need to check out http://tldp.org/LDP/abs/html/complexfunct.html
+                 if [[ "$not_installed_single_line" =~ ^dnsutils ]];then
+                      if ! [[ -z "$dnsutils_already_given_a_chance" ]];then
+                           digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+#                           printf "...Not a problem...\n"
+                           if [[ -z $digpath ]];then
+                                 eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
+                                 digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+                                 what_needs_to_be_installed
+                           fi
+                      else
+                           dnsutils_already_given_a_chance="anyvaluewillwork"
                       fi
                  fi
+#                 if [[ "$not_installed_single_line" =~ ^netfilter-persistent ]];then
+#                      if ! [[ -z "$netfilter_persistent_already_given_a_chance" ]];then
+#                           netfiltperspath=$($whereispath $binaryflag iptables-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+#                           printf "...Not a problem...\n"
+#                           if [[ -z $netfiltperspath ]];then
+#                                 eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/netfilter-persistent/iptables-persistent/1') -r -- sudo $installerpath"
+#                                 netfiltperspath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+#                                 what_needs_to_be_installed
+#                           fi
+#                      else
+#                           netfilter_persistent_already_given_a_chance="anyvaluewillwork"
+#                      fi
+#                 fi
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
                       : # keep looping as long as progress is being detected
                       previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
                       :
+
+
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "0" ];then
                       printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \npress R to retry (recommended as long as progress is being made with repeated\
 \nretries), any other alpha-numeric key to ignore:"
                       press_a_key r "<other-letter-or-number>" || break                 
+
+
+
+
                  fi
             else
                  break
@@ -2760,6 +2823,7 @@ until ! [ -z $answer ];do
                  read -e -r -i "$poofitee_home_dir" poofitee_home_dir
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
+                 chmod 0440 /etc/sudoers.d/poofitee
                  sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
                  user_poofitee_created_this_run="."
