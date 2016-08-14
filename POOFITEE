@@ -309,29 +309,14 @@ printf "\nCreated whitelisting script\n"
 adjust_for_private_ip () {
 IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
 if [[ "${octets[0]}" == "10" ]] || ([[ "${octets[0]}" == "192" ]] && [[ "${octets[1]}" == "168" ]]) || ([[ "${octets[0]}" == "172" ]] && [[ $((${octets[1]})) -ge 16 ]] && [[ $((${octets[1]})) -lt 32 ]]);then
-    $ipsetpath flush poofitee_bogons,privateIPs_cidr &>/dev/null
+     $ipsetpath del poofitee_bogons,privateIPs_cidr  10.0.0.0/8 &>/dev/null
+     $ipsetpath del poofitee_bogons,privateIPs_cidr  172.16.0.0/12 &>/dev/null
+     $ipsetpath del poofitee_bogons,privateIPs_cidr 192.168.0.0/16 &>/dev/null
 else
      $ipsetpath add poofitee_bogons,privateIPs_cidr  10.0.0.0/8 &>/dev/null
      $ipsetpath add poofitee_bogons,privateIPs_cidr  172.16.0.0/12 &>/dev/null
      $ipsetpath add poofitee_bogons,privateIPs_cidr 192.168.0.0/16 &>/dev/null
 fi
-<<-EOF
-other CIDRs to blacklist in some fashion on a specific interface in most, but not all, scenarios.
-0.0.0.0/8
-100.64.0.0/10
-127.0.0.0/8
-169.254.0.0/16
-192.0.0.0/24
-192.0.2.0/24
-198.18.0.0/15
-198.51.100.0/24
-203.0.113.0/24
-224.0.0.0/4
-240.0.0.0/4
-
-a bogon test file updated often : http://www.team-cymru.org/Services/Bogons/fullbogons-ipv4.txt, but private ip range[s] must be removed if the external-facing interface is a private ip
-
-EOF
 $greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add poofitee_static_trusted $ipaddr comment "needed to acquire address via DHCP" &>/dev/null;done
 }
 advise_to_verify_persistency () {
@@ -1287,6 +1272,46 @@ fi
      printf "." # insert friendly progress indicators
 adjust_for_private_ip
      printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 0.0.0.0/8 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 100.64.0.0/10 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 127.0.0.0/8 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 169.254.0.0/16 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 192.0.0.0/24 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 192.0.2.0/24 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 198.18.0.0/15 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 198.51.100.0/24 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 203.0.113.0/24 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 224.0.0.0/4 &>/dev/null
+     printf "." # insert friendly progress indicators
+$ipsetpath add poofitee_bogons,privateIPs_cidr 240.0.0.0/4 &>/dev/null
+     printf "." # insert friendly progress indicators
+<<-EOF
+other CIDRs to blacklist in some fashion on a specific interface in most, but not all, scenarios.
+0.0.0.0/8
+100.64.0.0/10
+127.0.0.0/8
+169.254.0.0/16
+192.0.0.0/24
+192.0.2.0/24
+198.18.0.0/15
+198.51.100.0/24
+203.0.113.0/24
+224.0.0.0/4
+240.0.0.0/4
+
+a bogon test file updated often : http://www.team-cymru.org/Services/Bogons/fullbogons-ipv4.txt, but private ip range[s] must be removed if the external-facing interface is a private ip
+
+EOF
+
 echo
 #  TODO: assist-load current ACCEPT lines list here
 #  TODO:  script a tool to allow owners to specify ports for public services.  Rate Limit those users 3-5/min connect attempts, I guess
