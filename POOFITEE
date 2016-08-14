@@ -153,31 +153,31 @@ fi
 digpath="$digpathstored"
 }
 what_needs_to_be_installed () {
-inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
-iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
-stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
-crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
-sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
-ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
-ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
-datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
-bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
-bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
-wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
-atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
-ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
-visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
-nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-[[ -z $digpath ]] && digpath=$($whereispath $binaryflag dig);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+[[ -z "$inotifywaitpath" ]] && inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
+[[ -z "$iptablespath" ]] && iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
+[[ -z "$stdbufpath" ]] && stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
+[[ -z "$crontabpath" ]] && crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+[[ -z "$sleeppath" ]] && sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
+[[ -z "$ifdownpath" ]] && ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
+[[ -z "$ifuppath" ]] && ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
+[[ -z "$datepath" ]] && datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
+[[ -z "$bashpath" ]] && bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
+[[ -z "$bcpath" ]] && bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
+[[ -z "$wcpath" ]] && wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
+[[ -z "$freepath" ]] && freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
+[[ -z "$atpath" ]] && atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
+[[ -z "$ipsetpath" ]] && ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
+[[ -z "$visudopath" ]] && visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
+[[ -z "$nicepath" ]] && nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
+[[ -z "$digpath" ]] && digpath=$($whereispath $binaryflag dig);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
+[[ -z "$netfiltperspath" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
 # [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
-mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
-[[ -z $mailpath ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
-[[ -z $mailpath ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
+[[ -z "$mailpath" ]] && mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
+[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
+[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
-postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
-postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
+[[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
+[[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
 notinstalled=""
 if [[ $answer =~ f ]];then
      set_notinstalled_var # during development, just install everything
@@ -365,19 +365,19 @@ Thank you for using POOFITEE.  God loves you, pass it on.
 EOF
 }
 set_notinstalled_var () {
-[[ -z $inotifywaitpath ]] && notinstalled+="inotify-tools\n"
-[[ -z $iptablespath ]] && notinstalled+="iptables\n"
-[[ -z $netfiltperspath ]] && notinstalled+="netfilter-persistent\n"
-[[ -z $stdbufpath ]] && notinstalled+="coreutils\n"
-[[ -z $mailpath ]] && notinstalled+="mailutils\n"
-[[ -z $crontabpath ]] && notinstalled+="cronie\nbcron\n"
-[[ -z $datepath ]] && notinstalled+="coreutils\n"
-[[ -z $bcpath ]] && notinstalled+="bc\n"
-[[ -z $atpath ]] && notinstalled+="at\n"
-[[ -z $nicepath ]] && notinstalled+="coreutils\n"
-[[ -z $sendmail_works ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
-[[ -z $ipsetpath ]] && notinstalled+="ipset\n"
-[[ -z $digpath ]] && notinstalled+="dnsutils\n"
+[[ -z "$inotifywaitpath" ]] && notinstalled+="inotify-tools\n"
+[[ -z "$iptablespath" ]] && notinstalled+="iptables\n"
+[[ -z "$netfiltperspath" ]] && notinstalled+="netfilter-persistent\n"
+[[ -z "$stdbufpath" ]] && notinstalled+="coreutils\n"
+[[ -z "$mailpath" ]] && notinstalled+="mailutils\n"
+[[ -z "$crontabpath" ]] && notinstalled+="cronie\nbcron\n"
+[[ -z "$datepath" ]] && notinstalled+="coreutils\n"
+[[ -z "$bcpath" ]] && notinstalled+="bc\n"
+[[ -z "$atpath" ]] && notinstalled+="at\n"
+[[ -z "$nicepath" ]] && notinstalled+="coreutils\n"
+[[ -z "$sendmail_works" ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
+[[ -z "$ipsetpath" ]] && notinstalled+="ipset\n"
+[[ -z "$digpath" ]] && notinstalled+="dnsutils\n"
 }
 
 press_a_key () {
@@ -2331,6 +2331,7 @@ printf "POOFITEE is currently available in experimental status.  Your suggestion
 \nimprovements are solicited and welcome ... "
 press_a_key
 clear
+#Why we use whereis instead of locate is because locate will see too many directories...like "Downloads" and, in the event of VMWare being present, the files of other virtual machines.
 usrdir="";localdir="";sharedir="";bindir="";sbindir="";binaryflag="-b";dirsign="";counter=0
 D2b=({0..1}{0..1}{0..1}{0..1}{0..1}{0..1})
 until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[ ++counter -eq 64 ]] || [[ "$($whereispath $binaryflag whereis &> /dev/null;echo $?)" == "0" ]];do
@@ -2420,8 +2421,8 @@ pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# 
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
-rhel="$($whereispath $binaryflag chkconfig)"
-rhel="${rhel#*:}";rhel="${rhel# }";rhel="${rhel%% *}"
+rhelchkconfigpath="$($whereispath $binaryflag chkconfig)"
+rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
 eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
     || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
@@ -2755,10 +2756,11 @@ until ! [ -z $answer ];do
                  printf "\nInstalling\n"
                  eval "$xargspath -a <(printf $not_installed_single_line) -r -- sudo $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
-#make the following into a function
+# make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
 #switch_from_more_common_package_to_less_common_package netfilter-persistent netfilter-persistent iptables-persistent iptables-persistent
 # might need to check out http://tldp.org/LDP/abs/html/complexfunct.html
+# can uninitialized variables be passed into funtion by reference?  Of course not!
                  if [[ "$not_installed_single_line" =~ ^dnsutils ]];then
                       if ! [[ -z "$dnsutils_already_given_a_chance" ]];then
                            digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
@@ -2767,24 +2769,30 @@ until ! [ -z $answer ];do
                                  eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/dnsutils/ldns/1') -r -- sudo $installerpath"
                                  digpath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
                                  what_needs_to_be_installed
+                                 dnsutils_already_given_a_chance=""
                            fi
                       else
                            dnsutils_already_given_a_chance="anyvaluewillwork"
                       fi
                  fi
-#                 if [[ "$not_installed_single_line" =~ ^netfilter-persistent ]];then
-#                      if ! [[ -z "$netfilter_persistent_already_given_a_chance" ]];then
-#                           netfiltperspath=$($whereispath $binaryflag iptables-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                 if [[ "$not_installed_single_line" =~ ^netfilter-persistent ]];then
+                      if ! [[ -z "$netfilter_persistent_already_given_a_chance" ]];then
+                           netfilter_persistent_already_given_a_chance=""
+                           iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
 #                           printf "...Not a problem...\n"
-#                           if [[ -z $netfiltperspath ]];then
-#                                 eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/netfilter-persistent/iptables-persistent/1') -r -- sudo $installerpath"
-#                                 netfiltperspath=$($whereispath $binaryflag drill);digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-#                                 what_needs_to_be_installed
-#                           fi
-#                      else
-#                           netfilter_persistent_already_given_a_chance="anyvaluewillwork"
-#                      fi
-#                 fi
+                           if [[ -z "$iptabsavepath" ]];then
+                                 eval "$xargspath -a <(printf $not_installed_single_line|$sedpath 's/netfilter/iptables/1') -r -- sudo $installerpath"
+                                 iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
+                                 netfiltperspath=$($whereispath $binaryflag iptables-restore);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                                 what_needs_to_be_installed
+                           else
+                                 netfiltperspath=$($whereispath $binaryflag iptables-restore);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                           fi
+                           iptabrestorepath="$netfiltperspath"
+                      else
+                           netfilter_persistent_already_given_a_chance="anyvaluewillwork"
+                      fi
+                 fi
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
                       : # keep looping as long as progress is being detected
                       previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
