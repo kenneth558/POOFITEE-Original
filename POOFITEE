@@ -297,7 +297,7 @@ fi
 # with a single call which iptables-persistent alone does not allow.
 #  You're on your own if you choose to depend on some other iptables + ipset persistence technique.
 # If you come up with something that works well for you, please share it on the POOFITEE wiki forum
-sudo $netfiltperspath save >/dev/null  || sudo $ipsetpath save > /etc/iptables/ipset.sets
+sudo $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || sudo $ipsetpath save > /etc/iptables/ipset.sets
 exit
 
 EOF
@@ -322,7 +322,7 @@ $greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="fr
 advise_to_verify_persistency () {
 
 # /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
-# $netfiltperspath save >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
+# $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 
 cat << EOF
 YOU ARE NOT FINISHED YET.
@@ -429,7 +429,7 @@ echo "\$$" > "$poofitee_home_dir/ramdisk/psnum"
 save_iptables () {
 if (sudo $iptablespath -wnL INPUT|$greppath ESTABLISHED >/dev/null) && (sudo $iptablespath -wnL INPUT|$greppath static_trusted >/dev/null); then
 
-     sudo $netfiltperspath save >/dev/null || sudo $ipsetpath save > /etc/iptables/ipset.sets
+     sudo $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null || sudo $ipsetpath save > /etc/iptables/ipset.sets
 else
 	(cat <<-EOF
 	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>/dev/null/d')
@@ -509,7 +509,7 @@ while current_time="$(date)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-$netfiltperspath save >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
+$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 backup_result="$?"
 printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
@@ -1934,7 +1934,7 @@ if [ \$((numofemails)) -gt -1 ]; then
                 if [[ \$((\$(ls -s /etc/iptables/rules.v4|$awkpath '{print \$1}'))) -lt 4 ]];then
                       cp "\$(ls -slt \$poofitee_home_dir/preparedness/rules*|$awkpath '{if (\$1>4) {print \$NF;exit}}')" "/etc/iptables/rules.v4"
                 fi
-                sudo $netfiltperspath restore
+                sudo $([[ -z "$iptabrestorepath" ]] && printf "$netfiltperspath restore" || printf "$iptabrestorepath")
                 $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null\/d' > "\$poofitee_home_dir/cronentries"
                 [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|sudo $crontabpath -
           else
