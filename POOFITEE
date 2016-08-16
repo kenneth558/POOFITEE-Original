@@ -525,7 +525,7 @@ if (sudo $iptablespath -wnL INPUT|$greppath ESTABLISHED >/dev/null) && (sudo $ip
      fi
 else
 	(cat <<-EOF
-	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null/d')
+	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse" &>\\/dev\\/null/d')
 	*/5 * * * * "$poofitee_home_dir/email_fetch_parse" &>/dev/null
 	EOF
 	)|sudo $crontabpath  -u poofitee -
