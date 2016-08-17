@@ -137,13 +137,14 @@ switch_from_more_common_package_to_less_common_package () {
                  fi
 }
 ensure_connection () {
+printf "Ensuring an Internet connection exists.  Please wait..."
 [[ -z "$digpath" ]] && digpath=""
 
 digpathstored="$digpath"
 [[ -z "$digpath" ]] && digpath=dig
-if ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com &>/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then
+if ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com >/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then
      [[ -z "$digpathstored" ]] && digpath=drill
-     if ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com &>/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then
+     if ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com >/dev/null)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then
           while ! [[ "$(ping -c1 opendns.com &>/dev/null;echo "$?")" == "0" ]];do
                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -rsn 1;read -rst 0.001 -n3
                break
@@ -151,6 +152,7 @@ if ! [[ "$($digpath +short myip.opendns.com @resolver1.opendns.com &>/dev/null)"
      fi
 fi
 digpath="$digpathstored"
+echo
 }
 what_needs_to_be_installed () {
 [[ -z "$inotifywaitpath" ]] && inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
@@ -529,7 +531,8 @@ else
 	*/5 * * * * "$poofitee_home_dir/email_fetch_parse" &>/dev/null
 	EOF
 	)|sudo $crontabpath  -u poofitee -
-        if ! [[ \$((\$($crontabpath -l -u poofitee 2>/dev/null|$wcpath -l))) -gt \$((\$($wcpath -l < "$poofitee_home_dir/cronentries.bak"))) ]];then
+$( [[ -f "$poofitee_home_dir/cronentries.bak" ]] && /usr/bin/wc -l < "$poofitee_home_dir/cronentries.bak" || printf ""|/usr/bin/wc -l )
+        if ! [[ \$((\$($crontabpath -l -u poofitee 2>/dev/null|$wcpath -l))) -gt \$((\$( [[ -f "$poofitee_home_dir/cronentries.bak" ]] && $wcpath -l < "$poofitee_home_dir/cronentries.bak" || printf ""|$wcpath -l ))) ]];then
             cat "$poofitee_home_dir/cronentries.bak"|sudo $crontabpath -u poofitee  -
             echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will work."|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
        else
@@ -2932,6 +2935,40 @@ until ! [ -z $answer ];do
          (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
          $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
          if [[ "$answer" =~ f ]];then
+         printf "\n\nChecking awk compatibility.  Please wait..."
+         until false;do
+# Check here for awk functionality with tail -F
+                  echo "" > awktestbed
+                  $tailpath -fn0 testbed|$stdbufpath -o0 $awkpath > awktestresults &
+                  tailawktestpid="$!"
+                  echo "testline" >> awktestbed
+                  sleep 1
+                  if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
+                       kill $tailawktestpid
+                       awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+                       if ! [[ -z "$awkpath" ]];then
+                            $tailpath -fn0 testbed|$stdbufpath -o0 $awkpath > awktestresults &
+                            tailawktestpid="$!"
+                            echo "testline" >> awktestbed
+                            sleep 1
+                       fi
+                       if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
+                            printf "\n\nThe version of $awkpath on this server does not receive input from the\
+\ntail -f command like it will need to.  This is common with some versions of awk.\
+\nThe best fix is that you upgrade awk or gawk manually.  Then start poofitee\
+\nagain.  Or you may use another terminal window to upgrade and resume in this\
+\none.\n"
+                            press_a_key
+                            awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+                       else
+                            kill $tailawktestpid
+                            rm testbed
+                            break
+                       fi
+                  fi
+                  kill $tailawktestpid
+                  rm testbed
+         done
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
