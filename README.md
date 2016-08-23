@@ -28,7 +28,7 @@ INTENDED AUDIENCE
 
  -- You've discovered innumerable security-flaw seekers and other type opportunistic thrill-seekers worldwide are hammering YOUR system, stealing YOUR bandwidth, and you take offense to that, never knowing when they might succeed
 
- -- You may have discovered that Fail2Ban, UFW and the like iptables front-ends are too complicated, not persistent enough, not intuitive, or otherwise too wimpy to be secure firewalls for owner-access-only systems.  This firewalling solution is NOT a front-end at all.  You're allowed to continue direct or programmed control of iptables via CLI or other scripting without fear of interaction consequences.  These are helper scriptings to give you some very useful remote or unattended iptables rules
+ -- You may have discovered that Fail2Ban, UFW and the like iptables front-ends are too complicated, not persistent enough, not intuitive, or otherwise too wimpy to be secure firewalls for owner-access-only systems.  This firewalling solution is NOT a front-end at all; you may edit these rules in place without fear that some iptables front-end will trash your edits.  You're allowed to continue direct or programmed control of iptables via CLI or other scripting without fear of interaction consequences.  These are helper scriptings to give you some very useful remote or unattended iptables rules right alongside current rules you may need for other purposes.
  
  -- You may have used knockd for port knocking and found it to be limited in knock port sequence, and horrifyingly it tends to stop running for no apparent reason.
 
