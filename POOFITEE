@@ -159,6 +159,7 @@ what_needs_to_be_installed () {
 [[ -z "$iptablespath" ]] && iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
 [[ -z "$stdbufpath" ]] && stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
 [[ -z "$crontabpath" ]] && crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+[[ -z "$timeoutpath" ]] && timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}"
 [[ -z "$sleeppath" ]] && sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
 [[ -z "$ifdownpath" ]] && ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
 [[ -z "$ifuppath" ]] && ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
@@ -197,7 +198,7 @@ notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
 not_installed_single_line="${not_installed_single_line:: -1}"
 [ -z "$not_installed_single_line" ] && return 0
-return "$(printf "$notinstalled"|wc -l)"
+return "$(printf "$notinstalled"|$wcpath -l)"
 }
 sendmail_works_or_not () {
 #functionize the following, name it 
@@ -279,7 +280,7 @@ poofitee_home_dir="$poofitee_home_dir"
 email_subjectline_front="Poofitee "
 recipient_list="\$(cat "\$poofitee_home_dir/toemailadds")"
 if ! [ "\$2x" == "-rx" ];then
-      if ! (sudo $ipsetpath add poofitee_whitelist \$1 comment "\$(date) \$2 \$3" 2>"$poofitee_home_dir/ramdisk/returerr"); then
+      if ! (sudo $ipsetpath add poofitee_whitelist \$1 comment "\$($datepath) \$2 \$3" 2>"$poofitee_home_dir/ramdisk/returerr"); then
           if [[ "\$(cat "$poofitee_home_dir/ramdisk/returerr" )" =~ is\ full ]];then # send the email notice out FIRST
                echo "Increasing the size of the whitelist. Verify continued server operation NOW"|$mailpath -s "\$email_subjectline_front" "\$recipient_list"
                sudo $ipsetpath create poofitee_whitelisttmp hash:ip comment maxelem \$(sudo $ipsetpath list -t|$greppath -iA 3 "^name: poofitee_whitelist"|$tailpath -n1|$awkpath '{printf \$7+65536}')
@@ -297,7 +298,7 @@ fi
 # This next statement will fail if netfilter-persistent package was not available for this distro.  Poofitee was designed
 # to need it because it utilizes /usr/share/netfilter-persistent/plugins.d/ for allowing saves of both iptables and ipset
 # with a single call which iptables-persistent alone does not allow.
-#  You're on your own if you choose to depend on some other iptables + ipset persistence technique.
+#  You're on your own if you choose to depend on some other iptables + $ipsetpath persistence technique.
 # If you come up with something that works well for you, please share it on the POOFITEE wiki forum
 sudo $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || sudo $ipsetpath save > /etc/iptables/ipset.sets
 exit
@@ -348,8 +349,8 @@ predictable.  PLEASE exercise due diligence in taking care of that aspect of
 this installation.
 
 You must next twice or thrice verify functionality after reboots.  Especially
-check for iptables black and whitelist rules in ipset being persistent.  At a
-minimum, ipset and iptables both need to be made persistent.
+check for iptables black and whitelist rules in $ipsetpath being persistent.  At a
+minimum, $ipsetpath and iptables both need to be made persistent.
 
 Note: if you need the pseudo-application layer firewalling, you'll next need to
 code the "process_logfile_line" script to your needs.  Then modify the iptables
@@ -388,7 +389,7 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
 printf "."
-date_for_cronentries_backup="poofitee_installer_$(date)"
+date_for_cronentries_backup="poofitee_installer_$($datepath)"
 printf "."
 $crontabpath -u poofitee -l 2>/dev/null> "$poofitee_home_dir/cronentries.$date_for_cronentries_backup"
 printf "."
@@ -428,7 +429,7 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created.  It should have well before now."
      exit
 fi
-if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee ps u|$greppath "kern.log" &>/dev/null);then
+if ! (sudo -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && sudo -u poofitee $pspath u|$greppath "kern.log" &>/dev/null);then
 	sudo -u poofitee mkdir /tmp/poofitee &>/dev/null
 	(cat <<-SCRIPT_END
 
@@ -466,126 +467,194 @@ printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_
 install_tail_f_lines_and_receiving_script () {
 (cat <<SCRIPT_END
 #!/bin/bash
-# if [[ "\$3" =~ blacklist
-if ! (sudo $ipsetpath add poofitee_blacklist \$1 comment "\$2"  2>"$poofitee_home_dir/ramdisk/returerr"); then
-     if [[ "\$(cat "$poofitee_home_dir/ramdisk/returerr" )" =~ is\ full ]];then # send the email notice out FIRST
-          echo "Increasing the size of the blacklist. Verify continued server operation NOW"|$mailpath -s "Increasing the size of the blacklist. Verify continued server operation NOW" "\$(cat "$poofitee_home_dir/toemailadds")"
-# list too full, make a larger new one, then swap it out and destroy old
-          sudo $ipsetpath create poofitee_blacklisttmp hash:ip comment maxelem \$(sudo $ipsetpath list -t|$greppath -iA 3 "^name: poofitee_blacklist"|$tailpath -n1|$awkpath '{printf \$7+65536}')
-          sudo $ipsetpath list poofitee_blacklist|$tailpath -n+8|while read ipadd comment;do
-              sudo $ipsetpath add poofitee_blacklisttmp "\$ipadd \$comment"
-          done
-          sudo $ipsetpath w blacklist poofitee_blacklisttmp >/dev/null 2>/dev/null && sudo $ipsetpath x poofitee_blacklisttmp &>/dev/null
-     fi
-     rm "$poofitee_home_dir/ramdisk/returerr"
-fi
-# By putting this here, we'll reduce number of duplicate calls to this script.  Port knocking may be adversely affected, however, for the knocks that need to get logged (example: whitelisting from loose rules) if they arrive before this gets reversed below.  That risk should be minimal.
-lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\${0##*/}.lockfile" &>/dev/null) &>/dev/null
-do ! [[ -f "\$lockfile_dir/\${0##*/}.lockfile" ]] && break
-     $inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\${0##*/}.lockfile" --format %e 2>&1|while read inotifywait_output
-          do
-               if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then
-                    setting_home="\${inotifywait_output:: -2}"
-                    echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'\`'}"
-                    echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf
-                    continue
-               fi
-               [[ "\$inotifywait_output" == "DELETE_SELF" ]] && break
-          done || sleep 1
-done
-trap 'rm "\$lockfile_dir/\${0##*/}.lockfile"' INT TERM EXIT
+# poofitee_home_dir="$poofitee_home_dir"
 email_subjectline_front="POOFITEE "
 recipient_list="\$(cat $poofitee_home_dir/toemailadds)"
-# amount_of_free_memory="\$($freepath -b|$awkpath '{if (\$1=="Mem:"){printf \$4;exit}}')"
-echo "\$(date) - Entering the script with \$1...\$2...\$3" >> "\$0.log"
-echo "\$2" >> "\$0.log"
-echo "\$3" >> "\$0.log"
-#pslinecount="\$($greppath "\$(
-
-ps > "$poofitee_home_dir/ramdisk/psout"
-#The following line is not yet complete
-
-#)"
-#|$wcpath -l)"
-
-# pslinecount="\$($greppath "\$($pspath > "$poofitee_home_dir/ramdisk/psout";$greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$sedpath -n 's/\\s*\\S*\\s*\\S*\\s*\\S*\\s*//p')"|$wcpath -l)"
-$greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$sedpath -n 's/\\s\\S*\\s*\\S*\\s*\\S*\\s*//'
-# > "$poofitee_home_dir/ramdisk/forpslinecount"
-echo "\$$" > "$poofitee_home_dir/ramdisk/psnum"
-# 6905 ?        00:00:00 process_logfile
-# 6913 ?        00:00:00 process_logfile
-# 6914 ?        00:00:00 process_logfile
-# 6915 ?        00:00:00 wc
-# 6916 ?        00:00:00 process_logfile
-# 6917 ?        00:00:00 ps
-
+#echo "\$($datepath) accepting \$1" >> "\$0.log"
 save_iptables () {
-if (sudo $iptablespath -wnL INPUT|$greppath ESTABLISHED >/dev/null) && (sudo $iptablespath -wnL INPUT|$greppath static_trusted >/dev/null); then
-     if [[ \$(( \$($greppath "\$($pspath > "$poofitee_home_dir/ramdisk/psout";$greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$sedpath 's/\\s*\\S*\\s*\\S*\\s*\\S*\\s*//1')"  < "$poofitee_home_dir/ramdisk/psout"|$wcpath -l) )) -le 1 ]];then
-          sudo $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save &>/dev/null" || printf $([[ -z "$rhelchkconfigpath" ]] && printf "$iptabsavepath > /etc/iptables/rules.v4" || printf "/sbin/service iptables save")) || sudo $ipsetpath save > /etc/iptables/ipset.sets
-     fi
+if (sudo $iptablespath -wnL INPUT|$greppath ESTABLISHED &>/dev/null) && (sudo $iptablespath -wnL INPUT|$greppath poofitee_static_trusted &>/dev/null); then
+     sudo $netfiltperspath save &>/dev/null
 else
-	(cat <<-EOF
-	\$($crontabpath -l -u poofitee 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse" &>\\/dev\\/null/d')
+        (cat <<-EOF
+	$(sudo $crontabpath -l -u poofitee|$sedpath '/*\/5 \* \* \* \* .*\/email_fetch_parse" >\/dev\/null 2>&1/d')
 	*/5 * * * * "$poofitee_home_dir/email_fetch_parse" &>/dev/null
 	EOF
-	)|sudo $crontabpath  -u poofitee -
-$( [[ -f "$poofitee_home_dir/cronentries.bak" ]] && /usr/bin/wc -l < "$poofitee_home_dir/cronentries.bak" || printf ""|/usr/bin/wc -l )
-        if ! [[ \$((\$($crontabpath -l -u poofitee 2>/dev/null|$wcpath -l))) -gt \$((\$( [[ -f "$poofitee_home_dir/cronentries.bak" ]] && $wcpath -l < "$poofitee_home_dir/cronentries.bak" || printf ""|$wcpath -l ))) ]];then
-            cat "$poofitee_home_dir/cronentries.bak"|sudo $crontabpath -u poofitee  -
-            echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will work."|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
+        )|sudo $crontabpath -u poofitee -
+        if ! [[ $(($(sudo $crontabpath -l -u poofitee |$wcpath -l))) -gt $(($( [[ -f "$poofitee_home_dir/cronentries.bak" ]] && $wcpath -l < "$poofitee_home_dir/cronentries.bak" || printf ""|$wcpath -l ))) ]];then
+            sudo cat "$poofitee_home_dir/cronentries.bak"|sudo $crontabpath -u poofitee  -
+            echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \"restore ruleset\".  Also unable to cronjob the email retrieval, so hopefully knocking the email through will work."|$mailpath -s "$email_subjectline_front""firewall ruleset lost" "$recipient_list"
        else
-            echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \\"restore ruleset\\".  No knock for it will be needed. "|$mailpath -s "\$email_subjectline_front""firewall ruleset lost" "\$recipient_list"
+            echo "Ruleset lost normal rules and is receiving blacklistable hits. Restore ruleset from most recent backup? Return email would say \"restore ruleset\".  No knock for it will be needed. "|$mailpath -s "$email_subjectline_front""firewall ruleset lost" "$recipient_list"
        fi
 fi
-# skip this if another instance of this script is waiting to run
-# echo "\$(date) - Entered save ruleset" >> "\$0.log"
-#pslinecount="\$($greppath "\$(ps > "$poofitee_home_dir/ramdisk/psout";$greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$greppath -v grep|$sedpath -n 's/\S*\s*\S*\s*\S*\s*//p')" < "$poofitee_home_dir/ramdisk/psout"|$wcpath -l)"
-# echo "\$(date) - pslinecount=\$pslinecount" >> "\$0.log"
-#!!!!!!! get this functional when it gets launched by poofitee user from crontab
-# if [[ \$(("\$pslinecount")) -lt 3 ]];then
-# :
-# else
-# echo "\$(date) - Passed first condition in save ruleset" >> "\$0.log"
-}
-#echo "\$(date) - Entering the ip address test with \$1 \$2 \$3" >> "\$0.log"
-#This test will allow CIDR-type consolidated IPv4 address ranges
-#Here, check if ipset blacklist is maxed out.  If so determine new high number of blacklistx, swap current for new, start again with empty blacklist set
-# sudo $ipsetpath poofitee_blacklist
 
-if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
-     if [[ ! "\$3x" =~ whitelist ]] && [[ ! "\$3x" =~ knock ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ] && [[ ! "\$3x" =~ public\ service\ after\ blacklis ]] ;then
-           if [[ "\$3x" =~ fetch\ email ]];then
-                nohup "$poofitee_home_dir/email_fetch_parse" &
-           fi
+}
+
+add_to_set () { # arg 1 is set name for address to get added to.  arg 2 is ipaddress plus proto plus port as is appropriate for the set.  arg 3 is comment from the log entry's pertinent info
+if ! [[ $(sudo $ipsetpath add $1 $2 comment "$3"  1>/dev/null 2>"$poofitee_home_dir/ramdisk/returerr") ]]; then
+     if [[ "$(cat $poofitee_home_dir/ramdisk/returerr )" =~ is\ full ]];then # send the email notice out FIRST
+          echo "Increasing the size of the $1 set. Verify continued server operation NOW"|$mailpath -s "Increasing the size of the $1 set. Verify continued server operation NOW" "$(cat $poofitee_home_dir/toemailadds)"
+# list too full, make a larger new one, then swap it out and destroy old
+# This would be a good time to consolidate single-host addresses into cidr ranges: static_trusted could be that only one address opens the whole range, blacklist could be that a percentage of range hits may be needed, say 50%
+          if [[ "$1" =~ trust ]];then 
+               cidrset="$(sudo $ipsetpath list -t|$greppath -o "$1"_cidr || echo "poofitee_stat_trustd_sockt_cidr")"
+               sudo $ipsetpath list $1|$tailpath -n+8|while read ipaddtmp commenttmp;do
+                    sock="${ipaddtmp#*','}"
+                    [[ ${#sock} -eq ${#ipaddtmp} ]] && sock="" || sock=",$sock"
+                    if [[ "$(sudo $ipsetpath test $cidrset "$ipaddtmp" 2>&1)" =~ NOT ]];then
+                         testrange="$((sudo $ipsetpath list $cidrset;echo ${ipaddtmp%','*})|$tailpath -n+8|$sortpath -Vk1|$greppath -wB1 ${ipaddtmp%','*} >"$poofitee_home_dir/ramdisk/grepout";$headpath -n -1 <"$poofitee_home_dir/ramdisk/grepout"| $awkpath '{print substr($1,1,index($1,",")-1)}')"
+                         if ! [[ -z "$testrange" ]] && (sudo $ipsetpath create test_cidr hash:net maxelem 1&>/dev/null;sudo $ipsetpath f test_cidr;sudo $ipsetpath add test_cidr "$testrange";sudo $ipsetpath test test_cidr ${ipaddtmp%','*} 2>&1|$greppath -v NOT  &>/dev/null);then
+                              eval "sudo $ipsetpath add $cidrset $($headpath -n -1 <"$poofitee_home_dir/ramdisk/grepout"|$awkpath '{print substr($1,1,index($1,",")-1)}')$sock $commenttmp"
+                              sudo $ipsetpath test $cidrset $ipaddtmp 2>&1|$greppath -v NOT &>/dev/null && eval "sudo $ipsetpath del $1 $ipaddtmp &>/dev/null"
+                         else
+                              $timeoutpath 3 whois ${ipaddtmp%','*} 2>/dev/null| \
+                                    $greppath '[[:alnum:]].*:.*\([0-9]\{1,3\}\.\)\{1,3\}[0-9]\{1,3\}.*[-/].*[0-9]'| \
+                                    $sedpath -e 's/^.*://1' \
+                                        -e 's/[0-9]\{4,\}/ /g' \
+                                        -e 's/[3-9][0-9][0-9]/ /g' \
+                                        -e 's/2[6-9][0-9]/ /g' \
+                                        -e 's/25[6-9]/ /g' \
+                                        -e 's/[^0-9^\.^/^-]\+/  /g' \
+                                        -e 's/[^0-9][0\.][0-9][^ ^-]\+-\?/ /g' \
+                                        -e 's/[^0-9]\+\.[^ ]*/ /g' \
+                                        -e 's/\ *\([-/]\) */ \1 /g' \
+                                        -e 's/^.*$/ & /' \
+                                        -e 's/\([^0-9^\.]\+\([0-9]\{1,3\}\.\)\{1,3\}\)\([^0-9]\)/\10\3/g' \
+                                        -e 's/\([^0-9^\.]\+\([0-9]\{1,3\}\.\)\{1,2\}[0-9]\{1,3\}\)\([^0-9^\.]\)/\1.\3/g' \
+                                        -e 's/\([^0-9^\.]\+\([0-9]\{1,3\}\.\)\{1,3\}\)\([^0-9]\)/\10\3/g' \
+                                        -e 's/\([^0-9^\.]\+\([0-9]\{1,3\}\.\)\{1,2\}[0-9]\{1,3\}\)\([^0-9^\.]\)/\1.\3/g' \
+                                        -e 's/\([^0-9^\.]\+\([0-9]\{1,3\}\.\)\{1,3\}\)\([^0-9]\)/\10\3/g' \
+                                        -e 's/[[:space:]]\([-/]\)/\1/g' \
+                                        -e 's/\([-/]\)[[:space:]]/\1/g' \
+                                        -e 's/\([0-9]\)-\([0-9]\{1,2\}[^0-9^\.]\)/\1\/\2/g' \
+                                        -e 's/^[^1-9]\+//g'| \
+                                   $awkpath '{for (i=1;i<=NF;i++){print $i}}'| \
+                                   $greppath '\([0-9]\{1,3\}\.\)\{1,3\}[0-9]\{1,3\}.*[-/].*[0-9]'| \
+                              while read cidrtmp;do
+                                   eval "sudo $ipsetpath add $cidrset $cidrtmp$sock $commenttmp &>/dev/null"
+                                   sudo $ipsetpath test $cidrset $ipaddtmp 2>&1|$greppath -v NOT &>/dev/null && eval "sudo $ipsetpath del $1 $ipaddtmp &>/dev/null"
+                              done
+                         fi
+                    else
+                         eval "sudo $ipsetpath del $1 $ipaddtmp &>/dev/null"
+                    fi
+               done
+          fi
+          sudo $ipsetpath create "${1::-3}"tmp hash:ip comment maxelem $(sudo $ipsetpath list -t|$greppath -iA 3 "^name: $1"|$tailpath -n1|$awkpath '{printf $7+65536}') &>/dev/null
+          sudo $ipsetpath list $1|$tailpath -n+8|while read ipaddtmp commenttmp;do
+               sudo $ipsetpath add ${1::-3}tmp "$ipaddtmp $commenttmp" &>/dev/null
+          done
+          sudo $ipsetpath w $1 ${1::-3}tmp &>/dev/null && sudo $ipsetpath x ${1::-3}tmp &>/dev/null
+          eval "sudo $ipsetpath add $1 $2 comment $3"
+     fi
+fi
+}
+
+if ! [[ $1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then #if more than a mere ip address was given in arg #1, skip this and go to else
+     if ! [[ "$1" =~ :.*\ poofitee ]];then
            exit
+     elif [[ "$1" =~ :.*\ poofitee.*blacklist.*IN=eth0\  ]];then
+           ipadd=$(echo "$1"|$greppath -o 'SRC=.*'|$awkpath '{printf substr($1,5)}')
+           if ( sudo $ipsetpath test poofitee_static_trusted $ipadd 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_static_trusted_cidr $ipadd 2>&1|$greppath NOT &>/dev/null);then #
+           comment=$(echo "$1"|/usr/bin/awk '{for (i=6;i<=NF;i++) {if ($i ~ "^DST=") {printf "kern.log "$1" "$2" "$3; for (j=i;j<=NF;j++) {if ($j ~ "^PROTO=" || $j ~ "^SPT=" || $j ~ "^DPT"  || $j ~ "^ID" || (($j ~ "^URGP") && ($j !~ "^URGP=0$")) || $j ~ "^SYN$" || $j ~ "^ACK$" || $j ~ "^FIN$" || $j ~ "^PSH$" || $j ~ "^RST$") {printf " "$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
+                sport=$(echo "$comment"|$greppath -o 'SPT=\S*'|$awkpath '{printf substr($1,5)}')
+                if ( sudo $ipsetpath test poofitee_static_trusted_socket $ipadd,$sport 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_stat_trustd_cidr_sockt $ipadd,$sport  2>&1|$greppath NOT &>/dev/null);then
+                     add_to_set poofitee_blacklist $ipadd "$comment"
+                fi
+           fi
+     elif [[ "$1" =~ :.*\ poofitee.*out.*trust ]] && [[  "$1" =~ IN=eth1\ OUT=eth0\  ]];then
+                ipadd=$(echo "$1"|$greppath -o 'DST=.*'|$awkpath '{printf substr($1,5)}')
+                comment=$(echo "$1"|/usr/bin/awk '{for (i=6;i<=NF;i++) {if ($i ~ "^DST=") {printf "kern.log "$1" "$2" "$3; for (j=i;j<=NF;j++) {if ($j ~ "^PROTO=" || $j ~ "^SPT=" || $j ~ "^DPT"  || $j ~ "^ID" || (($j ~ "^URGP") && ($j !~ "^URGP=0$")) || $j ~ "^SYN$" || $j ~ "^ACK$" || $j ~ "^FIN$" || $j ~ "^PSH$" || $j ~ "^RST$") {printf " "$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
+                dport=$(echo "$comment"|$greppath -o 'DPT=\S*'|$awkpath '{printf substr($1,5)}')
+                add_to_set poofitee_static_trusted_socket "$ipadd,$dport" "$comment"
+                add_to_set poofitee_static_trusted_socket "$ipadd,udp:$dport" "$comment"
+                if [[ "$dport" == "443" ]];then
+                     dport=80
+                     add_to_set poofitee_static_trusted_socket "$ipadd,$dport" "$comment"
+                     add_to_set poofitee_static_trusted_socket "$ipadd,udp:$dport" "$comment"
+                elif [[ "$dport" == "80" ]];then
+                     dport=443
+                     add_to_set poofitee_static_trusted_socket "$ipadd,$dport" "$comment"
+                     add_to_set poofitee_static_trusted_socket "$ipadd,udp:$dport" "$comment"
+                fi
+     elif [[ "$1" =~ :.*\ poofitee.*whitelist.*IN=eth0\  ]];then
+          ipadd=$(echo "$1"|/bin/grep -o 'SRC=.*'|/usr/bin/awk '{printf substr($1,5)}')
+          comment=$(echo "$1"|/usr/bin/awk '{for (i=6;i<=NF;i++) {if ($i ~ "^DST=") {printf "kern.log "$1" "$2" "$3; for (j=i;j<=NF;j++) {if ($j ~ "^PROTO=" || $j ~ "^SPT=" || $j ~ "^DPT"  || $j ~ "^ID" || (($j ~ "^URGP") && ($j !~ "^URGP=0$")) || $j ~ "^SYN$" || $j ~ "^ACK$" || $j ~ "^FIN$" || $j ~ "^PSH$" || $j ~ "^RST$") {printf " "$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
+          $poofitee_home_dir/openall.sh "$ipadd" "$comment"
      fi
-     sudo $ipsetpath del poofitee_blacklist "\$1" &>/dev/null
-     if [[ "\$3x" =~ whitelist ]];then
-           "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
-     elif [[ "\$3x" =~ knock ]] || [[ "\$3x" =~ public\ service\ after\ blacklis ]]; then
-          echo "if ! (sudo $ipsetpath test poofitee_whitelist "\$1" &>/dev/null); then sudo $ipsetpath add poofitee_blacklist \$1 comment \\"\$2\\" &>/dev/null;fi"|$atpath now +3 minute
-     elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
-          sudo $ipsetpath del poofitee_blacklist "\$1" &>/dev/null
+#     $greppath --line-buf ' SRC='|$greppath --line-buf -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if ($i ~ "^SRC=") {{gsub("SRC=","",$i); printf $i" \""} printf "kern.log "$1" "$2" "$3; for (j=i;j<=NF;j++) {if ($j ~ "^PROTO=" || $j ~ "^SPT=" || $j ~ "^DPT"  || (($j ~ "^URGP") && ($j !~ "^URGP=0$")) || $j ~ "^SYN$" || $j ~ "^ACK$" || $j ~ "^FIN$" || $j ~ "^PSH$" || $j ~ "^RST$") {printf " "$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "$j} print "\"";i=NF+1}}}'
+else
+
+if [[ -z "$3" ]] || [[ "$3" =~ blacklist ]] && ! ( [[ "$2" =~ DPT=[45]\S\S\S\S\s ]] && ( [[ "$2" =~ SPT=587\  ]] || [[ "$2" =~ SPT=443\  ]] || [[ "$2" =~ SPT=80\  ]] || [[ "$2" =~ SPT=993\  ]] ));then
+     if (sudo $ipsetpath test poofitee_static_trusted $1 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_static_trusted_cidr $1 2>&1|$greppath NOT &>/dev/null);then
+         sport=$(echo "$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr($1,5)}')
+             if ( sudo $ipsetpath test poofitee_static_trusted_socket $1,$sport 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_stat_trustd_cidr_sockt $1,$sport  2>&1|$greppath NOT &>/dev/null);then
+           if ! [[ $(sudo $ipsetpath add poofitee_blacklist $1 comment "$2"  2>$poofitee_home_dir/ramdisk/returerr) ]]; then
+          if [[ "$(cat $poofitee_home_dir/ramdisk/returerr )" =~ is\ full ]];then # send the email notice out FIRST
+               echo "Increasing the size of the blacklist. Verify continued server operation NOW"|$mailpath -s "Increasing the size of the blacklist. Verify continued server operation NOW" "$(cat $poofitee_home_dir/toemailadds)"
+# list too full, make a larger new one, then swap it out and destroy old
+               sudo $ipsetpath create poofitee_blacklisttmp hash:ip comment maxelem $($ipsetpath list -t|$greppath -iA 3 "^name: poofitee_blacklist"|$tailpath -n1|$awkpath '{printf $7+65536}')
+               sudo $ipsetpath list poofitee_blacklist|$tailpath -n+8|while read ipadd comment;do
+                   sudo $ipsetpath add poofitee_blacklisttmp "$ipadd $comment"
+               done
+               sudo $ipsetpath w poofitee_blacklist poofitee_blacklisttmp && sudo $ipsetpath x poofitee_blacklisttmp
+          fi;fi
+#          rm $poofitee_home_dir/ramdisk/returerr
+      fi
      fi
+fi
+# amount_of_free_memory="$(/usr/bin/free -b|$awkpath '{if ($1=="Mem:"){printf $4;exit}}')"
+ps > "$poofitee_home_dir/ramdisk/psout"
+$greppath "^$$" < "$poofitee_home_dir/ramdisk/psout"|$greppath -v grep|$sedpath -n 's/\S*\s*\S*\s*\S*\s*//p' > "$poofitee_home_dir/ramdisk/forpslinecount"
+echo "$$" > "$poofitee_home_dir/ramdisk/psnum"
+#This test will allow CIDR-type consolidated IPv4 address ranges
+if [[ $1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
+     if [[ ! "$3x" =~ whitelist ]] && [[ ! "$3x" =~ knock ]] && [ "$2x" != "-rx" ] && [ "$3x" != "-rx" ] && [[ ! "$3x" =~ public\ service\ after\ blacklis ]] ;then
+           if [[ "$3x" =~ fetch\ email ]];then
+                nohup "$poofitee_home_dir/email_fetch_parse" &
+           elif [[ "$3x" =~ static_trust ]];then
+                sport=$(echo "$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr($1,5)}')
+                sudo $ipsetpath add poofitee_static_trusted_socket $1,$sport comment "$2" &>/dev/null
+                sudo $ipsetpath add poofitee_static_trusted_socket $1,udp:$sport comment "$2" &>/dev/null
+                if [ $sport == "443" ];then
+                     sport=80
+                     sudo $ipsetpath add poofitee_static_trusted_socket $1,$sport comment "$2" &>/dev/null
+                     sudo $ipsetpath add poofitee_static_trusted_socket $1,udp:$sport comment "$2" &>/dev/null
+                elif [ $sport == "80" ];then
+                     sport=443
+                     sudo $ipsetpath add poofitee_static_trusted_socket $1,$sport comment "$2" &>/dev/null
+                     sudo $ipsetpath add poofitee_static_trusted_socket $1,udp:$sport comment "$2" &>/dev/null
+                fi
+#                sudo $ipsetpath add poofitee_static_trusted $1 comment "$2" &>/dev/null
+           fi
+     else
+          sudo $ipsetpath del poofitee_blacklist $1 &>/dev/null
+          if [[ "$3x" =~ whitelist ]];then
+                "$poofitee_home_dir/openall.sh" "$1" "by knocking"
+          elif [[ "$3x" =~ knock ]] || [[ "$3x" =~ public\ service\ after\ blacklis ]]; then
+               echo "if [[ "$(sudo $ipsetpath test whitelist $1 2>&1)" =~ NOT ]]; then sudo $ipsetpath add blacklist $1 comment \"$2\" >/dev/null 2>/dev/null;fi"|at now +3 minute
+          elif [ "$2x" == "-rx" ] || [ "$3x" == "-rx" ];then
+               sudo $ipsetpath del poofitee_blacklist "$1"
+          fi
      #  The lines below this are for detecting the knock and launching email fetch when the email-reader triggering port is knocked
      #  Notice that the email-reader triggering port is gotten from iptables INPUT chain rule with email-reader in its comment
      #  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
-     #  The rule would be created with a command like this (change the nnnnn to fit you): iptables -wI PREROUTING -t raw -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
-#     [[ \$($greppath -c "#running" <\($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
-#     if [ \$(printf "\$3"|$greppath -c "fetch email") -gt 0 ];then
+     #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
+#     [[ $($greppath -c "#running" <($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
+#     if [ $(printf "$3"|$greppath -c "fetch email") -gt 0 ];then
 #             nohup "$poofitee_home_dir/email_fetch_parse" &
 #     fi
-#elif [[ "\$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
-#     $ipsetpath remove poofitee_blacklist \$1 &>/dev/null
-#     echo "\$1"|mail -s "\$email_subjectline_front""auth.log entry" "\$recipient_list"
+#elif [[ "$1"  =~ \ $(hostname)\ .*:\ .+ ]];then
+#     $ipsetpath remove blacklist $1 >/dev/null 2>/dev/null
+#     echo "$1"|$mailpath -s "$email_subjectline_front""auth.log entry" "$recipient_list"
+     fi
 else
-     sudo $ipsetpath remove poofitee_blacklist \$1 &>/dev/null
-     echo "This script requires a valid IP address besides the script name: \$1" >> "\$0.log"
+     sudo $ipsetpath del poofitee_blacklist $1 &>/dev/null
+     echo "This script requires a valid IP address besides the script name: $1" >> "$0.log"
 fi
-save_iptables
-# echo "\$(date) Done with all processing file" >> "\$0.log"
+fi
+[[ -z "$save_or_not" ]] || save_iptables
+#echo "$($datepath) Done with all processing file" >> "$0.log"
 SCRIPT_END
 ) > "$poofitee_home_dir/process_logfile_line"
 printf "."
@@ -601,7 +670,7 @@ install_firewall_cronentries
 }
 back_up_iptables_ruleset () {
 printf "\nPlease wait while your $1 iptables ruleset is backed up..."
-while current_time="$(date)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current_time" ]];do
+while current_time="$($datepath)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current_time" ]];do
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
@@ -618,7 +687,6 @@ if ! [[ -z "$likeliest_internal_net_interface" ]];then
      printf "\n"
      printf "" > internal_interfaces_referenced # won't include the default gateway
 # test knock rules belonging in the INPUT chain need to be located just prior to any other reference to that private interface or any of the addresses associated with such interface
-#SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
      echo "$internal_net_interfaces"|$awkpath '{print $1}' \
      |while read interface; do
           $iptablespath -wnvL INPUT --line-number \
@@ -635,6 +703,10 @@ if ! [[ -z "$likeliest_internal_net_interface" ]];then
 # determine address range[s] routed out that interface and check for input chain references to any of them 
 #   using $ippath route show|$greppath $internal_net_interfaces|$awkpath '{print $1}' -> convert each line 
 #   to binary which gives one or more lines of address ranges to match to ip addresses referenced in INPUT chain to, /32 = no / at all.  Abort operation if private interface is also default
+#  TODO:  convert this code into using $ipsetpath like this:
+# $ipsetpath n poofitee_internal_iface_ranges hash:net comment
+# $ipsetpath test poofitee_internal_iface_ranges "$src_addr_in_input_chain"
+# SEARCH FOR ADDRESSES EVEN IF INTERFACE REFERENCE IS FOUND SO CAN KNOW THE FIRST LINE EITHER ONE OCCURS IN.
                          $ippath route show|$greppath -v default|$greppath $interface \
                          |while read line; do 
                               line="${line%% *}/32"
@@ -673,7 +745,7 @@ if ! [[ -z "$likeliest_internal_net_interface" ]];then
      linenumber_for_inserting_before=$(($($sortpath -k1 < internal_interfaces_referenced|$awkpath '{if (NR==1) {print $1}}')))
      [[ "$linenumber_for_inserting_before" == "0" ]] && linenumber_for_inserting_before="1"
      if ! [[ -z "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" ]]; then
-          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
+          [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -m comment --comment "poofitee_knock extract ssh for knock testg frm private side in ssh" -p tcp --dport $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}') -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 14"
      fi
      line_number_for_authorized_rule=$linenumber_for_inserting_before
 fi
@@ -731,7 +803,7 @@ printf ", and of course only if the previous\nknocks in the sequence have been r
                           printf -- "Your ${knockproto[$i]} is not crafted well enough, try again\n"
                           continue
                       fi
-                      if [[ "x$1$2$3" =~ unique ]] && ! [[ "$(i=1;while ! [[ -z "${knockproto[$i]}" ]];do printf -- "${knockproto[$i]}";printf "\n";i=$(($i + 1));done|$sortpath|$uniqpath -d|wc -l)" == "0" ]];then
+                      if [[ "x$1$2$3" =~ unique ]] && ! [[ "$(i=1;while ! [[ -z "${knockproto[$i]}" ]];do printf -- "${knockproto[$i]}";printf "\n";i=$(($i + 1));done|$sortpath|$uniqpath -d|$wcpath -l)" == "0" ]];then
                           printf -- "\nYour ${knockproto[$i]} is required to be unique and is not, try again\n"
                           continue
                       fi
@@ -766,7 +838,7 @@ else
 fi
 }
 get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will change behavior from taking numerous entries, storing them in variable toemailadds to either taking one entry or selecting one entry from previous list and storing it in variable mailadd
-     [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$( [[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "/home/poofitee")"
+     [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$( [[ -f poofitee_home_dir ]] && cat poofitee_home_dir || printf "$poofitee_home_dir")"
 #or check user poofitee home directory
      line=""
      if [[ -f "$poofitee_home_dir/toemailadds" ]];then
@@ -1038,15 +1110,15 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_junior --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_seniorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 8"
                  [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_sophomore --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_juniorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 9"
                  [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --rcheck --seconds $(( $j * 12 )) --reap -j poofitee_knock_sophomorize 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 10"
-                 [[ $($iptablespath -wA poofitee_knock_new_knock -m recent --name poofitee_knock_freshman --set -j LOG --log-prefix "poofitee knock freshman " -m comment --comment "poofitee_knock:This will schedule its blacklisting for couple mins from now" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 11"
+                 [[ $($iptablespath -wA poofitee_knock_new_knock -m comment --comment "poofitee_knock:This will schedule its blacklisting for couple mins from now" -m recent --name poofitee_knock_freshman --set -j LOG --log-prefix "poofitee knock freshman " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 11"
                  [[ $($iptablespath -wA poofitee_knock_new_knock -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
                  [[ $($iptablespath -wA poofitee_knock_authorize -m recent --name poofitee_knock_authorized --set -j LOG --log-prefix "poofitee knock authorized whitelist" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 13"
                  [[ $($iptablespath -wA poofitee_knock_authorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 14"
-                 [[ $($iptablespath -wA poofitee_knock_seniorize -m recent --name poofitee_knock_senior --set -j LOG --log-prefix "poofitee knock senior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 15"
+                 [[ $($iptablespath -wA poofitee_knock_seniorize -m comment --comment "poofitee_knock" -m recent --name poofitee_knock_senior --set -j LOG --log-prefix "poofitee knock senior " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 15"
                  [[ $($iptablespath -wA poofitee_knock_seniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 16"
-                 [[ $($iptablespath -wA poofitee_knock_juniorize -m recent --name poofitee_knock_junior --set -j LOG --log-prefix "poofitee knock junior " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
+                 [[ $($iptablespath -wA poofitee_knock_juniorize -m comment --comment "poofitee_knock" -m recent --name poofitee_knock_junior --set -j LOG --log-prefix "poofitee knock junior " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 17"
                  [[ $($iptablespath -wA poofitee_knock_juniorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 18"
-                 [[ $($iptablespath -wA poofitee_knock_sophomorize -m recent --name poofitee_knock_sophomore --set -j LOG --log-prefix "poofitee knock sophomore " -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 19"
+                 [[ $($iptablespath -wA poofitee_knock_sophomorize -m comment --comment "poofitee_knock" -m recent --name poofitee_knock_sophomore --set -j LOG --log-prefix "poofitee knock sophomore " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 19"
                  [[ $($iptablespath -wA poofitee_knock_sophomorize -j poofitee_knock_customexit 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
                  find_first_reference_to_internal_interface
                  if ! [[ -z "$likeliest_internal_net_interface" ]];then
@@ -1056,7 +1128,7 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       linenumber_for_inserting_before="1" #even though we may never use this var again
                       line_number_for_authorized_rule="1"
                  fi
-                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -m comment --comment "poofitee_knock loose rule" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m comment --comment "poofitee_knock loose rule" -m recent --name poofitee_authorized --rcheck --mask 255.255.255.255 -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
                  back_up_iptables_ruleset new && \
                       printf "Note that the file name is different than the one saved before" || \
                       ( printf "Your new iptables ruleset did NOT get backed up correctly.  You should\"
@@ -1113,10 +1185,10 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       $iptablespath -wN poofitee_knockstage$j 2>/dev/null # ;echo "$?") == "0" ]] || printf "Failed 6"
                       [[ $($iptablespath -wF poofitee_knockstage$j 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7"
                       if ! [[ "$j" == "1" ]];then
-                           [[ $($iptablespath -wA poofitee_knockersort ${knockproto[$j]} -m recent --name poofitee_knockstage$j --rcheck --seconds 12 -m comment --comment "knock to stage $j successful" -j poofitee_knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7.5"
+                           [[ $($iptablespath -wA poofitee_knockersort ${knockproto[$j]} -m comment --comment "knock to stage $j successful" -m recent --name poofitee_knockstage$j --rcheck --seconds 12 -j poofitee_knockstage$j  2>/dev/null;echo "$?") == "0" ]] || printf "Failed 7.5"
                       fi
                       [[ $($iptablespath -wI poofitee_knockstage$j -j poofitee_knockerreap;echo "$?") == "0" ]] || printf "Failed 9"
-                      [[ $($iptablespath -wI poofitee_knockstage$j 2 -m recent --name poofitee_knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j " -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires";echo "$?") == "0" ]] || printf "Failed 10"
+                      [[ $($iptablespath -wI poofitee_knockstage$j 2 -m comment --comment "Entry in log makes blacklisting get delayed until after knocking time window expires" -m recent --name poofitee_knockstage$(( $j + 1 )) --set -j LOG --log-prefix "knocked: Stage$j ";echo "$?") == "0" ]] || printf "Failed 10"
 #Here we put the right DROP or REJECT target in the third rule under this chain
                       [[ $($iptablespath -wA poofitee_knockstage$j ${testtarget[$j]} ;echo "$?") == "0" ]] || printf "Failed 11"
                  done
@@ -1129,12 +1201,12 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                  [[ $($iptablespath -wF poofitee_knockers 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12"
 # for persistent whitelisting only
 #                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -j LOG --log-prefix "whitelist " -m comment --comment "Entry in log to delay blacklisting until knocking time window expires" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed"
-                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success whitelist" -m comment --comment "allows 1 time-limited attempt to establish a dialog" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
+                 [[ $($iptablespath -wR poofitee_knockstage$j 2 -m comment --comment "allows 1 time-limited attempt to establish a dialog" -m recent --name poofitee_authorized --set -j LOG --log-prefix "knock full success whitelist" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 12.5"
                  inchainoffset=0
                  find_first_reference_to_internal_interface
                  if ! [[ -z "$likeliest_internal_net_interface" ]];then
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
-                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -m comment --comment "poofitee_knock" -m recent --name poofitee_knocker --seconds 60 --rcheck -j poofitee_knockerstest 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 15"
+                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface ${knockproto[1]} -m comment --comment "poofitee_knock, 1st port" -m recent --set --name poofitee_knocker -j poofitee_knockstage1 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 16"
 #                      [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "allow all from private side" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 17"
                       $iptablespath -wA poofitee_knockerstest -j poofitee_knockersort
                       $iptablespath -wA poofitee_knockerstest -j LOG --log-prefix "poofitee_knockertest fail "
@@ -1147,11 +1219,11 @@ printf "\n\nYour current iptables ruleset is about to be changed to reflect your
                       linenumber_for_inserting_before="1"
                       line_number_for_authorized_rule="1"
                  fi
-                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -m comment --comment "poofitee_knock 1-packet pass: 1 chance to establish or then knock higher" -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers -m comment --comment "poofitee_knock" 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
-                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 -m comment --comment "poofitee_knock, 1st port" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
-                 [[ $($iptablespath -wA poofitee_knockers -m conntrack ! --ctstate NEW -j poofitee_knockerreap -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
-                 [[ $($iptablespath -wA poofitee_knockers -m conntrack --ctstate NEW -j poofitee_knockersort -m comment --comment "for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+                 [[ $($iptablespath -wI INPUT $line_number_for_authorized_rule -m comment --comment "poofitee_knock 1-packet pass: 1 chance to establish or then knock higher" -m recent --remove --name poofitee_authorized --mask 255.255.255.255 --rsource  -m conntrack --ctstate NEW -j ACCEPT 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 19"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m comment --comment "poofitee_knock" -m recent --name poofitee_knocker --seconds 200 --rcheck  -m conntrack --ctstate NEW -j poofitee_knockers 2>/dev/null;echo "$?") == "0" ]] && linenumber_for_inserting_before=$(( $linenumber_for_inserting_before + 1 )) || printf "Failed 18"
+                 [[ $($iptablespath -wI INPUT $linenumber_for_inserting_before -i $external_net_interface -m comment --comment "poofitee_knock, 1st port" -m conntrack --ctstate NEW ${knockproto[1]} -m recent --set --name poofitee_knocker -j poofitee_knockstage1 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 20"
+                 [[ $($iptablespath -wA poofitee_knockers -m conntrack ! --ctstate NEW -j poofitee_knockerreap -m comment --comment "poofitee_knock for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 21"
+                 [[ $($iptablespath -wA poofitee_knockers -m conntrack --ctstate NEW -j poofitee_knockersort -m comment --comment "poofitee_knock for port knock capability" 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
                  [[ $($iptablespath -wA poofitee_knockers -j LOG --log-prefix "pktfail:knock|late|ctstate " 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 23"
                  [[ $($iptablespath -wA poofitee_knockers -m recent --name poofitee_knocker --rcheck --reap --seconds 200 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 24"
                  [[ $($iptablespath -wA poofitee_knockers -m recent --name poofitee_knocker --remove 2>/dev/null;echo "$?") == "0" ]] || printf "Failed 25"
@@ -1201,7 +1273,7 @@ load_rules()
                 echo "Warning: skipping IPv4 (no rules to load)"
         else
            # load rules made with ipset
-           /sbin/ipset restore -f /etc/iptables/ipset.sets 1>restor 2>restorerr 2>&1 ||  grep "already exists" < restorerr ||  grep "already exists" < restor
+           $ipsetpath restore -f /etc/iptables/ipset.sets 1>restor 2>restorerr 2>&1 ||  grep "already exists" < restorerr ||  grep "already exists" < restor
 		if [ \$? -ne 0 ]; then
 			rc=1
 		fi
@@ -1211,7 +1283,7 @@ load_rules()
 save_rules()
 {
         # save rules made with ipset
-        /sbin/ipset save -f /etc/iptables/ipset.sets
+        $ipsetpath save -f /etc/iptables/ipset.sets
 		if [ \$? -ne 0 ]; then
 			rc=1
 		fi
@@ -1267,7 +1339,7 @@ printf "\n"
           printf "." # insert friendly progress indicators
           [[ "$($greppath -c ^net.ipv4.ip_forward=1 </etc/sysctl.conf)" == "0" ]] && echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
           printf "." # insert friendly progress indicators
-          [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "by installer request during poofitee_fw installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
+          [[ $iptables_masquerading == false ]] && ([[ "$($iptablespath -wt nat -I POSTROUTING 1  -o $external_net_interface  -p all -j MASQUERADE -m comment --comment "poofitee_fw by installer request during installation";echo $?)" == "0" ]] || printf "\n\nUnable to make the change in iptables")
           printf "." # insert friendly progress indicators
      fi
      printf "." # insert friendly progress indicators
@@ -1275,11 +1347,13 @@ fi
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null
 printf "." # insert friendly progress indicators
-$ipsetpath create poofitee_whitelist hash:ip comment &>/dev/null
+$ipsetpath create poofitee_whitelist hash:ip comment&>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_static_trusted hash:ip comment &>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_static_trusted_cidr hash:net comment &>/dev/null
+printf "." # insert friendly progress indicators
+$ipsetpath create poofitee_stat_trustd_cidr_sockt hash:net,port comment &>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_blacklist_cidr hash:net comment &>/dev/null
 printf "." # insert friendly progress indicators
@@ -1300,28 +1374,28 @@ printf "." # insert friendly progress indicators
 printf "." # insert friendly progress indicators
 ! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  lo  "                                                                                                                     ) >/dev/null && ($iptablespath -wA INPUT -i lo -m comment --comment "poofitee_fw we really have to trust localhost at this level" -j ACCEPT &>/dev/null || printf "Failed b")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                                             |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT &>/dev/null || printf "Failed c")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                                             |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT &>/dev/null || printf "Failed c")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set poofitee_static_trusted src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set poofitee_static_trusted src -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed d")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set poofitee_static_trusted src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_static_trusted src -j ACCEPT &>/dev/null || printf "Failed d")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"               |$greppath -- " match-set poofitee_static_trusted_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set poofitee_static_trusted_cidr src -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed d")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"               |$greppath -- " match-set poofitee_static_trusted_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_static_trusted_cidr src -j ACCEPT &>/dev/null || printf "Failed d")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                         |$greppath -- " match-set poofitee_whitelist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m set --match-set poofitee_whitelist src -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed e")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  $external_net_interface"                         |$greppath -- " match-set poofitee_whitelist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_whitelist src -j ACCEPT &>/dev/null || printf "Failed e")
 printf "." # insert friendly progress indicators
 # raw tables target should never be ACCEPT because nat will be thwarted.  Make it RETURN instead.
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " RETURN     all  --  \*"                                                           |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -j RETURN -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed e1")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " RETURN     all  --  \*"                                                           |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -j RETURN -m comment --comment "poofitee_fw" -m conntrack --ctstate RELATED,ESTABLISHED &>/dev/null || printf "Failed e1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"            |$greppath -- " match-set poofitee_bogons,privateIPs_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set poofitee_bogons,privateIPs_cidr src -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed f")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"            |$greppath -- " match-set poofitee_bogons,privateIPs_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_bogons,privateIPs_cidr src -j DROP &>/dev/null || printf "Failed f")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                  |$greppath -- " match-set poofitee_full_bogons_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set poofitee_full_bogons_cidr src -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed f1")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                  |$greppath -- " match-set poofitee_full_bogons_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_full_bogons_cidr src -j DROP &>/dev/null || printf "Failed f1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set poofitee_blacklist_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set poofitee_blacklist_cidr src -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed g")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                    |$greppath -- " match-set poofitee_blacklist_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist_cidr src -j DROP &>/dev/null || printf "Failed g")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                         |$greppath -- " match-set poofitee_blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m set --match-set poofitee_blacklist src -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed g1")
+! ($iptablespath -wnvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                         |$greppath -- " match-set poofitee_blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA PREROUTING -t raw -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist src -j DROP &>/dev/null || printf "Failed g1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " LOG        all  --  "                           |$greppath -- " --log-level 4 --log-prefix \"blacklist poofitee_fw \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j LOG --log-level 4 --log-prefix "blacklist poofitee_fw " -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed h")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " LOG        all  --  "                           |$greppath -- " --log-level 4 --log-prefix \"blacklist poofitee_fw \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -j LOG --log-level 4 --log-prefix "blacklist poofitee_fw " &>/dev/null || printf "Failed h")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  "                                                                      |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed i")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " DROP       all  --  "                                                                      |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -j DROP &>/dev/null || printf "Failed i")
 printf "." # insert friendly progress indicators
 #The below lines are for templates the owner/admin can copy techjnique
 $ipsetpath add poofitee_static_trusted_cidr 91.189.88.0/21 comment "Canonical"   >/dev/null  2>/dev/null
@@ -1329,21 +1403,21 @@ printf "." # insert friendly progress indicators
 $ipsetpath add poofitee_static_trusted 199.102.46.70 comment "local time server hosted by Monticello"   >/dev/null  2>/dev/null
 printf "." # insert friendly progress indicators
 
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                                             |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -j ACCEPT &>/dev/null || printf "Failed j")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                                             |$greppath -- " RELATED,ESTABLISHED"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw existing dialogs traffic presumed trusted" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT &>/dev/null || printf "Failed j")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                           |$greppath -- " match-set poofitee_static_trusted dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set poofitee_static_trusted dst -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed k")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                           |$greppath -- " match-set poofitee_static_trusted dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw" -m set --match-set poofitee_static_trusted dst -j ACCEPT &>/dev/null || printf "Failed k")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                      |$greppath -- " match-set poofitee_static_trusted_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set poofitee_static_trusted_cidr dst -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed l")
+! ($iptablespath -wnvL INPUT                         |$greppath -- " ACCEPT     all  --  "                                      |$greppath -- " match-set poofitee_static_trusted_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw" -m set --match-set poofitee_static_trusted_cidr dst -j ACCEPT &>/dev/null || printf "Failed l")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                                |$greppath -- " match-set poofitee_whitelist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set poofitee_whitelist dst -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed l1")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " ACCEPT     all  --  "                                                |$greppath -- " match-set poofitee_whitelist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw" -m set --match-set poofitee_whitelist dst -j ACCEPT &>/dev/null || printf "Failed l1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                                |$greppath -- " match-set poofitee_blacklist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set poofitee_blacklist dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed m")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                                |$greppath -- " match-set poofitee_blacklist dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist dst -j DROP &>/dev/null || printf "Failed m")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                           |$greppath -- " match-set poofitee_blacklist_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m set --match-set poofitee_blacklist dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed m1")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  "                                           |$greppath -- " match-set poofitee_blacklist_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist dst -j DROP &>/dev/null || printf "Failed m1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"    |$greppath -- " match-set poofitee_bogons,privateIPs_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set poofitee_bogons,privateIPs_cidr dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed n")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*      $external_net_interface"    |$greppath -- " match-set poofitee_bogons,privateIPs_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_bogons,privateIPs_cidr dst -j DROP &>/dev/null || printf "Failed n")
 printf "." # insert friendly progress indicators
-! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*            $external_net_interface"    |$greppath -- " match-set poofitee_full_bogons_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m set --match-set poofitee_full_bogons_cidr dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed n1")
+! ($iptablespath -wnvL OUTPUT                        |$greppath -- " DROP       all  --  \*            $external_net_interface"    |$greppath -- " match-set poofitee_full_bogons_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA OUTPUT -o $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_full_bogons_cidr dst -j DROP &>/dev/null || printf "Failed n1")
 printf "." # insert friendly progress indicators
 read -n3 -t 0.001 discard
 printf "." # insert friendly progress indicators
@@ -1367,20 +1441,20 @@ if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/i
      #$iptablespath -wnvL FORWARD --line-number|$greppath poofitee|$awkpath '{print $1}'|$sortpath -r|while read linenum;do $iptablespath -wD FORWARD $linenum;done
      # using ipsets without spec-ing the interface has not been tested
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                  |$greppath -- " match-set poofitee_static_trusted src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set poofitee_static_trusted src,dst -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
-     #! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_fw") && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set poofite_whitelist src -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                  |$greppath -- " match-set poofitee_static_trusted src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m comment --comment "poofitee_fw" -m set --match-set poofitee_static_trusted src,dst -j ACCEPT &>/dev/null || printf "Failed")
+     #! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  $external_net_interface"                    |$greppath -- " match-set whitelist src"|$greppath "poofitee_fw") && ($iptablespath -wA FORWARD -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofite_whitelist src -j ACCEPT &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                       |$greppath -- " match-set poofitee_whitelist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set poofitee_whitelist src,dst -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " ACCEPT     all  --  "                                       |$greppath -- " match-set poofitee_whitelist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m comment --comment "poofitee_fw" -m set --match-set poofitee_whitelist src,dst -j ACCEPT &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set poofitee_bogons,privateIPs_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -i $external_net_interface -m set --match-set poofitee_bogons,privateIPs_cidr src -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  $external_net_interface"                   |$greppath -- " match-set poofitee_bogons,privateIPs_cidr src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_bogons,privateIPs_cidr src -j DROP &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"           |$greppath -- " match-set poofitee_bogons,privateIPs_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m set --match-set poofitee_bogons,privateIPs_cidr dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      $external_net_interface"           |$greppath -- " match-set poofitee_bogons,privateIPs_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -o $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_bogons,privateIPs_cidr dst -j DROP &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set poofitee_blacklist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set poofitee_blacklist src,dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set poofitee_blacklist src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist src,dst -j DROP &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set poofitee_blacklist_cidr src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m set --match-set poofitee_blacklist_cidr src,dst -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  \*      \*"                             |$greppath -- " match-set poofitee_blacklist_cidr src,dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist_cidr src,dst -j DROP &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
-     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " LOG        all  --  "              |$greppath -- " --log-level 4 --log-prefix \"FORWARD chain termed \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -j LOG --log-level 4 --log-prefix "FORWARD chain termed " -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
+     ! ($iptablespath -wnvL FORWARD                       |$greppath -- " LOG        all  --  "              |$greppath -- " --log-level 4 --log-prefix \"FORWARD chain termed \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA FORWARD -m comment --comment "poofitee_fw" -j LOG --log-level 4 --log-prefix "FORWARD chain termed " &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
      ! ($iptablespath -wnvL FORWARD                       |$greppath -- " DROP       all  --  "                                                        |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -wA INPUT -j DROP -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed")
      printf "." # insert friendly progress indicators
@@ -1651,7 +1725,7 @@ See
 \nany were delayed, a different outgoing email server may do a better job." \
             || printf "Judging by the email queue not getting emptied quickly, a different outgoing\
 \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
-# \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|sed 's/^.*status=//g')"
+# \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
           printf "\nNote that not all email providers keep a record of your emails sent from this\
 \ntype of connection.  If it is meaningful to you that these notification emails\
 \nremain in the sent folder of this email address, be sure to check for that\
@@ -1947,7 +2021,7 @@ if [ \$((numofemails)) -gt -1 ]; then
               [ \$(( \${#deleteresponse} )) -lt 1 ] && break;done
     done
      [ -f "$poofitee_home_dir/valid_instructions_from_email" ] && rm "$poofitee_home_dir/valid_instructions_from_email"
-#This will give us the subject line of first email: head -n+\$(( \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}') - 1)) mailcontent|$greppath -E '^Subject'
+#This will give us the subject line of first email: $headpath -n+\$(( \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}') - 1)) mailcontent|$greppath -E '^Subject'
 #This will start us at content of first email: $tailpath -n+\$(( 2 + \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}'))) mailcontent
      cat "$poofitee_home_dir/mailcontent" |while read line; do line1="\$(echo "\$line "|$greppath -E -o "\\b((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])( |/[1-2]?[0-9] |/3[0-2] )")" && ( echo "\$line1"|while read ipadd;do echo "\$ipadd \$line" >> "$poofitee_home_dir/valid_instructions_from_email"; done ) || (line1="\$(echo "\$line"|$greppath -wie "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "log")" && ( echo "\$line1" >> "$poofitee_home_dir/valid_instructions_from_email" ));done
      cat "$poofitee_home_dir/valid_instructions_from_email" |while read line
@@ -1956,12 +2030,12 @@ if [ \$((numofemails)) -gt -1 ]; then
           if [ \$($greppath -cwie "report" -e "send" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
               script="echo \\"\$(sudo $ipsetpath list poofitee_whitelist|$awkpath 'NR>7 {print \$1}')\\"|$mailpath -s \\"As you requested\\" \\"\$recipient_list\\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$(sudo $tailpath /var/log/kern.log)\\"|mail -s \\"As you requested\\" \\"\$recipient_list\\""
+              script="echo \\"\$(sudo $tailpath /var/log/kern.log)\\"|$mailpath -s \\"As you requested\\" \\"\$recipient_list\\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
-              script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
+              script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
               if [ \$(( \${#option} )) -eq 0 ];then
-                    script="\\(sudo $iptablespath -wnL INPUT|$greppath \\"remove when not needed\\"\\) || (sudo $iptablespath -wI INPUT \\$(sudo $iptablespath -wnL PREROUTING -t raw --line-numbers|$greppath \\"privateIPs_and_bogons \\"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$(date) - remove when not needed\\" -j LOG"
+                    script="\\(sudo $iptablespath -wnL INPUT|$greppath \\"remove when not needed\\"\\) || (sudo $iptablespath -wI INPUT \\$(sudo $iptablespath -wnL PREROUTING -t raw --line-numbers|$greppath \\"privateIPs_and_bogons \\"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$($datepath) - remove when not needed\\" -j LOG"
                     script+=";echo \\"sudo $iptablespath -wD INPUT \\$\\(sudo $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)\\ &>/dev/null\\"|at now +15 min\\)"
               elif (sudo $iptablespath -wnL INPUT|$greppath "remove when not needed") ;then
                     script="\\(sudo $iptablespath -wnL INPUT|$greppath \\"remove when not needed\\"\\) && sudo $iptablespath -wD INPUT \\$\\(sudo $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)"
@@ -1976,7 +2050,7 @@ if [ \$((numofemails)) -gt -1 ]; then
                 $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null\/d' > "\$poofitee_home_dir/cronentries"
                 [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|sudo $crontabpath -
           else
-              script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$(date)\\""
+              script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
           fi
           echo "email_fetch_parse is sending the following command to be executed:" >> "\$0.log"
           echo "\$script"  >> "\$0.log"
@@ -2006,7 +2080,7 @@ if [ -f "/etc/protocols" ];then
 else
 :
 fi
-[[ $($iptablespath -wI PREROUTING 1 -t raw -p $emailproto --dpt $emailport -m comment --comment "This rule ensures email-reader port knock won't get ignored" -j LOG --log-prefix "fetch email " &>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+[[ $($iptablespath -wI PREROUTING 1 -t raw -m comment --comment "This rule ensures email-reader port knock won't get ignored" -p $emailproto --dpt $emailport -j LOG --log-prefix "fetch email " &>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
           }
 install_dynIPch () {
 #dhcp_lease_path
@@ -2444,12 +2518,23 @@ is available only on OS platforms using ELF.  Sorry..."
 EOF
     exit
 fi
+#  the following color codes only work inside echo -e or printf commands.  I am unable to get them working inside here-docs
+aquatext="\\033[1;36;46m"
+normaltext="\\033[0m"
+validoptiontext="\\033[1;39;40m"
+invalidoptiontext="\\033[1;30;40m"
 if ! [ "$(whoami)" == "root" ];then 
-printf "\nWithout being launched by su, this script won't be able to do anything except\
-\ndisplay menus.  No control of this computer can be made by this script unless\
-\nre-launched by root.  ";press_a_key;fi
+     cat <<-EOF
+	Without being launched by su, this script won't be able to do anything except
+	display menus.  No control of this computer can be made by this script unless
+	re-launched by root.  
+	EOF
+     press_a_key
+fi
 #  Beginning of copyright message
-printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
+clear
+printf "$aquatext""POOFITEE$(printf '%.s'"\'" $(seq 56))Copyright Screen""$normaltext\
+\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \n\nThis work of authorship is made available to you under only one out of the\
 \nfollowing two arrangements.  In both arrangements, this copyright message must\
 \nremain with this work of authorship and any and all of its derivatives.\
@@ -2462,7 +2547,7 @@ printf "\nCopyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
 \nstatement transiently.\
 \n\n2.  Arrangement for your freedom from copyright display obligation, or to\
 \ncontribute, see the comments within the source code of this script"
-printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
+printf "\n\n       \033[1;36;46mJesus Christ is Lord of all  ... press a key to acknowledge\\033[0m\n"
 read -rsn 1;read -rst 0.001 -n3
 awkpath="$($whereispath $binaryflag awk)"
 awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
@@ -2524,22 +2609,24 @@ likeliest_internal_net_interface="$(printf "$internal_net_interfaces"|$headpath 
 # echo "Script-required items: whereis path=$whereispath, awk path=$awkpath, python path=$pythonpath, grep path=$greppath, ifconfig path=$ifconfigpath, uniq path=$uniqpath, sort path=$sortpath, head path=$headpath";exit
 #
 # Introduction and what we'll do
-startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\
+startscreen="\n\\033[1;36;46mPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Main Configuration Screen\\033[0m\
 \n                SELECT DESIRED OPTIONS FOR THIS INSTALLATION\
-\n\n      (f) firewalling\
-\n\n      (e) email remote control\
-\n\n      (d) dynamic IP address change notifier"
+\n\n      (\\033[1;39;40mf\\033[0m) firewalling\
+\n\n      (\\033[1;39;40me\\033[0m) email remote control\
+\n\n      ("
 if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
-     startscreen+=" NOT for your configuration";notdhcp="notdhcp"
+     startscreen+="d) \\033[1;30;40mdynamic IP address change notifier\\033[0m NOT for your configuration";notdhcp="notdhcp"
+else
+     startscreen+="\\033[1;39;40md\\033[0m) dynamic IP address change notifier"
 fi
-startscreen+="\n\n      (p) port knocking\
-\n\n      (l) lists (white, black, & static_trusted) to/from storage FUTURE\
-\n\n      (c) copy current configuration to a storage medium FUTURE\
-\n\n      (r) restore the previously saved configuration FUTURE\
-\n\n      (?) context helpful information\
+startscreen+="\n\n      (\\033[1;39;40mp\\033[0m) port knocking\
+\n\n      (\\033[1;39;40ml\\033[0m) lists (white, black, & static_trusted) to/from storage FUTURE\
+\n\n      (\\033[1;39;40mc\\033[0m) copy current configuration to a storage medium FUTURE\
+\n\n      (\\033[1;39;40mr\\033[0m) restore the previously saved configuration FUTURE\
+\n\n      (\\033[1;39;40m?\\033[0m) context helpful information\
 \n
-\nTyping the letters f, e, d, p, s, r optionally followed by a question mark, or\
-\njust plain ? with no letters, select all of the five services listed above that\
+\nTyping the letters \\033[1;39;40mf\\033[0m, \\033[1;39;40me\\033[0m, \\033[1;39;40md\\033[0m, \\033[1;39;40mp\\033[0m, \\033[1;39;40ms\\033[0m, \\033[1;39;40mr\\033[0m optionally followed by a question mark, or\
+\njust plain \\033[1;39;40m?\\033[0m with no letters, select all of the many services listed above that\
 \nyou want, then press ENTER: (or Ctrl-c at any time to terminate installer)\n"
 # POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else"
 ghscreen1="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
@@ -2668,10 +2755,10 @@ listscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nseparated for you.  Each list entry can include a comment that conforms to the\
 \nstyle required by ipset, including the fact that any and all double-quote marks\
 \nwill be discarded before saving the entry to the destination list.  You will be\
-\nasked to indicate whether you are configuring ipset to utilize the list or lists\
+\nasked to indicate whether you are configuring $ipsetpath to utilize the list or lists\
 \nof your choice inputted from stdin (keyboard or a normal file), displaying the\
-\nlists active in ipset as currently running, or saving to storage the list or\
-\nlists of your choice from ipset as currently configured."
+\nlists active in $ipsetpath as currently running, or saving to storage the list or\
+\nlists of your choice from $ipsetpath as currently configured."
 savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                       SAVING YOUR INSTALLED CONFIGURATION\
 \nSelecting this is only meaningful if one or more of the above selections is also\
@@ -2745,7 +2832,7 @@ until ! [ -z $answer ];do
 #  2.  determine if any packages need installing, warn if no known installer found
 #  3.  Install the packages needed by the particular selections, except for mail
 #      -- if an installer is not found, inform operator to install listed programs
-# In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to go
+# In Ubuntu (and probably Debian), install the $ipsetpath and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and $ipsetpath is ready to go
 #  packages required to install everything
          echo
          notinstalled="."
@@ -2807,7 +2894,7 @@ until ! [ -z $answer ];do
                            clear
                            installeranswer="$REPLY"
                            printf "Cleaning up with apt-get autoremove\n"
-                           while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
+                           while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get autoremove -y &>/dev/null
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
@@ -2816,7 +2903,7 @@ until ! [ -z $answer ];do
                       if [[ "$REPLY" =~ [UuBb] ]];then
                            clear
                            printf "Updating your system\'s package installer\n"
-                           while true;do ps a|grep -v grep|grep preconfigure &>/dev/null || printf ".";sleep 1;done &
+                           while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get update &>/dev/null
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
@@ -2892,7 +2979,7 @@ until ! [ -z $answer ];do
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
              else
                   poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
-                  [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
+                  [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$poofitee_home_dir"
                   clear
                   printf "Specify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
@@ -2902,7 +2989,7 @@ until ! [ -z $answer ];do
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  chmod 0440 /etc/sudoers.d/poofitee
-                 sed -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
+                 $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
                  user_poofitee_created_this_run="."
              fi
@@ -2997,50 +3084,50 @@ until ! [ -z $answer ];do
          if [[ "$answer" =~ l ]];then
               clear;printf -- "       lists (white, black, & static_trusted) to/from storage\
 \n\nThis menu option is under development.\
-\n\n   s -- Save ipset sets (blacklist, blacklist_cidr, whitelist, whitelist_cidr,\
+\n\n   s -- Save $ipsetpath sets (blacklist, blacklist_cidr, whitelist, whitelist_cidr,\
 \n        static_trusted, and static_trusted_cidr) of this firewall's current\
 \n        configuration to files in a directory you will choose\
-\n\n   e -- Enter ipset sets into this firewall's configuration through the keyboard\
-\n        or from files that conform to ipset \'save\' conventions\
+\n\n   e -- Enter $ipsetpath sets into this firewall's configuration through the keyboard\
+\n        or from files that conform to $ipsetpath \'save\' conventions\
 \n\n"
               if (press_a_key s e);then
                   if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                        directory_for_list_files="$([[ -f "$poofitee_home_dir/directory_for_list_files" ]] && cat "$poofitee_home_dir/directory_for_list_files")"
                        [[ -z "$directory_for_list_files" ]] && directory_for_list_files="$PWD"
                    fi
-                   while printf "\nEnter the directory name where you want the firewall ipset sets to be saved to:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
+                   while printf "\nEnter the directory name where you want the firewall $ipsetpath sets to be saved to:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
                         [[ -d "$directory_for_list_files" ]] && break
                         printf "\nNot a valid directory. Try again.  "
                         press_a_key
                    done
                    echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
-                   ipset save -file "$directory_for_list_files/ipset.sets"
-#                   ipset save blacklist -file "$directory_for_list_files/poofitee_blacklist"
-#                   ipset save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
-#                   ipset save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
-#                   ipset save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
-#                   ipset save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
-#                   ipset save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   $ipsetpath save -file "$directory_for_list_files/ipset.sets"
+#                   $ipsetpath save blacklist -file "$directory_for_list_files/poofitee_blacklist"
+#                   $ipsetpath save blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+#                   $ipsetpath save whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+#                   $ipsetpath save whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+#                   $ipsetpath save static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+#                   $ipsetpath save static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
                    printf "The files are now saved to $directory_for_list_files"
                else
                   if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                        directory_for_list_files="$([[ -f "$poofitee_home_dir/directory_for_list_files" ]] && cat "$poofitee_home_dir/directory_for_list_files")"
                        [[ -z "$directory_for_list_files" ]] && directory_for_list_files="$PWD"
                    fi
-                   while printf "\nEnter the directory name containing the files that you want the firewall ipset sets to be configured from:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
+                   while printf "\nEnter the directory name containing the files that you want the firewall $ipsetpath sets to be configured from:\n";read -er -i "$directory_for_list_files" directory_for_list_files;do
                         [[ -d "$directory_for_list_files" ]] && break
                         printf "\nNot a valid directory. Try again.  "
                         press_a_key
                    done
                    echo "$directory_for_list_files" > "$poofitee_home_dir/directory_for_list_files"
-                   ipset restore -file "$directory_for_list_files/ipset.sets"
-#                   ipset restore blacklist -file "$directory_for_list_files/poofitee_blacklist"
-#                   ipset restore blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
-#                   ipset restore whitelist  -file "$directory_for_list_files/poofitee_whitelist"
-#                   ipset restore whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
-#                   ipset restore static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
-#                   ipset restore static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
-                   printf "The ipset sets are now restored from $directory_for_list_files"
+                   $ipsetpath restore -file "$directory_for_list_files/ipset.sets"
+#                   $ipsetpath restore blacklist -file "$directory_for_list_files/poofitee_blacklist"
+#                   $ipsetpath restore blacklist_cidr  -file "$directory_for_list_files/poofitee_blacklist_cidr"
+#                   $ipsetpath restore whitelist  -file "$directory_for_list_files/poofitee_whitelist"
+#                   $ipsetpath restore whitelist_cidr  -file "$directory_for_list_files/poofitee_whitelist_cidr"
+#                   $ipsetpath restore static_trusted  -file "$directory_for_list_files/poofitee_static_trusted"
+#                   $ipsetpath restore static_trusted_cidr  -file "$directory_for_list_files/poofitee_static_trusted_cidr"
+                   printf "The $ipsetpath sets are now restored from $directory_for_list_files"
                fi
          fi
          if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
