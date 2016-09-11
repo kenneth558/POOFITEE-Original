@@ -3025,11 +3025,11 @@ until ! [ -z $answer ];do
          (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
          $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
          if [[ "$answer" =~ f ]];then
-         printf "\n\nChecking awk compatibility.  Please wait..."
+         printf "."
          until false;do
 # Check here for awk functionality with stdbuf
                   echo "" > awktestbed
-                  $tailpath -fn0 awktestbed|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults &
+                  $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
                   tailawktestpid="$!"
                   echo "testline" >> awktestbed
                   sleep 1
@@ -3037,13 +3037,13 @@ until ! [ -z $answer ];do
                   if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
                        awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
                        if ! [[ -z "$awkpath" ]];then
-                            $tailpath -fn0 awktestbed|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults &
+                            $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
                             tailawktestpid="$!"
                             echo "testline" >> awktestbed
                             sleep 1
 #                            kill $tailawktestpid &>/dev/null
                        fi
-                       if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
+                       if ! [[ "$($tailpath -n1 awktestresults 2>/dev/null)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
                             printf "\n\nThe version of $awkpath on this server does not receive input via the\
 \nstdbuf command like it will need to.  This is common with some versions of awk.\
 \nThe best fix is that you upgrade awk or gawk manually.  Then start poofitee\
@@ -3051,7 +3051,7 @@ until ! [ -z $answer ];do
 \none.  Here is the test instruction snippet that awk or gawk needs to succeed\
 \nwith:\
 \n\necho \"\" > awktestbed\
-\n$tailpath -fn0 awktestbed|$stdbufpath -o0 awk '{print \$1}' > awktestresults &\
+\n$tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > awktestresults 2>/dev/null &\
 \ntailawktestpid=\"\$!\"\
 \necho \"testline\" >> awktestbed\
 \nsleep 1\
