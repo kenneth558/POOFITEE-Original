@@ -3055,7 +3055,7 @@ until ! [ -z $answer ];do
 \necho \"testline\" >> awktestbed\
 \nsleep 1\
 \ntailawktestpid=\"\$!\"\
-\nif [[ -z \"$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi\
+\nif [[ -z \"\$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi\
 \n\n"
                             press_a_key
                             awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
