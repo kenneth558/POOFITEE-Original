@@ -3033,25 +3033,33 @@ until ! [ -z $answer ];do
                   tailawktestpid="$!"
                   echo "testline" >> awktestbed
                   sleep 1
+                  kill $tailawktestpid
                   if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
-                       kill $tailawktestpid
                        awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
                        if ! [[ -z "$awkpath" ]];then
                             $tailpath -fn0 awktestbed|$stdbufpath -o0 $awkpath > awktestresults &
                             tailawktestpid="$!"
                             echo "testline" >> awktestbed
                             sleep 1
+                            kill $tailawktestpid
                        fi
                        if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
                             printf "\n\nThe version of $awkpath on this server does not receive input via the\
 \nstdbuf command like it will need to.  This is common with some versions of awk.\
 \nThe best fix is that you upgrade awk or gawk manually.  Then start poofitee\
 \nagain.  Or you may use another terminal window to upgrade and resume in this\
-\none.\n"
+\none.  Here is the test instruction snippet that awk or gawk needs to succeed\
+\nwith:\
+\n\necho \"\" > awktestbed\
+\n$tailpath -fn0 awktestbed|$stdbufpath -o0 awk > awktestresults &\
+\necho \"testline\" >> awktestbed\
+\nsleep 1\
+\ntailawktestpid=\"\$!\"\
+\nif [[ -z \"$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi\
+\n"
                             press_a_key
                             awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
                        else
-                            kill $tailawktestpid
                             rm testbed
                             break
                        fi
