@@ -1322,6 +1322,7 @@ install_buildiptablessh
 install_firewall_cronentries
 } 
        install_buildiptablessh () {
+#ipset list error on stderr when ipset not working due to?: ipset v6.29: Kernel error received: Invalid argument
 printf "." # insert friendly progress indicators
 if ! [ -d /etc/iptables ];then
      mkdir /etc/iptables
@@ -2657,7 +2658,7 @@ eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\"
     || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
     || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
-external_net_interface="$($ippath -o route get 8.8.8.8 2>/dev/null|$awkpath '{ print $5 }')"
+external_net_interface="$($ippath -o route get 8.8.8.8 2>/dev/null|$awkpath '{for (i=1;i<=NF;i++) {if ($i=="dev"){ print $(i+1);exit }}}')"
 if [ -z "$external_net_interface" ];then
      clear
      printf "\nUnable to identify an Internet connection."
