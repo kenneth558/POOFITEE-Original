@@ -1,4 +1,7 @@
 #! /bin/bash
+#
+# Downloading this script: YOU SHOULDN'T COPY/PASTE BECAUSE THERE ARE ADJACENT SPACES THAT WOULD GET CONSOLIDATED THAT WAY.  Instead, download with raw or download the file
+#
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
 # TODO: make undo feature in case of merely testing or changes of heart
