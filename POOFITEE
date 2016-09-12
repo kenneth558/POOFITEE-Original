@@ -252,6 +252,8 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
                             gawkpath=""
                             break
                        fi
+                  else
+                       gawkpath=""
                   fi
                   kill $tailawktestpid &>/dev/null
                   rm awktestresults &>/dev/null
