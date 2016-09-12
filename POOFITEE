@@ -184,7 +184,7 @@ mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" #
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
 [[ -z "$gawkpath" ]] && gawkpath=""
 if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
-     if [[ "$1" == "checkawk" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
+     if [[ "$1" == "checkawk" ]] && [[ $gawkpath != "checkedgood" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
           if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
               until false;do
 # Check here for awk functionality with stdbuf
@@ -246,17 +246,17 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
                             awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
                        else
                             kill $tailawktestpid &>/dev/null
-                            rm awktestresults &>/dev/null
+#                            rm awktestresults &>/dev/null
                             rm awktestbed &>/dev/null
                             [[ -z "$gawkpath" ]] || awkpath="$gawkpath"
-                            gawkpath=""
+                            gawkpath="checkedgood"
                             break
                        fi
                   else
-                       gawkpath=""
+                       gawkpath="checkedgood"
                   fi
                   kill $tailawktestpid &>/dev/null
-                  rm awktestresults &>/dev/null
+#                  rm awktestresults &>/dev/null
                   rm awktestbed &>/dev/null
                   break
               done
