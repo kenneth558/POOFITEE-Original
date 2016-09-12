@@ -192,6 +192,70 @@ fi
 if [[ $answer =~ p ]];then
      set_notinstalled_var # during development, just install everything
 fi
+if ! [[ -z "$1" ]];then
+     if [[ "$1" == "checkawk" ]];then
+          if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
+              until false;do
+# Check here for awk functionality with stdbuf
+                  echo "" > awktestbed
+                  $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
+                  tailawktestpid="$!"
+                  echo "testline" >> awktestbed
+                  sleep 1
+#                  kill $tailawktestpid &>/dev/null
+                  if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
+                       awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+                       if ! [[ -z "$awkpath" ]];then
+                            $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
+                            tailawktestpid="$!"
+                            echo "testline" >> awktestbed
+                            sleep 1
+#                            kill $tailawktestpid &>/dev/null
+                       fi
+                       if ! [[ "$($tailpath -n1 awktestresults 2>/dev/null)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
+                            cat <<-EOF
+
+				One or more features that you selected will require another version of awk than
+				this system has currently - the version of $awkpath
+				on this system does not receive\
+				input via the stdbuf command like it will need to.  This is a common deficiency
+				with some versions of awk.  This install script is not advanced enough to locate
+				the right version of awk to install for you.  The best fix for this condition is
+				that you manually upgrade awk or gawk, verifying that the new version succeeds
+				with the following code snippet, then restart this poofitee installer again.  
+				If you decide to keep your current version[s] of awk/gawk and install a separate
+				version for poofitee only so that none of your other scripts run the new awk
+				version that poofitee needs, restart this installer script with the command line
+				argument \"awk=/path/and/awkfilename\".   You may use another terminal window to
+				upgrade awk and resume in this one to see if this script discovers the new awk
+				version.  Here is the test instruction snippet that awk or gawk needs to succeed
+				with:
+
+				echo "" > awktestbed
+				$tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > awktestresults 2>/dev/null &
+				tailawktestpid="\$!"
+				echo \"testline\" >> awktestbed
+				sleep 1
+				kill \$tailawktestpid &>/dev/null
+				if [[ -z \"\$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi
+
+				EOF
+                            press_a_key
+                            awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+                       else
+                            kill $tailawktestpid &>/dev/null
+                            rm awktestresults &>/dev/null
+                            rm awktestbed &>/dev/null
+                            break
+                       fi
+                  fi
+                  kill $tailawktestpid &>/dev/null
+                  rm awktestresults &>/dev/null
+                  rm awktestbed &>/dev/null
+              done
+          fi
+     fi
+fi
 notinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
 not_installed_single_line="${not_installed_single_line:: -1}"
@@ -2541,10 +2605,20 @@ printf "POOFITEE$(printf '%.s'"\'" $(seq 56))Copyright Screen\
 \nstatement transiently.\
 \n\n2.  Arrangement for your freedom from copyright display obligation, or to\
 \ncontribute, see the comments within the source code of this script"
-printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge"
+printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
 read -rsn 1;read -rst 0.001 -n3
-awkpath="$($whereispath $binaryflag awk)"
-awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+if [[ "$*" =~ ^awk= ]] || [[ "$*" =~ \ awk= ]];then
+    index=1
+    for arg in "$@"
+    do
+        [[ "${arg#*'awk='}" == "$arg" ]] || awkpath="${arg#*'awk='}"
+        ! [[ -z "$awkpath" ]] && break
+        let "index+=1"
+    done
+else
+     awkpath="$($whereispath $binaryflag awk)"
+     awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+fi
 pythonpath="$($whereispath $binaryflag python)"
 pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
 greppath="$($whereispath $binaryflag grep)"
@@ -2832,7 +2906,7 @@ until ! [ -z $answer ];do
          notinstalled="."
          until [ -z "$notinstalled" ];do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
             until ! [ -z "$goahead" ] && ! [ -z "$ackd" ] && [ "$goahead" == "true" ] || [ "$ackd" == "true" ];do
-                  what_needs_to_be_installed
+                  what_needs_to_be_installed checkawk
 #                  printf "There are $(what_needs_to_be_installed;echo "$?") things needing to be installed";read -srn1
                   [[ "$?" == "0" ]] && break 2
                   ground_zero_install_needs="$not_installed_single_line"
@@ -3026,51 +3100,6 @@ until ! [ -z $answer ];do
          $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
          if [[ "$answer" =~ f ]];then
          printf "."
-         until false;do
-# Check here for awk functionality with stdbuf
-                  echo "" > awktestbed
-                  $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
-                  tailawktestpid="$!"
-                  echo "testline" >> awktestbed
-                  sleep 1
-#                  kill $tailawktestpid &>/dev/null
-                  if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
-                       awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
-                       if ! [[ -z "$awkpath" ]];then
-                            $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
-                            tailawktestpid="$!"
-                            echo "testline" >> awktestbed
-                            sleep 1
-#                            kill $tailawktestpid &>/dev/null
-                       fi
-                       if ! [[ "$($tailpath -n1 awktestresults 2>/dev/null)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
-                            printf "\n\nThe version of $awkpath on this server does not receive input via the\
-\nstdbuf command like it will need to.  This is common with some versions of awk.\
-\nThe best fix is that you upgrade awk or gawk manually.  Then start poofitee\
-\nagain.  Or you may use another terminal window to upgrade and resume in this\
-\none.  Here is the test instruction snippet that awk or gawk needs to succeed\
-\nwith:\
-\n\necho \"\" > awktestbed\
-\n$tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > awktestresults 2>/dev/null &\
-\ntailawktestpid=\"\$!\"\
-\necho \"testline\" >> awktestbed\
-\nsleep 1\
-\nkill \$tailawktestpid &>/dev/null\
-\nif [[ -z \"\$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi\
-\n\n"
-                            press_a_key
-                            awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
-                       else
-                            kill $tailawktestpid &>/dev/null
-                            rm awktestresults &>/dev/null
-                            rm awktestbed &>/dev/null
-                            break
-                       fi
-                  fi
-                  kill $tailawktestpid &>/dev/null
-                  rm awktestresults &>/dev/null
-                  rm awktestbed &>/dev/null
-         done
 #            echo "firewalling"
 #             printf "iptables, including ruleset and crontab entries will be set up next.\
 #\n   Press a key...";read -n1 -r
