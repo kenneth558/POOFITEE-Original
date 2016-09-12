@@ -197,6 +197,7 @@ if ! [[ -z "$1" ]];then
           if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
               until false;do
 # Check here for awk functionality with stdbuf
+                  printf "Checking awk for functionality..."
                   echo "" > awktestbed
                   $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
                   tailawktestpid="$!"
@@ -204,32 +205,34 @@ if ! [[ -z "$1" ]];then
                   sleep 1
 #                  kill $tailawktestpid &>/dev/null
                   if ! [[ "$($tailpath -n1 awktestresults)" == "testline" ]];then #try/use gawk instead
-                       awkpath="$($whereispath $binaryflag gawk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
-                       if ! [[ -z "$awkpath" ]];then
-                            $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
+                       gawkpath="$($whereispath $binaryflag gawk)";gawkpath="${gawkpath#*:}";gawkpath="${gawkpath# }";gawkpath="${gawkpath%% *}"
+                       if ! [[ -z "$gawkpath" ]];then
+                            $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $gawkpath '{print $1}' > awktestresults 2>/dev/null &
                             tailawktestpid="$!"
                             echo "testline" >> awktestbed
                             sleep 1
 #                            kill $tailawktestpid &>/dev/null
                        fi
-                       if ! [[ "$($tailpath -n1 awktestresults 2>/dev/null)" == "testline" ]] || [[ -z "$awkpath" ]];then #warn
+                       if ! [[ "$($tailpath -n1 awktestresults 2>/dev/null)" == "testline" ]];then #warn
                             cat <<-EOF
-
+				WARNING:
 				One or more features that you selected will require another version of awk than
 				this system has currently - the version of $awkpath
-				on this system does not receive\
-				input via the stdbuf command like it will need to.  This is a common deficiency
-				with some versions of awk.  This install script is not advanced enough to locate
-				the right version of awk to install for you.  The best fix for this condition is
-				that you manually upgrade awk or gawk, verifying that the new version succeeds
-				with the following code snippet, then restart this poofitee installer again.  
-				If you decide to keep your current version[s] of awk/gawk and install a separate
-				version for poofitee only so that none of your other scripts run the new awk
-				version that poofitee needs, restart this installer script with the command line
-				argument \"awk=/path/and/awkfilename\".   You may use another terminal window to
-				upgrade awk and resume in this one to see if this script discovers the new awk
-				version.  Here is the test instruction snippet that awk or gawk needs to succeed
-				with:
+				on this system does not receive input via the stdbuf command like it will need 
+				to.  This is a common deficiency with some versions of awk.  This install script
+				is not advanced enough to locate the right version of awk to install for you.  
+				The best fix for this condition is that you manually upgrade awk or gawk, 
+				verifying that the new version succeeds with the code snippet below, then 
+				restart this poofitee installer again.  If you decide to keep your current
+				version[s] of awk/gawk and install a separate version for poofitee only so that
+				none of your other scripts run the new awk version that poofitee needs, restart 
+				this installer script with the command line argument added as follows:
+
+				poofitee \"awk=/path/and/awkfilename\".
+
+				You may use another terminal window to upgrade awk and resume in this one to see
+				if this script discovers the new awk version.  
+				Here is the test instruction snippet that awk or gawk needs to succeed with:
 
 				echo "" > awktestbed
 				$tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > awktestresults 2>/dev/null &
@@ -238,7 +241,6 @@ if ! [[ -z "$1" ]];then
 				sleep 1
 				kill \$tailawktestpid &>/dev/null
 				if [[ -z \"\$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi
-
 				EOF
                             press_a_key
                             awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
@@ -246,6 +248,8 @@ if ! [[ -z "$1" ]];then
                             kill $tailawktestpid &>/dev/null
                             rm awktestresults &>/dev/null
                             rm awktestbed &>/dev/null
+                            [[ -z "$gawkpath" ]] || awkpath="$gawkpath"
+                            gawkpath=""
                             break
                        fi
                   fi
