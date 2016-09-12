@@ -448,6 +448,7 @@ Thank you for using POOFITEE.  God loves you, pass it on.
 EOF
 }
 set_notinstalled_var () {
+! [[ -z "$gawkpath" ]] && [[ "$gawkpath" == "installandcheckme" ]] && notinstalled+="gawk\n"
 [[ -z "$inotifywaitpath" ]] && notinstalled+="inotify-tools\n"
 [[ -z "$iptablespath" ]] && notinstalled+="iptables\n"
 [[ -z "$netfiltperspath" ]] && notinstalled+="netfilter-persistent\n"
@@ -461,7 +462,6 @@ set_notinstalled_var () {
 [[ -z "$sendmail_works" ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z "$ipsetpath" ]] && notinstalled+="ipset\n"
 [[ -z "$digpath" ]] && notinstalled+="dnsutils\n"
-! [[ -z "$gawkpath" ]] && [[ "$gawkpath" == "installandcheckme" ]] && notinstalled+="gawk\n"
 }
 
 press_a_key () {
