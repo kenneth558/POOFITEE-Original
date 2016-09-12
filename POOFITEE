@@ -182,9 +182,8 @@ what_needs_to_be_installed () {
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
 [[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
-[[ -z "$gawkpath" ]] && gawkpath=""
 if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
-     if [[ "$1" == "checkawk" ]] && [[ $gawkpath != "checkedgood" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
+     if ([[ "$1" == "checkawk" ]] && ! [[ "$gawkpath" == "checkedgood" ]]) || [[ "$gawkpath" == "installandcheckme" ]];then
           if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
               until false;do
 # Check here for awk functionality with stdbuf
@@ -248,8 +247,10 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]];then
                             kill $tailawktestpid &>/dev/null
 #                            rm awktestresults &>/dev/null
                             rm awktestbed &>/dev/null
-                            [[ -z "$gawkpath" ]] || awkpath="$gawkpath"
-                            gawkpath="checkedgood"
+                            if ! [[ -z "$gawkpath" ]];then
+                                 awkpath="$gawkpath"
+                                 gawkpath="checkedgood"
+                            fi
                             break
                        fi
                   else
@@ -2641,6 +2642,8 @@ else
      awkpath="$($whereispath $binaryflag awk)"
      awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
 fi
+#force these to be global variables, we need them to perform the install:
+gawkpath=""
 pythonpath="$($whereispath $binaryflag python)"
 pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
 greppath="$($whereispath $binaryflag grep)"
@@ -2845,10 +2848,10 @@ listscreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`
 \nseparated for you.  Each list entry can include a comment that conforms to the\
 \nstyle required by ipset, including the fact that any and all double-quote marks\
 \nwill be discarded before saving the entry to the destination list.  You will be\
-\nasked to indicate whether you are configuring $ipsetpath to utilize the list or lists\
+\nasked to indicate whether you are configuring ipset to utilize the list or lists\
 \nof your choice inputted from stdin (keyboard or a normal file), displaying the\
-\nlists active in $ipsetpath as currently running, or saving to storage the list or\
-\nlists of your choice from $ipsetpath as currently configured."
+\nlists active in ipset as currently running, or saving to storage the list or\
+\nlists of your choice from ipset as currently configured."
 savescreen="POOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`Information Screen\
 \n                       SAVING YOUR INSTALLED CONFIGURATION\
 \nSelecting this is only meaningful if one or more of the above selections is also\
@@ -2922,7 +2925,7 @@ until ! [ -z $answer ];do
 #  2.  determine if any packages need installing, warn if no known installer found
 #  3.  Install the packages needed by the particular selections, except for mail
 #      -- if an installer is not found, inform operator to install listed programs
-# In Ubuntu (and probably Debian), install the $ipsetpath and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and $ipsetpath is ready to test
+# In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to test
 #  packages required to install everything
          echo
          notinstalled="."
