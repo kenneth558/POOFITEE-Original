@@ -228,7 +228,7 @@ if ! [[ -z "$1" ]];then
 				none of your other scripts run the new awk version that poofitee needs, restart 
 				this installer script with the command line argument added as follows:
 
-				poofitee \"awk=/path/and/awkfilename\".
+				poofitee \"awk=/path/and/awkfilename\"
 
 				You may use another terminal window to upgrade awk and resume in this one to see
 				if this script discovers the new awk version.  
