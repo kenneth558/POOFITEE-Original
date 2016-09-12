@@ -201,6 +201,7 @@ if ! [[ -z "$1" ]];then
                   echo "" > awktestbed
                   $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
                   tailawktestpid="$!"
+                  sleep 1
                   echo "testline" >> awktestbed
                   sleep 1
 #                  kill $tailawktestpid &>/dev/null
@@ -209,6 +210,7 @@ if ! [[ -z "$1" ]];then
                        if ! [[ -z "$gawkpath" ]];then
                             $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $gawkpath '{print $1}' > awktestresults 2>/dev/null &
                             tailawktestpid="$!"
+                            sleep 1
                             echo "testline" >> awktestbed
                             sleep 1
 #                            kill $tailawktestpid &>/dev/null
@@ -228,7 +230,7 @@ if ! [[ -z "$1" ]];then
 				none of your other scripts run the new awk version that poofitee needs, restart 
 				this installer script with the command line argument added as follows:
 
-				poofitee \"awk=/path/and/awkfilename\"
+				poofitee awk=/path/and/awkfilename
 
 				You may use another terminal window to upgrade awk and resume in this one to see
 				if this script discovers the new awk version.  
@@ -237,10 +239,10 @@ if ! [[ -z "$1" ]];then
 				echo "" > awktestbed
 				$tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > awktestresults 2>/dev/null &
 				tailawktestpid="\$!"
-				echo \"testline\" >> awktestbed
+				echo "testline" >> awktestbed
 				sleep 1
 				kill \$tailawktestpid &>/dev/null
-				if [[ -z \"\$(cat awktestresults)\" ]];then echo \"This awk version fails\";else echo \"This awk version succeeds\";fi
+				if [[ -z "\$(cat awktestresults)" ]];then echo "This awk version fails";else echo "This awk version succeeds";fi
 				EOF
                             press_a_key
                             awkpath="$($whereispath $binaryflag awk)";awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
@@ -256,6 +258,7 @@ if ! [[ -z "$1" ]];then
                   kill $tailawktestpid &>/dev/null
                   rm awktestresults &>/dev/null
                   rm awktestbed &>/dev/null
+                  break
               done
           fi
      fi
@@ -2611,7 +2614,7 @@ printf "POOFITEE$(printf '%.s'"\'" $(seq 56))Copyright Screen\
 \ncontribute, see the comments within the source code of this script"
 printf "\n\n       Jesus Christ is Lord of all  ... press a key to acknowledge\n"
 read -rsn 1;read -rst 0.001 -n3
-if [[ "$*" =~ ^awk= ]] || [[ "$*" =~ \ awk= ]];then
+if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
     index=1
     for arg in "$@"
     do
