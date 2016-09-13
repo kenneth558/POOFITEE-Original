@@ -672,7 +672,7 @@ if ! [[ \$(sudo $ipsetpath add \$1 \$2 comment "\$3"  1>/dev/null 2>"$poofitee_h
 fi
 }
 
-if ! [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then #if more than a mere ip address was given in arg #1, skip this and go to else
+if ! [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then #if more than a mere ip address was given in arg #1, skip this and go to else
      if ! [[ "\$1" =~ :.*\ poofitee ]];then
            exit
      elif [[ "\$1" =~ :.*\ poofitee.*blacklist.*IN=eth0\  ]];then
@@ -730,7 +730,7 @@ ps > "$poofitee_home_dir/ramdisk/psout"
 $greppath "^\$$" < "$poofitee_home_dir/ramdisk/psout"|$greppath -v grep|$sedpath -n 's/\S*\s*\S*\s*\S*\s*//p' > "$poofitee_home_dir/ramdisk/forpslinecount"
 echo "\$$" > "$poofitee_home_dir/ramdisk/psnum"
 #This test will allow CIDR-type consolidated IPv4 address ranges
-if [[ \$1 =~ ^(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
+if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?$ ]];then
      if [[ ! "\$3x" =~ whitelist ]] && [[ ! "\$3x" =~ knock ]] && [ "\$2x" != "-rx" ] && [ "\$3x" != "-rx" ] && [[ ! "\$3x" =~ public\ service\ after\ blacklis ]] ;then
            if [[ "\$3x" =~ fetch\ email ]];then
                 nohup "$poofitee_home_dir/email_fetch_parse" &
@@ -1493,7 +1493,7 @@ printf "." # insert friendly progress indicators
 	#  TODO:  warn installer in that case
 #  preload default router and dns name server, etc into ipset poofitee_static_trusted, all addresses that show up in ip route output, /etc/resolv.conf, /etc/network/interfaces, etc, etc.
 ($ippath route;cat /etc/resolv.conf /etc/network/interfaces)|\
-     $greppath -Eo '(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?'|\
+     $greppath -Eo '((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?'|\
      while read ipadd;do
            if [[ $ipadd =~ / ]];then
                 ipset add poofitee_static_trusted_cidr $ipadd comment "$(date) installer detected as trusted"
