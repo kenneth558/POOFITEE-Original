@@ -1491,7 +1491,16 @@ printf "." # insert friendly progress indicators
 
 	# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
 	#  TODO:  warn installer in that case
-
+#  preload default router and dns name server, etc into ipset poofitee_static_trusted, all addresses that show up in ip route output, /etc/resolv.conf, /etc/network/interfaces, etc, etc.
+($ippath route;cat /etc/resolv.conf /etc/network/interfaces)|\
+     $greppath -Eo '(([1-9]|[1-9][0-9]|1[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?'|\
+     while read ipadd;do
+           if [[ $ipadd =~ / ]];then
+                ipset add poofitee_static_trusted_cidr $ipadd comment "$(date) installer detected as trusted"
+           else
+                ipset add poofitee_static_trusted $ipadd comment "$(date) installer detected as trusted"
+           fi
+     done
 #	! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -w -nvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                                  |$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_fw"  >/dev/null 2>/dev/null || printf "Failed a")
 ! [ -z "$likeliest_internal_net_interface" ] && ! ($iptablespath -w -nvL INPUT|$greppath -- " ACCEPT     all  --  $likeliest_internal_net_interface"                                         |$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A INPUT -i $likeliest_internal_net_interface -j ACCEPT -m comment --comment "poofitee_fw" &>/dev/null || printf "Failed a")
 printf "." # insert friendly progress indicators
