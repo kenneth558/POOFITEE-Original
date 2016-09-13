@@ -190,7 +190,7 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
 # Check here for awk functionality with stdbuf
                   printf "Checking $([[ "$gawkpath" == "installandcheckme" ]] && printf "gawk$([[ "$mawkpath" == "installandcheckme" ]] && printf ", mawk,") and " || [[ "$mawkpath" == "installandcheckme" ]] && printf "mawk and ")awk for functionality..."
                   echo "" > awktestbed
-                  $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
+                  nohup $tailpath -fn0 awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > awktestresults 2>/dev/null &
                   tailawktestpid="$!"
                   sleep 1
                   echo "testline" >> awktestbed
@@ -308,10 +308,12 @@ pronotinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 # packages are in alpha order so duplicates got removed, now we need to rearrange to workable order
 # packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk
 # netfilter-persistent first, then awk/gawk/mawk/nawk
-notinstalled="$(printf "$pronotinstalled\n"|while read package;do [[ "$package" == "netfilter-persistent" ]] && printf "$package\n";done)"
-notinstalled+="\n$(printf "$pronotinstalled\n"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && printf "$package\n";done)"
-notinstalled+="\n$(printf "$pronotinstalled\n"|while read package;do [[ "$package" != "netfilter-persistent" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && printf "$package\n";done)"
+printf "$pronotinstalled"|while read package;do [[ "$package" == "netfilter-persistent" ]] && echo "$package" > notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> notinstalled;done
+notinstalled=$(cat notinstalled)
 notinstalled+="\n"
+rm notinstalled
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
 not_installed_single_line="${not_installed_single_line:: -1}"
 [ -z "$not_installed_single_line" ] && return 0
@@ -2272,7 +2274,6 @@ for dhcpclientpkg in "pump -i $external_net_interface --status" "udhcpc -i $exte
     dhcpclientpath="${dhcpclientpath# }"
     dhcpclientpath="${dhcpclientpath%% *}"
     echo "Executing <$dhcpclientpath ${dhcpclientpkg#* }>"
-exit
     $($dhcpclientpath ${dhcpclientpkg#* } | $greppath -i renew ) # |$greppath  # since there could be several dhcp clients installed we know only one will be working, eliminate non-working ones
 done
 if [[ -z "$dhcpclientpath" ]];then
