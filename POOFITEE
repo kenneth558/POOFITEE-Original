@@ -259,7 +259,7 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
                                       press_a_key
                                  fi
                             else
-                                 if ! [[ -z "$mawkpath" ]] && ! [[ "$mawkpath" == "" ]];then
+                                 if ! [[ -z "$mawkpath" ]];then
                                       awkpath="$mawkpath"
                                       mawkpath="checkedgood"
                                       gawkpath=""
@@ -269,14 +269,23 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
                        else
                             if ! [[ -z "$gawkpath" ]];then
                                  awkpath="$gawkpath"
+                                 mawkpath=""
                                  gawkpath="checkedgood"
                             fi
                             break
                        fi
+                  else
+                       if ! [[ -z "$awkpath" ]];then
+                            mawkpath=""
+                            gawkpath="checkedgood"
+                       fi
+                       break
                   fi
                   break
               done
-              ! [[ -z $tailawktestpid ]] && kill $tailawktestpid &>/dev/null
+              if [[ $(kill -0 "$tailawktestpid";echo "$?") == "0" ]];then
+                   kill $tailawktestpid &>/dev/null
+              fi
               rm awktestresults &>/dev/null
               rm awktestbed &>/dev/null
           fi
