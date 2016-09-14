@@ -1842,6 +1842,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           printf "\nNext, suitability test notifications will be sent out to all email addresses you\
 \nindicated should receive notifications.  Press a key to send them..."
           read -rsn 1;read -rst 0.001 -n3
+          printf "\n"
           notemsg=""
           [[ $answer =~ f ]] && notemsg+="Firewalling\n"
           [[ $answer =~ e ]] && notemsg+="Email remote control\n"
