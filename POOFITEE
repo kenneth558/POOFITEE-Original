@@ -1474,11 +1474,7 @@ printf "\n"
      printf "." # insert friendly progress indicators
 fi
 printf "." # insert friendly progress indicators
-$ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null || \
-   $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
-   printf "The ipset loadable kernel module is not automatically loaded for you.\
-\nThis just happens to be the case with the particular Linux distro you're using.\
-\nYou'll have to load the ipset module manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
+$ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_whitelist hash:ip comment&>/dev/null
 printf "." # insert friendly progress indicators
@@ -2615,10 +2611,16 @@ cat <<-EOF
 POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS
 
 Specifically -
+
  - no integrated dependency support is provided
+
  - no uninstall feature is provided
- - If the ipset loadable kernel module is not automatically loaded for you,
-      you'll have to load it manually and restart poofitee installer
+
+ - If loadable modules for iptables are not automatically loaded in your Linux
+      kernel as it is configured, some options of poofitee will end execution
+      of this script early and inform you to manually load the ipset module,
+      a one-time necessary event. Currently, poofitee is not advanced enough to
+      load kernel modules itself.
 
 Your suggestions for improvements are solicited and
 welcome.  Use the POOFITEE Wiki to offer them..."
@@ -3072,42 +3074,6 @@ until ! [ -z $answer ];do
                  printf "\nInstalling\n"
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- sudo $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# LAST UNTESTED CHANGE WAS TO DOUBLE QUOTE $not_installed_single_line IN THE INSTALL LINES
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
 #switch_from_more_common_package_to_less_common_package netfilter-persistent netfilter-persistent iptables-persistent iptables-persistent
@@ -3127,11 +3093,6 @@ until ! [ -z $answer ];do
                            dnsutils_already_given_a_chance="anyvaluewillwork"
                       fi
                  fi
-
-
-
-
-
                  if [[ "$not_installed_single_line" =~ ^netfilter-persistent ]];then
                       if ! [[ -z "$netfilter_persistent_already_given_a_chance" ]];then
                            netfilter_persistent_already_given_a_chance=""
@@ -3150,11 +3111,6 @@ until ! [ -z $answer ];do
                            netfilter_persistent_already_given_a_chance="anyvaluewillwork"
                       fi
                  fi
-
-
-
-
-
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
                       : # keep looping as long as progress is being detected
                       previous_not_installed="$(what_needs_to_be_installed;echo "$?")"
@@ -3179,9 +3135,11 @@ until ! [ -z $answer ];do
                  break
             fi
          done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-# printf "line 2656, $notinstalled";read -rsn1
-# echo "$not_installed_single_line";read -srn1
-# printf "\nnetfilter-persistent is found at $netfiltperspath";press_a_key
+$ipsetpath list -t >&/dev/null ||
+   $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
+   printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
+\nThis just happens to be the case with the particular Linux distro you're using.\
+\nYou'll have to load the ipset module manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
          while true ;do
              if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
