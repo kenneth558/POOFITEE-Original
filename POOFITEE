@@ -796,13 +796,16 @@ while current_time="$($datepath)";[[ -f "$poofitee_home_dir/iptables_ruleset.$cu
      sleep 1
 done
 if ! [[ -z "$iptabsavepath""$netfiltperspath" ]];then
-     $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-     $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null
+     $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 2>/dev/null
+     $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") &>/dev/null 
      backup_result="$?"
      [[ "$backup_result" ]] && printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
 fi
-[[ "$backup_result" ]] && ! [[ -z "$ipsetpath" ]] && "$ipsetpath list" && "$ipsetpath save > /etc/iptables/ipset.sets" 2>/dev/null || backup_result="$?"
+if [[ "$backup_result" ]] && ! [[ -z "$ipsetpath" ]] && "$ipsetpath list" &>/dev/null]];then
+     "$ipsetpath save > /etc/iptables/ipset.sets" 2>/dev/null
+     backup_result="$?"
+fi
 return $(($backup_result))
 }
 find_first_reference_to_internal_interface () {
@@ -1409,7 +1412,7 @@ load_rules()
 save_rules()
 {
         # save rules made with ipset
-        $ipsetpath save -f /etc/iptables/ipset.sets
+        $ipsetpath save -f /etc/iptables/ipset.sets &>/dev/null
 		if [ \$? -ne 0 ]; then
 			rc=1
 		fi
@@ -1472,9 +1475,10 @@ printf "\n"
 fi
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null || \
-   $lsmodpath|$greppath -e xt_set -e ip_set -e || \
-   echo "The ipset loadable kernel module is not automatically loaded for you,\
-      you'll have to load it manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
+   $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
+   printf "The ipset loadable kernel module is not automatically loaded for you.\
+\nThis just happens to be the case with the particular Linux distro you're using.\
+\nYou'll have to load the ipset module manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_whitelist hash:ip comment&>/dev/null
 printf "." # insert friendly progress indicators
