@@ -796,7 +796,7 @@ while current_time="$($datepath)";[[ -f "$poofitee_home_dir/iptables_ruleset.$cu
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || ( [[ -z "$ipsetpath"]] || $ipsetpath save > /etc/iptables/ipset.sets )
+$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
 backup_result="$?"
 printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
