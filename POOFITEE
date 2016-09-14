@@ -796,7 +796,7 @@ while current_time="$($datepath)";[[ -f "$poofitee_home_dir/iptables_ruleset.$cu
      sleep 1
 done
 $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
+$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || ( [[ -z "$ipsetpath"]] || $ipsetpath save > /etc/iptables/ipset.sets )
 backup_result="$?"
 printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
@@ -1468,7 +1468,10 @@ printf "\n"
      printf "." # insert friendly progress indicators
 fi
 printf "." # insert friendly progress indicators
-$ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null
+$ipsetpath create poofitee_blacklist hash:ip comment &>/dev/null || \
+   $lsmodpath|$greppath -e xt_set -e ip_set -e || \
+   echo "The ipset loadable kernel module is not automatically loaded for you,\
+      you'll have to load it manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
 printf "." # insert friendly progress indicators
 $ipsetpath create poofitee_whitelist hash:ip comment&>/dev/null
 printf "." # insert friendly progress indicators
@@ -2601,9 +2604,18 @@ get_1_addr_from_bunch() {
           ! [[ -z "$emailadd" ]] && ! [[ -z "$emailpw" ]] && break
           done
 }
+cat <<-EOF
+POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS
 
-printf "POOFITEE is currently available in experimental status.  Your suggestions for\
-\nimprovements are solicited and welcome ... "
+Specifically -
+ - no integrated dependency support is provided
+ - no uninstall feature is provided
+ - If the ipset loadable kernel module is not automatically loaded for you,
+      you'll have to load it manually and restart poofitee installer
+
+Your suggestions for improvements are solicited and
+welcome.  Use the POOFITEE Wiki to offer them..."
+EOF
 press_a_key
 clear
 #Why we use whereis instead of locate is because locate will see too many directories...like "Downloads" and, in the event of VMWare being present, the files of other virtual machines.
@@ -2623,15 +2635,12 @@ until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[
 done
 if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
 whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
-unamepath="$($whereispath $binaryflag uname)"
-unamepath="${unamepath#*:}";unamepath="${unamepath# }";unamepath="${unamepath%% *}"
-sortpath="$($whereispath $binaryflag sort)"
-sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
-headpath="$($whereispath $binaryflag head)"
-headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
+unamepath="$($whereispath $binaryflag uname)";unamepath="${unamepath#*:}";unamepath="${unamepath# }";unamepath="${unamepath%% *}"
+sortpath="$($whereispath $binaryflag sort)";sortpath="${sortpath#*:}";sortpath="${sortpath# }";sortpath="${sortpath%% *}"
+headpath="$($whereispath $binaryflag head)";headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
 filepath="$($whereispath $binaryflag file)";filepath="${filepath#*:}";filepath="${filepath# }";filepath="${filepath%% *}"
 digpath="$($whereispath $binaryflag dig)";digpath="${digpath#*:}";digpath="${digpath# }";digpath="${digpath%% *}"
-
+lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodpath="${lsmodpath# }";lsmodpath="${lsmodpath%% *}"
 # The reject and exit notices should be in order of how extensive of upgrades would be required.  Entire computer first, then OS, then executable version
 #  I haven't yet sorted them in that order
 
