@@ -362,8 +362,7 @@ if ! [[ -z $mailpath ]];then
           fi
           if ! [[ -z "$mailadd" ]];then
                printf "Sending a test email to $mailadd..."
-               eval "$mailcmd $mailadd"
-               wait
+               eval "$timeout 10 $mailcmd $mailadd"
                if [[ "$?" == "0" ]];then
                     printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                     read -r -n1
