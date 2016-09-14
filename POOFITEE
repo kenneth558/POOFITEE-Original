@@ -795,11 +795,14 @@ printf "\nPlease wait while your $1 iptables ruleset is backed up..."
 while current_time="$($datepath)";[[ -f "$poofitee_home_dir/iptables_ruleset.$current_time" ]];do
      sleep 1
 done
-$iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
-$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
-backup_result="$?"
-printf "\nA copy of your $1 iptables ruleset is backed up in\
+if ! [[ -z "$iptabsavepath""$netfiltperspath" ]];then
+     $iptablespath-save > "$poofitee_home_dir/iptables_ruleset.$current_time" 
+     $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null
+     backup_result="$?"
+     [[ "$backup_result" ]] && printf "\nA copy of your $1 iptables ruleset is backed up in\
 \n\n$poofitee_home_dir/iptables_ruleset.$current_time\n\n"
+fi
+[[ "$backup_result" ]] && $ipsetpath save > /etc/iptables/ipset.sets 2>/dev/null || backup_result="$?"
 return $(($backup_result))
 }
 find_first_reference_to_internal_interface () {
