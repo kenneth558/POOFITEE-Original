@@ -3137,10 +3137,10 @@ until ! [ -z $answer ];do
          done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
 if ! [[ -z "$ipsetpath" ]];then
      $ipsetpath list -t >&/dev/null || \
-     $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
-     printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
+     ( $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
+     ( printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
 \nThis just happens to be the case with the particular Linux distro you're using.\
-\nYou'll have to load the ipset module manually and restart poofitee installer." && exit #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
+\nYou'll have to load the ipset module manually and restart poofitee installer." && exit )) #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
 fi
          while true ;do
              if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
