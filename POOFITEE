@@ -625,7 +625,7 @@ if ! [[ \$(sudo $ipsetpath add \$1 \$2 comment "\$3"  1>/dev/null 2>"$poofitee_h
                     if [[ "\$(sudo $ipsetpath test \$cidrset "\$ipaddtmp" 2>&1)" =~ NOT ]];then
                          testrange="\$((sudo $ipsetpath list \$cidrset;echo \${ipaddtmp%','*})|$tailpath -n+8|$sortpath -Vk1|$greppath -wB1 \${ipaddtmp%','*} >"$poofitee_home_dir/ramdisk/grepout";$headpath -n -1 <"$poofitee_home_dir/ramdisk/grepout"| $awkpath '{print substr(\$1,1,index(\$1,",")-1)}')"
                          if ! [[ -z "\$testrange" ]] && (sudo $ipsetpath create test_cidr hash:net maxelem 1&>/dev/null;sudo $ipsetpath f test_cidr;sudo $ipsetpath add test_cidr "\$testrange";sudo $ipsetpath test test_cidr \${ipaddtmp%','*} 2>&1|$greppath -v NOT  &>/dev/null);then
-                              eval "sudo $ipsetpath add \$cidrset $($headpath -n -1 <"$poofitee_home_dir/ramdisk/grepout"|$awkpath '{print substr(\$1,1,index(\$1,",")-1)}')\$sock \$commenttmp"
+                              eval "sudo $ipsetpath add \$cidrset \$($headpath -n -1 <"$poofitee_home_dir/ramdisk/grepout"|$awkpath '{print substr(\$1,1,index(\$1,",")-1)}')\$sock \$commenttmp"
                               sudo $ipsetpath test \$cidrset \$ipaddtmp 2>&1|$greppath -v NOT &>/dev/null && eval "sudo $ipsetpath del \$1 \$ipaddtmp &>/dev/null"
                          else
                               $timeoutpath 3 whois \${ipaddtmp%','*} 2>/dev/null| \
