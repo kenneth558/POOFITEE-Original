@@ -362,7 +362,7 @@ if ! [[ -z $mailpath ]];then
           fi
           if ! [[ -z "$mailadd" ]];then
                printf "Sending a test email to $mailadd..."
-               eval "$timeout 10 $mailcmd $mailadd"
+               eval "$timeoutpath 10 $mailcmd $mailadd"
                if [[ "$?" == "0" ]];then
                     printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                     read -r -n1
@@ -1912,7 +1912,7 @@ while true;do
                   printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
               done
               while ! [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];do # this loop re-tries if no connection file is created in the loop
-                  exec 5>&-;wait
+                  exec 5>&-
                   for MAIL_PROT in pop pop3 mail;do
                        for port in 465 995 110 993;do
                             printf "\rChecking $MAIL_PROT.$inemailprovider:$port\033[K"
@@ -1941,7 +1941,7 @@ while true;do
 # mkfifo fifo doesn't function ideally
               while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a pop connection ${line%:*}"."$outemailprovider"]:"${line#*:}
                   while true;do # This loop for exact settings retry
-                      exec 5>&-;wait
+                      exec 5>&-
                       exec 5<>/dev/tcp/"${line%:*}.$inemailprovider/${line#*:}"
                       printf "\rExecuted the connect of ${line%:*}.$inemailprovider/${line#*:}, now communicating with it for user $inemailacct...\033[K"
                       read -t 2 -u 5 HELO 
@@ -2110,7 +2110,7 @@ MAIL_FROM="$inemailacct@$inemailprovider"
 [ ! -z \${3,S} ] && [ \${3,S} == "s" ] && MAIL_PROT="smtp"
 [ ! -z \${3,S} ] && [ \${3,I} == "i" ] && MAIL_PROT="imap"
 accountname="\${MAIL_FROM%%@*}";domainname="\${MAIL_FROM##*@}"
-exec 5>&-;wait
+exec 5>&-
 exec 5<>/dev/tcp/\$MAIL_PROT"."\$domainname/\$port
 [[ \$- = *i* ]] && echo "Executed the connect, now trying to read..."
 read -t 2 -u 5 HELO # <&5
@@ -2199,7 +2199,6 @@ else
 fi
 if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "SENDING: QUIT";fi
 echo -e "QUIT\\r" >&5
-wait
 exec 5>&-
 EOF
 ) > "$poofitee_home_dir/email_fetch_parse"
@@ -3138,10 +3137,10 @@ until ! [ -z $answer ];do
 if ! [[ -z "$ipsetpath" ]];then
      $ipsetpath list -t >&/dev/null || \
      ( $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
-     ( printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
+     (printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
 \nThis just happens to be the case with the particular Linux distro you're using.\
 \nYou'll have to load the ipset module manually and restart poofitee installer." && exit )) #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
-fi
+fi         
          while true ;do
              if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
@@ -3156,6 +3155,7 @@ fi
                  read -e -r -i "$poofitee_home_dir" poofitee_home_dir
                  echo
                  echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
+#                 echo "poofitee ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                  chmod 0440 /etc/sudoers.d/poofitee
                  $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                  $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
