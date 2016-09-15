@@ -417,7 +417,7 @@ fi
 # with a single call which iptables-persistent alone does not allow.
 #  You're on your own if you choose to depend on some other iptables + $ipsetpath persistence technique.
 # If you come up with something that works well for you, please share it on the POOFITEE wiki forum
-sudo $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || sudo $ipsetpath save > /etc/iptables/ipset.sets
+sudo \$([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || sudo $ipsetpath save > /etc/iptables/ipset.sets
 exit
 
 EOF
@@ -677,7 +677,7 @@ if ! [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[
      elif [[ "\$1" =~ :.*\ poofitee.*blacklist.*IN=eth0\  ]];then
            ipadd=\$(echo "\$1"|$greppath -o 'SRC=.*'|$awkpath '{printf substr(\$1,5)}')
            if ( sudo $ipsetpath test poofitee_static_trusted \$ipadd 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_static_trusted_cidr \$ipadd 2>&1|$greppath NOT &>/dev/null);then #
-           comment=$(echo "\$1"|$awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^DST=") {printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || \$j ~ "^ID" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
+           comment=\$(echo "\$1"|$awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^DST=") {printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || \$j ~ "^ID" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
                 sport=\$(echo "\$comment"|$greppath -o 'SPT=\S*'|$awkpath '{printf substr(\$1,5)}')
                 if ( sudo $ipsetpath test poofitee_static_trusted_socket \$ipadd,\$sport 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_stat_trustd_cidr_sockt \$ipadd,\$sport  2>&1|$greppath NOT &>/dev/null);then
                      add_to_set poofitee_blacklist \$ipadd "\$comment"
@@ -734,7 +734,7 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
            if [[ "\$3x" =~ fetch\ email ]];then
                 nohup "$poofitee_home_dir/email_fetch_parse" &
            elif [[ "\$3x" =~ static_trust ]];then
-                sport=$(echo "\$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr(\$1,5)}')
+                sport=\$(echo "\$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr(\$1,5)}')
                 sudo $ipsetpath add poofitee_static_trusted_socket \$1,\$sport comment "\$2" &>/dev/null
                 sudo $ipsetpath add poofitee_static_trusted_socket \$1,udp:\$sport comment "\$2" &>/dev/null
                 if [ $sport == "443" ];then
@@ -753,7 +753,7 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
           if [[ "\$3x" =~ whitelist ]];then
                 "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
           elif [[ "\$3x" =~ knock ]] || [[ "\$3x" =~ public\ service\ after\ blacklis ]]; then
-               echo "if [[ "$(sudo $ipsetpath test whitelist \$1 2>&1)" =~ NOT ]]; then sudo $ipsetpath add blacklist \$1 comment \"\$2\" >/dev/null 2>/dev/null;fi"|at now +3 minute
+               echo "if [[ "\$(sudo $ipsetpath test whitelist \$1 2>&1)" =~ NOT ]]; then sudo $ipsetpath add blacklist \$1 comment \"\$2\" >/dev/null 2>/dev/null;fi"|at now +3 minute
           elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
                sudo $ipsetpath del poofitee_blacklist "\$1"
           fi
@@ -761,11 +761,11 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
      #  Notice that the email-reader triggering port is gotten from iptables INPUT chain rule with email-reader in its comment
      #  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
      #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
-#     [[ $($greppath -c "#running" <($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
-#     if [ $(printf "$3"|$greppath -c "fetch email") -gt 0 ];then
+#     [[ \$($greppath -c "#running" <($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
+#     if [ \$(printf "$3"|$greppath -c "fetch email") -gt 0 ];then
 #             nohup "$poofitee_home_dir/email_fetch_parse" &
 #     fi
-#elif [[ "$1"  =~ \ $(hostname)\ .*:\ .+ ]];then
+#elif [[ "$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
 #     $ipsetpath remove blacklist $1 >/dev/null 2>/dev/null
 #     echo "$1"|$mailpath -s "$email_subjectline_front""auth.log entry" "$recipient_list"
      fi
@@ -2184,9 +2184,9 @@ if [ \$((numofemails)) -gt -1 ]; then
                 if [[ \$((\$(ls -s /etc/iptables/rules.v4|$awkpath '{print \$1}'))) -lt 4 ]];then
                       cp "\$(ls -slt \$poofitee_home_dir/preparedness/rules*|$awkpath '{if (\$1>4) {print \$NF;exit}}')" "/etc/iptables/rules.v4"
                 fi
-                sudo $([[ -z "$iptabrestorepath" ]] && printf "$netfiltperspath restore" || printf "$iptabrestorepath")
+                sudo \$([[ -z "$iptabrestorepath" ]] && printf "$netfiltperspath restore" || printf "$iptabrestorepath")
                 $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null\/d' > "\$poofitee_home_dir/cronentries"
-                [[ \$(($($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|sudo $crontabpath -
+                [[ \$((\$($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|sudo $crontabpath -
           else
               script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
           fi
@@ -2447,11 +2447,11 @@ fi
 #modify the here-doc section below to produce your desired email notification
 (cat <<EOM
 \$webpageprotocol://$ip_from_resolver
-\$(sudo $iptablespath -w -nL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf $(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
+\$(sudo $iptablespath -w -nL PREROUTING -t nat|$awkpath '{if (\$1=="DNAT") {for (i=6;i<=NF;i++) if (\$i ~ "^dport") {printf \$(i+1)} else if (\$i ~ "^dpt") {printf substr(\$i,5,length(\$i)-4)}}print ""}')
 ssh user@\$ip_from_resolver
 hping3 -V -S -c 1 -n -p port_number[s]  \$ip_from_resolver
 #adjust the protocol to the targeted service
-http://"${ip_from_internal_interface[0]}"."${ip_from_internal_interface[1]}"."${ip_from_internal_interface[2]}"."$((${ip_from_internal_interface[0]}+1))"
+http://"${ip_from_internal_interface[0]}"."${ip_from_internal_interface[1]}"."${ip_from_internal_interface[2]}"."\$((${ip_from_internal_interface[0]}+1))"
 ssh user@$ip_from_internal_interface
 EOM
 ) | $mailpath -s "\$emailsubjectline" \$emaildestination
