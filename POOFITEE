@@ -686,7 +686,7 @@ if ! [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[
      elif [[ "\$1" =~ :.*\ poofitee.*out.*trust ]] && [[  "\$1" =~ IN=eth1\ OUT=eth0\  ]];then
                 ipadd=\$(echo "\$1"|$greppath -o 'DST=.*'|$awkpath '{printf substr(\$1,5)}')
                 comment=\$(echo "\$1"|$awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^DST=") {printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || \$j ~ "^ID" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} i=NF+1}}}';printf " ";printf "\$1"|$greppath -o '[^ ]\+eth0' || echo)
-                dport=\$(echo "$comment"|$greppath -o 'DPT=\S*'|$awkpath '{printf substr(\$1,5)}')
+                dport=\$(echo "\$comment"|$greppath -o 'DPT=\S*'|$awkpath '{printf substr(\$1,5)}')
                 add_to_set poofitee_static_trusted_socket "\$ipadd,\$dport" "\$comment"
                 add_to_set poofitee_static_trusted_socket "\$ipadd,udp:\$dport" "\$comment"
                 if [[ "\$dport" == "443" ]];then
@@ -706,7 +706,7 @@ if ! [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[
 #     $greppath --line-buf ' SRC='|$greppath --line-buf -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\" \""; for (j=6;j<i;j++) {printf " "\$j} print "\"";i=NF+1}}}'
 else
 
-if [[ -z "$3" ]] || [[ "\$3" =~ blacklist ]] && ! ( [[ "\$2" =~ DPT=[45]\S\S\S\S\s ]] && ( [[ "\$2" =~ SPT=587\  ]] || [[ "\$2" =~ SPT=443\  ]] || [[ "\$2" =~ SPT=80\  ]] || [[ "\$2" =~ SPT=993\  ]] ));then
+if [[ -z "\$3" ]] || [[ "\$3" =~ blacklist ]] && ! ( [[ "\$2" =~ DPT=[45]\S\S\S\S\s ]] && ( [[ "\$2" =~ SPT=587\  ]] || [[ "\$2" =~ SPT=443\  ]] || [[ "\$2" =~ SPT=80\  ]] || [[ "\$2" =~ SPT=993\  ]] ));then
      if (sudo $ipsetpath test poofitee_static_trusted \$1 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_static_trusted_cidr \$1 2>&1|$greppath NOT &>/dev/null);then
          sport=\$(echo "\$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr(\$1,5)}')
              if ( sudo $ipsetpath test poofitee_static_trusted_socket \$1,\$sport 2>&1|$greppath NOT &>/dev/null && sudo $ipsetpath test poofitee_stat_trustd_cidr_sockt \$1,\$sport  2>&1|$greppath NOT &>/dev/null);then
@@ -737,11 +737,11 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
                 sport=\$(echo "\$2"|$greppath -o 'SPT=\S*\s'|$awkpath '{printf substr(\$1,5)}')
                 sudo $ipsetpath add poofitee_static_trusted_socket \$1,\$sport comment "\$2" &>/dev/null
                 sudo $ipsetpath add poofitee_static_trusted_socket \$1,udp:\$sport comment "\$2" &>/dev/null
-                if [ $sport == "443" ];then
+                if [ \$sport == "443" ];then
                      sport=80
                      sudo $ipsetpath add poofitee_static_trusted_socket \$1,\$sport comment "\$2" &>/dev/null
                      sudo $ipsetpath add poofitee_static_trusted_socket \$1,udp:\$sport comment "\$2" &>/dev/null
-                elif [ $sport == "80" ];then
+                elif [ \$sport == "80" ];then
                      sport=443
                      sudo $ipsetpath add poofitee_static_trusted_socket \$1,\$sport comment "\$2" &>/dev/null
                      sudo $ipsetpath add poofitee_static_trusted_socket \$1,udp:\$sport comment "\$2" &>/dev/null
@@ -753,7 +753,7 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
           if [[ "\$3x" =~ whitelist ]];then
                 "$poofitee_home_dir/openall.sh" "\$1" "by knocking"
           elif [[ "\$3x" =~ knock ]] || [[ "\$3x" =~ public\ service\ after\ blacklis ]]; then
-               echo "if [[ "\$(sudo $ipsetpath test whitelist \$1 2>&1)" =~ NOT ]]; then sudo $ipsetpath add blacklist \$1 comment \"\$2\" >/dev/null 2>/dev/null;fi"|at now +3 minute
+               echo "if [[ "\$(sudo $ipsetpath test whitelist \$1 2>&1)" =~ NOT ]]; then sudo $ipsetpath add blacklist \$1 comment "\$2" >/dev/null 2>/dev/null;fi"|at now +3 minute
           elif [ "\$2x" == "-rx" ] || [ "\$3x" == "-rx" ];then
                sudo $ipsetpath del poofitee_blacklist "\$1"
           fi
@@ -762,12 +762,12 @@ if [[ \$1 =~ ^((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-
      #  That rule will look like this:  LOG        tcp  --  eth0   *       0.0.0.0/0            0.0.0.0/0            tcp dpt:nnnnn /* This rule ensures email-reader port knock won't get ignored */ LOG flags 0 level 4
      #  The rule would be created with a command like this (change the 7 and nnnnn to fit you): iptables -wI INPUT 7 -i eth0 -p tcp --dport nnnnn -j LOG -m comment --comment "This rule ensures email-reader port knock won't get ignored"
 #     [[ \$($greppath -c "#running" <($tailpath -n-1 "$poofitee_home_dir/email_fetch_parse")) -gt 0 ]] && exit #the user needed to send that email plenty early before knocking this
-#     if [ \$(printf "$3"|$greppath -c "fetch email") -gt 0 ];then
+#     if [ \$(printf "\$3"|$greppath -c "fetch email") -gt 0 ];then
 #             nohup "$poofitee_home_dir/email_fetch_parse" &
 #     fi
-#elif [[ "$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
-#     $ipsetpath remove blacklist $1 >/dev/null 2>/dev/null
-#     echo "$1"|$mailpath -s "$email_subjectline_front""auth.log entry" "$recipient_list"
+#elif [[ "\$1"  =~ \ \$(hostname)\ .*:\ .+ ]];then
+#     $ipsetpath remove blacklist \$1 >/dev/null 2>/dev/null
+#     echo "\$1"|$mailpath -s "\$email_subjectline_front""auth.log entry" "\$recipient_list"
      fi
 else
      sudo $ipsetpath del poofitee_blacklist \$1 &>/dev/null
