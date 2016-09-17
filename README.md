@@ -1,6 +1,6 @@
 # POOFITEE 
 
--- as of 2016-09-16 operational, but future expansion still planned including source code cleanup and screen layout enhancement
+-- as of 2016-09-16 operational with Ubuntu server CLI, Raspberry Pi, and Pine A64 (for which you'll have to manually load the ipset module for iptables) but future expansion still planned including source code cleanup and screen layout enhancement
 
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
 
