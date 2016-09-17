@@ -1,4 +1,7 @@
-# POOFITEE  coming soon
+# POOFITEE 
+
+-- as of 2016-09-16 operational, but future expansion still planned including source code cleanup and screen layout enhancement
+
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
 
 Linux iptables plus scripting firewall  "NOT COMPATIBLE WITH BSD NOR MAC SYSTEMS"
