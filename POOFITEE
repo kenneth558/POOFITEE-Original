@@ -2715,6 +2715,7 @@ else
      awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
 fi
 #force these to be global variables, we need them to perform the install:
+firewall_external_interface_not_in_privateIP_ranges=""
 gawkpath=""
 mawkpath=""
 pythonpath="$($whereispath $binaryflag python)"
@@ -2780,7 +2781,8 @@ startscreen="\nPOOFITEE\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\`\
 \n\n      (f) firewalling\
 \n\n      (e) email remote control\
 \n\n      ("
-if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]];then
+if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]] \
+       && [[ firewall_external_interface_not_in_privateIP_ranges =~ 123 ]];then
      startscreen+="d) dynamic IP address change notifier NOT for your configuration";notdhcp="notdhcp"
 else
      startscreen+="d) dynamic IP address change notifier"
