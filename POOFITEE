@@ -1,4 +1,5 @@
 #! /bin/bash
+version="version 0.0.01"
 #
 # Downloading this script: YOU SHOULDN'T COPY/PASTE BECAUSE THERE ARE ADJACENT SPACES THAT WOULD GET CONSOLIDATED THAT WAY.  Instead, download with raw or download the file
 #
@@ -426,6 +427,20 @@ chown poofitee "$poofitee_home_dir/openall.sh"
 chmod 700 "$poofitee_home_dir/openall.sh"
 printf "\nCreated whitelisting script\n"
 }
+firewall_external_interface_not_in_privateIP_ranges () {
+localresult=""
+IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
+if [[ "${octets[0]}" != "10" ]];then
+     localresult+="1"
+fi
+if [[ "${octets[0]}" != "172" ]] || [[ $((${octets[1]})) -lt 16 ]] || [[ $((${octets[1]})) -ge 32 ]];then
+     localresult+="2"
+fi
+if [[ "${octets[0]}" != "192" ]] || [[ "${octets[1]}" != "168" ]];then
+     localresult+="3"
+fi
+return localresult
+}
 adjust_for_private_ip () {
 $ipsetpath del poofitee_bogons,privateIPs_cidr  10.0.0.0/8 &>/dev/null
 $ipsetpath del poofitee_bogons,privateIPs_cidr  172.16.0.0/12 &>/dev/null
@@ -433,20 +448,15 @@ $ipsetpath del poofitee_bogons,privateIPs_cidr 192.168.0.0/16 &>/dev/null
 $ipsetpath add poofitee_static_trusted_cidr 10.0.0.0/8 &>/dev/null
 $ipsetpath add poofitee_static_trusted_cidr 172.16.0.0/12 &>/dev/null
 $ipsetpath add poofitee_static_trusted_cidr 192.168.0.0/16 &>/dev/null
-IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
-firewall_has_privateIP=""
-if [[ "${octets[0]}" != "10" ]];then
-     firewall_external_interface_not_in_privateIP_ranges+="1"
+if [[ firewall_external_interface_not_in_privateIP_ranges =~ 1 ]];then
      $ipsetpath add poofitee_bogons,privateIPs_cidr  10.0.0.0/8 &>/dev/null
      $ipsetpath del poofitee_static_trusted_cidr  10.0.0.0/8 &>/dev/null
 fi
-if [[ "${octets[0]}" != "172" ]] || [[ $((${octets[1]})) -lt 16 ]] || [[ $((${octets[1]})) -ge 32 ]];then
-     firewall_external_interface_not_in_privateIP_ranges+="2"
+if [[ firewall_external_interface_not_in_privateIP_ranges =~ 2 ]];then
      $ipsetpath add poofitee_bogons,privateIPs_cidr  172.16.0.0/12 &>/dev/null
      $ipsetpath del poofitee_static_trusted_cidr  172.16.0.0/12 &>/dev/null
 fi
-if [[ "${octets[0]}" != "192" ]] || [[ "${octets[1]}" != "168" ]];then
-     firewall_external_interface_not_in_privateIP_ranges+="3"
+if [[ firewall_external_interface_not_in_privateIP_ranges =~ 3 ]];then
      $ipsetpath add poofitee_bogons,privateIPs_cidr 192.168.0.0/16 &>/dev/null
      $ipsetpath del poofitee_static_trusted_cidr  192.168.0.0/16 &>/dev/null
 fi
