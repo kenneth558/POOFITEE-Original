@@ -2624,9 +2624,9 @@ Specifically -
  - No ability to differentiate between nor work with initsystem types.
     For persistence of this installation, you're on your own.
 
- - no integrated dependency support is provided
+ - No integrated dependency support is provided
 
- - no uninstall feature is provided
+ - No uninstall feature is provided
 
  - If loadable modules for iptables are not automatically loaded in your Linux
       kernel as it is configured, some options of poofitee will end execution
