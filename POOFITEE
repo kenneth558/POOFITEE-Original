@@ -2748,9 +2748,12 @@ adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";add
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)"
 rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
-eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
-    || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
-    || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
+
+# the following is not portable with Arch linux, et. al. eval command
+# eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > \"distributionby.${0#*/}\"" \
+#    || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
+#    || eval "echo $OSTYPE > \"distributionby.${0#*/}\""
+
 # eval "$ifconfigpath -a|$awkpath -F'^ ' '{print \$1}'|$awkpath '{print \$1}'|$greppath -vw lo|$xargspath" > "interfacesby.${0#*/}"
 external_net_interface="$($ippath -o route get 8.8.8.8 2>/dev/null|$awkpath '{for (i=1;i<=NF;i++) {if ($i=="dev"){ print $(i+1);exit }}}')"
 if [ -z "$external_net_interface" ];then
@@ -3158,13 +3161,13 @@ if ! [[ -z "$ipsetpath" ]];then
 \nis a web page that may help you with that:\
 \nhttp://www.fwbuilder.org/4.0/docs/users_guide5/Appendix.shtml\n" && exit )) #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
 fi         
+         clear
          while true ;do
              if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
                   poofitee_home_dir="$($getentpath passwd|$greppath -w ^poofitee|$awkpath -F: '{printf $6}')"
              else
                   poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
                   [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$poofitee_home_dir"
-                  clear
                   printf "Specify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
