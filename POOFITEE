@@ -2621,6 +2621,9 @@ POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS
 
 Specifically -
 
+ - No ability to differentiate between nor work with initsystem types.
+    For persistence of this installation, you're on your own.
+
  - no integrated dependency support is provided
 
  - no uninstall feature is provided
