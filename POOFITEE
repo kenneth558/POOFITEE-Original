@@ -2664,28 +2664,64 @@ digpath="$($whereispath $binaryflag dig)";digpath="${digpath#*:}";digpath="${dig
 lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodpath="${lsmodpath# }";lsmodpath="${lsmodpath%% *}"
 # The reject and exit notices should be in order of how extensive of upgrades would be required.  Entire computer first, then OS, then executable version
 #  I haven't yet sorted them in that order
-
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you pass it on"
-min_bash_version_tested="4.3.11";! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]] && \
-   trap "echo If you had run-time errors, your version of bash might be too old. $exitmsg" EXIT
-if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then printf "This firewalling solution does not accommodate Mac nor BSD due to"\
-"\niptables and crontab dysfunction in those *NIXes";exit;fi
+
+dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
+if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then
+    failreason="\n  This firewalling solution does not accommodate Mac nor BSD due to \
+iptables and crontab dysfunction in those *NIXes\n"
+fi
 if ! [[ "$($filepath "/bin/bash")" =~ ^/bin/bash:\ ELF ]];then
-    cat <<EOF
-This version of POOFITEE is unable to run on non-ELF platforms such as yours
-simply because the cron 'tail -F ... /var/log/syslog' entry uses stdbuf, which
-is available only on OS platforms using ELF.  Sorry..."
-EOF
+    failreason+="\n  This version of POOFITEE is unable to run on non-ELF platforms \
+such as yours simply because the cron 'tail -F ... /var/log/syslog' entry uses stdbuf, \
+which is available only on OS platforms using ELF.\n"
+fi
+if ! [[ -z "$failreason" ]];then
+    failreason="\nTHANK YOU FOR TRYING POOFITEE INSTALLER, BUT YOUR COMPUTER CANNOT \
+RUN IT FOR THE FOLLOWING REASON[S]:\n\n$failreason\nPress any key..."
+    localbacktitle="POOFITEE  $version                                      Exit Notice"
+    if ! [[ -z "$dialogpath" ]];then
+        "$dialogpath" --title "$localtitle" --backtitle "$localbacktitle" --scrollbar --infobox "$failreason" 0 0
+    elif ! [[ -z "$whiptailpath" ]];then
+        "$whiptailpath" --title "$localtitle" --backtitle "$localbacktitle" --scrollbar --infobox "$failreason" 0 0
+    else
+        printf "$failreason"
+    fi
+    read -sn1;read -rst 0.001 -n3 discard
     exit
 fi
-if ! [ "$(whoami)" == "root" ];then 
-     cat <<-EOF
-	Without being launched by su, this script won't be able to do anything except
-	display menus.  No control of this computer can be made by this script unless
-	re-launched by root.  
-	EOF
-     press_a_key
+min_bash_version_tested="4.3.11"
+if ! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]];then
+   localwarning+=" run-time errors, your version of bash might be too old."
+   trap "echo If you had$localwarning $exitmsg" EXIT
+   localwarning="\nThe bash shell version running now is older than what this script was written \
+and tested in.  If you experience$localwarning\n"
+fi
+if ! [ "$(whoami)" == "root" ];then
+    ! [[ -z "$localwarning" ]] && localwarning+="\nAdditionally, \n"
+    localwarning+="\nWithout being launched by su, this script won't be able to do anything except \
+display menus.  No installation on this computer can be made by this script unless \
+re-launched by root.\n"
+fi
+if [[ -z "$sudopath" ]];then
+    ! [[ -z "$localwarning" ]] && localwarning+="\nAdditionally, \n"
+    localwarning+="\nThe actual sudo command is necessary for several aspects of this installer, \
+but cannot be found.  Please install it before continuing.  Use another window or end this \
+script and restart it later.  In Arch Linux you may install sudo using \
+the following command:\n\n    pacman -Syy base-devel\n"
+fi
+if ! [[ -z "$localwarning" ]];then
+    localwarning="\nYOUR OPERATING ENVIRONMENT IS NOT ENTIRELY ADEQUATE:\n\n$localwarning\n\npress any key, Ctrl-c aborts..."
+    if ! [[ -z "$dialogpath" ]];then
+        "$dialogpath" --title "$localtitle" --backtitle "$localbacktitle" --scrollbar --infobox "$localwarning" 0 0
+    elif ! [[ -z "$whiptailpath" ]];then
+        "$whiptailpath" --title "$localtitle" --backtitle "$localbacktitle" --scrollbar --infobox "$localwarning" 0 0
+    else
+        printf "$localwarning"
+    fi
+    read -sn1;read -rst 0.001 -n3 discard
 fi
 #  Beginning of copyright message
 clear
