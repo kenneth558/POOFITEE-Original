@@ -141,7 +141,7 @@ switch_from_more_common_package_to_less_common_package () {
                  fi
 }
 ensure_connection () {
-printf "Ensuring an Internet connection exists.  Please wait..."
+# printf "Ensuring an Internet connection exists.  Please wait..."
 # if [[ -z "$digpath" ]];then
           while ! [[ "$(ping -c1 opendns.com &>/dev/null;echo "$?")" == "0" ]];do
                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected or to ignore...";read -rsn 1;read -rst 0.001 -n3
@@ -153,7 +153,7 @@ printf "Ensuring an Internet connection exists.  Please wait..."
 #               break
 #          done
 #fi
-echo
+# echo
 }
 what_needs_to_be_installed () {
 [[ -z "$inotifywaitpath" ]] && inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
@@ -3021,7 +3021,7 @@ until ! [ -z $answer ];do
 #                  printf "There are $(what_needs_to_be_installed;echo "$?") things needing to be installed";read -srn1
                   [[ "$?" == "0" ]] && break 2
                   ground_zero_install_needs="$not_installed_single_line"
-                  installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman -S pkg install  pkg_add "" xbps-install -Sy brew install port install)
+                  installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman "-S --noconfirm" pkg install  pkg_add "" xbps-install -Sy brew install port install)
 
 #                  installers=("DEBIAN_FRONTEND=noninteractive apt-get" "install --fix-missing --force-yes" dnf install yum install zypper install emerge "" pacman -S pkg install pkg_add "" xbps-install -Sy brew install port install)
                   for installer in {0..10};do
@@ -3066,7 +3066,6 @@ until ! [ -z $answer ];do
             if ! [ -z "$installerpath" ] && ! [ -z "$not_installed_single_line" ];then # install what is neededpress 
                  if [ -z "$been_here_before" ];then
                       ensure_connection
-                      if [[ "$installerpath" =~ apt-get ]];then
                            printf "Installation of\n$notinstalled\n\nis required next.  Press u to update your system's package installer first,\
 \npress b to both update your system's package installer & have it run autoremove,\
 \nany other letter or number key not to update the installer first.  \n"
@@ -3078,7 +3077,11 @@ until ! [ -z $answer ];do
                                 printf "Cleaning up with apt-get autoremove\n"
                                 while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                                 progress_dots="$!"
-                                apt-get autoremove -y &>/dev/null
+                                if [[ "$installerpath" =~ apt-get ]];then
+                                    apt-get autoremove -y &>/dev/null
+                                elif [[ "$installerpath" =~ pacman ]];then
+                                    pacman -Ru --noconfirm
+                                fi
                                 kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                                 REPLY="$installeranswer"
                            fi
@@ -3087,14 +3090,20 @@ until ! [ -z $answer ];do
                                 printf "Updating your system\'s package installer\n"
                                 while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                                 progress_dots="$!"
-                                apt-get update &>/dev/null
+                                if [[ "$installerpath" =~ apt-get ]];then
+                                    apt-get update &>/dev/null
+                                elif [[ "$installerpath" =~ pacman ]];then
+                                    pacman -Syuu --noconfirm
+                                fi
                                 kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                            fi
                            been_here_before="."
-                      fi
                  fi
                  printf "\nInstalling\n"
-                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
+                 for pkg in $(printf "$not_installed_single_line");do
+                     printf "Installing $pkg as in $sudopath $installerpath\n"
+                     eval "$xargspath -a <(printf "$pkg") -r -- $sudopath $installerpath" # 2>/dev/null
+                 done
                  what_needs_to_be_installed &>/dev/null
 # make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
@@ -3144,7 +3153,11 @@ until ! [ -z $answer ];do
                            printf "Updating your system\'s package installer\n"
                            while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
-                           apt-get update &>/dev/null
+                           if [[ "$installerpath" =~ apt-get ]];then
+                              apt-get update &>/dev/null
+                           elif [[ "$installerpath" =~ pacman ]];then
+                              pacman -Syuu --noconfirm
+                           fi
                            kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                       else
                            printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
