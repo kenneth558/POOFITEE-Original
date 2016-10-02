@@ -2939,7 +2939,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 index=$((index + 1))
             done
         done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-#        printf -- "$answer" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf -- "$answer\n" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     radiobox|radiolist)
         printf -- "$1\n"| \
@@ -3010,7 +3010,7 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
                 index=$((index + 1))
             done
         done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-#        printf -- "$answer" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf -- "$answer\n" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     esac
 else
@@ -3222,7 +3222,7 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
@@ -3591,12 +3591,10 @@ until ! [[ -z "$answer" ]];do
     fi
 #    [ "$?" == "0" ] && exit
 #clear
-    if [[ -z "$answer" ]];then
-        while read line;do # change numbers to letters for compatibility with original code
-            [[ -z "$line" ]] || answer+=${chararray[line]}
-        done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-    fi
-#printf "$answer\n"
+    answer=""
+    while read line;do # change numbers to letters for compatibility with original code
+        [[ -z "$line" ]] || answer+=${chararray[$((line))]}
+    done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
 #    rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     if [[ $answer =~ q ]];then
         $tputpath cup $((quitrow)) 0
