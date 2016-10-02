@@ -5,6 +5,7 @@ version="version 0.0.1"
 #
 # Copyright: see comments below and the notice displayed during runtime for the details
 # PROJECT NAME: POOFITEE: "Packet filtering Owner Only access linux Firewall - the system is Invisible To Everyone Else" 
+# TODO: Determine why a file named '1' remains in local directory after postfix configure
 # TODO: make undo feature in case of merely testing or changes of heart
 # TODO: convert to CIDR address consolidation where port and tcp flags for individual addresses would be tracked in a separate file instead of in the iptables rule.
 # TODO: accommodate other countries' different date, etc. formatting preferences in log files, directory listings, etc.
@@ -502,7 +503,7 @@ if [[ -z "$user_poofitee_created_this_run" ]];then
      fi
 fi
 ! [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
-(printf "$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
+(printf "\n$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
 \n\nConfirm you understand that the shell in POOFITEE's crontab is now getting\
 \nchanged which might affect the above entries if they send values out, contain\
 \nquotes, etc.\n"
@@ -2020,7 +2021,7 @@ done
 # programming.
 
 # Example: (roughly, please don't criticize imperfection between the lists)
-#     echo "\$(grep -e "Content-Type: text/plain; charset=UTF-8" -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" <(echo "\$mailcontentline"))" >> $poofitee_home_dir/mailcontent
+#     echo "\$(grep -e "Content-Type: text/plain; charset=UTF-8" -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" <(echo "\$mailcontentline"))" >>$poofitee_home_dir/mailcontent
 #
 # becomes (except the email content header line becomes case-insensitive along with everything else):
 
@@ -2441,7 +2442,7 @@ chown poofitee "$poofitee_home_dir/newdynip.sh"
 chmod 700 "$poofitee_home_dir/newdynip.sh"
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "\n$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+     (printf -- "\n$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
