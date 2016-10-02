@@ -3401,7 +3401,7 @@ facing interface from the following choices, but even so, without Internet acces
 fi
 maintitle="SELECT DESIRED OPTIONS FOR THIS INSTALLATION"
 mainbacktitle="POOFITEE $version  Main Menu"
-mainchecklisttest="\n<center>Select with spacebar/tab/etc. all or any services listed below that \
+mainchecklisttest="\n<center>Select with spacebar/tab... all or any services listed below that \
 you want, then enter/OK\n"
 if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -ne 0 ]] \
        && ! [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ 123 ]];then
