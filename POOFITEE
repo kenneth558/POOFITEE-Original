@@ -3140,38 +3140,14 @@ key=""
 #                                   scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the delete character
 #                                   printf "${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
 #                              fi
-                         else
-print "Did not find match in if statement\n";exit
                          fi
                 ;;
-                 *)
-printf "\n$key\n"
-printf "Did not find match in case construct\n";exit
-;;
                 esac
             key=""
-#exit
             done
-#            [[ -z "$tputpath" ]] && clear
         done
 fi
 <<EOF
-                   elif [[ "$(printf "%d" "'$char")" == "127" ]];then # '
-                     if ! [[ $(( ${horizptr} )) -eq 0 ]];then # exit
-                         horizptr="$(( ${horizptr} - 1 ))"
-                         scratchpad="${scratchpad:0:horizptr}${scratchpad:horizptr+1}" # handles the backspace character
-                         printf "\033[1D${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                     fi
-                   elif [[ -z "$char" ]];then
-                         break
-                   else
-                        horizptr="$(( ${horizptr} + 1 ))"
-                        scratchpad="${scratchpad:0:horizptr-1}$char${scratchpad:horizptr-1}"
-                        printf "$char${scratchpad:horizptr}\033[K\r${scratchpad:0:horizptr}"
-                   fi
-#printf "\nGot to where ready to examine keys in\n"
-#printf "$key\n"
-#exit
 #insert       27,91,50,126,0,
 #home         27,91,72,0,0,
 #page up      27,91,53,126,0,
@@ -3246,7 +3222,7 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
@@ -3615,10 +3591,11 @@ until ! [[ -z "$answer" ]];do
     fi
 #    [ "$?" == "0" ] && exit
 #clear
-    answer=""
-    while read line;do # change numbers to letters for compatibility with original code
-        [[ -z "$line" ]] || answer+=${chararray[line]}
-    done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+    if [[ -z "$answer" ]];then
+        while read line;do # change numbers to letters for compatibility with original code
+            [[ -z "$line" ]] || answer+=${chararray[line]}
+        done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+    fi
 #printf "$answer\n"
 #    rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     if [[ $answer =~ q ]];then
