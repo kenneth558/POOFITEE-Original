@@ -3297,6 +3297,8 @@ kernel as it is configured, some options of poofitee will end execution \
 of this script early and inform you to manually load the ipset module, \
 a one-time necessary event. Currently, poofitee is not advanced enough to \
 load kernel modules itself.\
+\n\n - The source code is full of extraneous reminders helpful to the script\'s development team.\
+\n\n - Enhancements are being added weekly or even more often\
 \n\n\n<center>Your suggestions for improvements are solicited and \
 welcome.  Use the POOFITEE Wiki to offer them...\
 \n\n\n<center>Copyright 2016 - Kenneth L. Anderson MCSE, RDH, BGS, BT\
