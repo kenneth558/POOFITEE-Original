@@ -3393,8 +3393,8 @@ maintitle="SELECT DESIRED OPTIONS FOR THIS INSTALLATION"
 mainbacktitle="POOFITEE $version  Main Menu"
 mainchecklisttest="\n<center>Select with spacebar/tab... all or any services listed below that \
 you want, then enter/OK\n"
-if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -ne 0 ]] \
-       && ! [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ 123 ]];then
+if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]] \
+       || ! [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ ^123$ ]];then
     notdhcp="notdhcp"
     mainchecklisttest+="<center>(Not available with this IP address: dynamic IP address change notifier)\n"
 fi
@@ -3589,10 +3589,10 @@ until ! [[ -z "$answer" ]];do
 #clear
     answer=""
     while read line;do # change numbers to letters for compatibility with original code
-        [[ -z "$line" ]] || answer+=${chararray[$((line))]}
+        ! [[ -z "$line" ]] && answer+=${chararray[$((line))]}
     done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
 #    rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-    if [[ $answer =~ q ]];then
+    if [[ $answer =~ q ]] || [[ ${#answer} -eq 0 ]];then
         $tputpath cup $((quitrow)) 0
         exit
     fi
