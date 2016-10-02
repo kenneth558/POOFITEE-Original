@@ -2759,6 +2759,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        [[ -z "$whiptailpath" ]] && press_a_key # Would need with infobox
     ;;
     yesno)
         printf -- "$1\n"| \
@@ -3056,22 +3057,10 @@ else
         layitout "$1"
         printf "\033[6n" ; read -sd R cp;cp="${cp#*[}"
         quitrow="$((${cp%;*} - 2))"
+        [[ "$2" =~ ^msgbox ]] && press_a_key
         highlightedentryid=0
-#Select the ones that were ON, place in some lookup or hash storage, and on exit in /tmp/fifos_and_temp_files_for_poofitee_installer/answergui, one per line
-#position the cursor at highlightedentryid
-#for item in "${selection[@]}";do
-#    printf -- "$item\n"
-#done
-#for item in "${selection_select_status[@]}";do
-#    printf -- "$item\n"
-#done
-#exit
-# leave cursor at entry indicated by highlightedentryid
-#set -x
-! [[ -z  "$tputpath" ]] && $tputpath cup ${selectionrow[highlightedentryid]} ${selectioncol[highlightedentryid]}
-#        ! [[ "$2" =~ ^radio|^check|^menu ]] && (read -rsn 1;read -rst 0.001 -n4 discard)
-#set -x
-key=""
+        ! [[ -z  "$tputpath" ]] && $tputpath cup ${selectionrow[highlightedentryid]} ${selectioncol[highlightedentryid]}
+        key=""
         while [[ "$2" =~ ^radio|^check|^menu ]];do 
             while IFS= read -rsn1 char;do
                 key+="$(printf "%d" "'$char")," # '
@@ -3610,7 +3599,7 @@ until ! [[ -z "$answer" ]];do
     if [[ $answer =~ \? ]];then
 #        printf "  Since info is selected, no changes are to be made"
         if [[ $answer == "?" ]];then
-            showthis "$ghscreen1" infobox \
+            showthis "$ghscreen1" msgbox \
             "HELPER SCRIPT OVERVIEW" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3618,8 +3607,8 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
-            showthis "$ghscreen2" infobox \
+#            press_a_key # Would need with infobox
+            showthis "$ghscreen2" msgbox \
             "HELPER SCRIPT OVERVIEW" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3627,10 +3616,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ f ]] || [[ $answer == "?" ]];then
-            showthis "$fwscreen" infobox \
+            showthis "$fwscreen" msgbox \
             "FIREWALLING WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             "$ghscreen1""$fwscreen" \
@@ -3639,10 +3628,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ e ]] || [[ $answer == "?" ]];then
-            showthis "$rcscreen" infobox \
+            showthis "$rcscreen" msgbox \
             "REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
              \
@@ -3651,10 +3640,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ d ]] || [[ $answer == "?" ]];then
-            showthis "$dascreen" infobox \
+            showthis "$dascreen" msgbox \
             "PORT KNOCKING WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3662,10 +3651,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ p ]] || [[ $answer == "?" ]];then
-            showthis "$pkscreen" infobox \
+            showthis "$pkscreen" msgbox \
             "BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3673,10 +3662,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
-            showthis "$listscreen" infobox \
+            showthis "$listscreen" msgbox \
             "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3684,10 +3673,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ s ]] || [[ $answer == "?" ]];then
-            showthis "$savescreen" infobox \
+            showthis "$savescreen" msgbox \
             "SAVING YOUR INSTALLED CONFIGURATION" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3695,10 +3684,10 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         if [[ $answer =~ r ]] || [[ $answer == "?" ]];then
-            showthis "$restorescreen" infobox \
+            showthis "$restorescreen" msgbox \
             "RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
@@ -3706,7 +3695,7 @@ until ! [[ -z "$answer" ]];do
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
             printf "\r"
-            press_a_key
+#            press_a_key # Would need with infobox
         fi
         answer=""
     else
