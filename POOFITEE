@@ -3481,8 +3481,7 @@ the iptables ruleset.\
 \nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to allow http, irc and/or other public services hosting\
-\n  -- Force single-interface firewalling even though two interfaces exist\
-\n\n* No testing has been done using DHCP client nor server on the private interface"
+\n  -- Force single-interface firewalling even though two interfaces exist""$postfix"
 rcscreen="$prefix""What we mean by Remote Control Via Email:  You find yourself travelling far \
 from home, and thus, far away from this computer you are configuring.  You \
 decide you need this computer to do a few things for you now before you return.  \
@@ -3632,8 +3631,8 @@ until ! [[ -z "$answer" ]];do
         fi
         if [[ $answer =~ f ]] || [[ $answer == "?" ]];then
             showthis "$fwscreen" infobox \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
             "FIREWALLING WITH THIS SCRIPT SET" \
+            "POOFITEE $version  Main menu will resume later  Information Screen" \
             "$ghscreen1""$fwscreen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
