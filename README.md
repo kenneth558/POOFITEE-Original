@@ -2,7 +2,7 @@
 
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
 
--- as of 2016-09-16 operational - tested with Ubuntu server CLI, Linux Mint, Raspberry Pi, and Pine A64 (for which you'll have to manually load the ipset module for iptables).  We expect success with many or most other Linux distros.  Future expansion still planned including source code cleanup and screen layout enhancement.  
+-- At first blush, we thought POOFITEE was operational 2016-09-16, but a few bugs remained until 2016-10-1 - tested with Ubuntu server CLI, Linux Mint, Raspberry Pi, and Pine A64 (for which you'll have to manually load the ipset module for iptables).  We expect success with many or most other Linux distros.  Future expansion still planned including source code cleanup and screen layout enhancement.  
 
 Linux iptables plus scripting firewall  "NOT COMPATIBLE WITH BSD NOR MAC SYSTEMS"
 
