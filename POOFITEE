@@ -403,7 +403,7 @@ printf "\nCreated whitelisting script\n"
 }
 firewall_external_interface_not_in_privateIP_ranges () {
 localresult=""
-IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{print $7}')"
+IFS=. read -r -a octets <<< "$($ippath -o route get 8.8.8.8|$awkpath '{for (i=1;i<NF;i++){if ($i=="src"){print $(i+1);exit}}}')"
 if [[ "${octets[0]}" != "10" ]];then
      localresult+="1"
 fi
