@@ -3311,7 +3311,7 @@ contribute, see the comments within the source code of this script.\
 msgbox \
 "Limitations and Copyright" \
 "POOFITEE $version  Copyright Screen"
-[[ -z "$whiplogpath" ]] && read -sn1;read -rst 0.001 -n4 discard
+# [[ -z "$whiplogpath" ]] && read -sn1;read -rst 0.001 -n4 discard
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
     index=1
     for arg in "$@"
