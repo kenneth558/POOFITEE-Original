@@ -451,7 +451,7 @@ this installation:\
 \n\n\
 You must next twice or thrice verify persistence...that is, functionality after reboots.  Especially \
 check for iptables black and whitelist rules in $ipsetpath being persistent.  At a \
-minimum, $ipsetpath and iptables both need to be made persistent.\
+minimum, $ipsetpath and iptables both need to be made persistent by you.\
 \n\n\
 Note: if you need the pseudo-application layer firewalling, you'll next need to \
 code the \"process_logfile_line\" script to your needs.  Then modify the iptables \
