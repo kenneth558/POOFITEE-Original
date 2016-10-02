@@ -3226,7 +3226,7 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
@@ -3618,6 +3618,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ f ]] || [[ $answer == "?" ]];then
@@ -3629,6 +3630,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ e ]] || [[ $answer == "?" ]];then
@@ -3640,6 +3642,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ d ]] || [[ $answer == "?" ]];then
@@ -3650,6 +3653,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ p ]] || [[ $answer == "?" ]];then
@@ -3660,6 +3664,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
@@ -3670,6 +3675,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ s ]] || [[ $answer == "?" ]];then
@@ -3680,6 +3686,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         if [[ $answer =~ r ]] || [[ $answer == "?" ]];then
@@ -3690,6 +3697,7 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            printf "\r"
             press_a_key
         fi
         answer=""
