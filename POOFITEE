@@ -449,7 +449,7 @@ predictable for the purposes of writing this installer.  PLEASE exercise \
 due diligence in taking care of that aspect of \
 this installation:\
 \n\n\
-You must next twice or thrice verify functionality after reboots.  Especially \
+You must next twice or thrice verify persistence...that is, functionality after reboots.  Especially \
 check for iptables black and whitelist rules in $ipsetpath being persistent.  At a \
 minimum, $ipsetpath and iptables both need to be made persistent.\
 \n\n\
@@ -464,7 +464,7 @@ before blacklisting.  Don't forget to verify persistency afterwards.\
 Thank you for using POOFITEE.  God loves you, pass it on.\
 \n\n\
 <center>The POOFITEE development team, Kenneth L. Anderson, lead developer" infobox \
-"IMPORTANT MESSAGE" $globalbacktitle
+"IMPORTANT MESSAGE" "$globalbacktitle"
 }
 set_notinstalled_var () {
 ! [[ -z "$gawkpath" ]] && [[ "$gawkpath" == "installandcheckme" ]] && notinstalled+="gawk\n"
@@ -2441,7 +2441,7 @@ chown poofitee "$poofitee_home_dir/newdynip.sh"
 chmod 700 "$poofitee_home_dir/newdynip.sh"
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+     (printf "\n$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
       echo "Confirm you understand that your crontab shell is now getting changed which"
       read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
 (cat << CRONTAB_ENTRIES_END
