@@ -1809,7 +1809,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ $(/etc/init.d/postfix reload >/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
 
           if ! [[ "$( $postqueuepath -p )" == *is\ empty* ]];then
-               printf "For the next step, the mail queue needs to be flushed.  You will lose the\
+               printf "\nFor the next step, the mail queue needs to be flushed.  You will lose the\
 \nfollowing emails that haven't been sent.  Press a key to acknowledge..."
                printf "$( $postqueuepath -p )"
                read -rsn 1;read -rst 0.001 -n3
