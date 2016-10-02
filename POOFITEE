@@ -3273,12 +3273,49 @@ but cannot be found.  Please install it before continuing.  Use another window o
 script and restart it later.  In Arch Linux you may install sudo using \
 the following command:\n\n		pacman -Syy base-devel\n"
 fi
+if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
+    index=1
+    for arg in "$@"
+    do
+        [[ "${arg#*'awk='}" == "$arg" ]] || awkpath="${arg#*'awk='}"
+        ! [[ -z "$awkpath" ]] && break
+        let "index+=1"
+    done
+else
+     awkpath="$($whereispath $binaryflag awk)"
+     awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
+fi
+#force these to be global variables, we need them to perform the install:
+gawkpath=""
+mawkpath=""
+# pythonpath="$($whereispath $binaryflag python)";pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
+ifconfigpath="$($whereispath $binaryflag ifconfig)";ifconfigpath="${ifconfigpath#*:}";ifconfigpath="${ifconfigpath# }";ifconfigpath="${ifconfigpath%% *}"
+uniqpath="$($whereispath $binaryflag uniq)";uniqpath="${uniqpath#*:}";uniqpath="${uniqpath# }";uniqpath="${uniqpath%% *}"
+findpath="$($whereispath $binaryflag find)";findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}";
+tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
+xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
+getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
+adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+for pgm in ifconfig uniq find tail xargs getentpath adduser;do
+   if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
+        localwarning+="\n$pgm needs to be installed\n"
+    fi
+done
 if ! [[ -z "$localwarning" ]];then
     localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning""$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
     localbacktitle="POOFITEE $version  Deficiency Notice"
     showthis "$localwarning" "infobox" "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle"
     ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard
 fi
+until ! [[ -z "$sudopath" ]];do
+    showthis "The actual sudo command is necessary for several aspects of this installer, \
+but it cannot be found.  Please install it before continuing.  Use another window or \
+end this script and restart it later.  In Arch Linux you may install sudo using \
+the following command:\
+\n\n       pacman -Syy base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
+        press_a_key
+    sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
+done
 
 #  Beginning of copyright message
 clear
@@ -3316,40 +3353,7 @@ contribute, see the comments within the source code of this script.\
 msgbox \
 "Limitations and Copyright" \
 "POOFITEE $version  Copyright Screen"
-# [[ -z "$whiplogpath" ]] && read -sn1;read -rst 0.001 -n4 discard
-if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
-    index=1
-    for arg in "$@"
-    do
-        [[ "${arg#*'awk='}" == "$arg" ]] || awkpath="${arg#*'awk='}"
-        ! [[ -z "$awkpath" ]] && break
-        let "index+=1"
-    done
-else
-     awkpath="$($whereispath $binaryflag awk)"
-     awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
-fi
-#force these to be global variables, we need them to perform the install:
-gawkpath=""
-mawkpath=""
-# pythonpath="$($whereispath $binaryflag python)";pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
-until ! [[ -z "$sudopath" ]];do
-    showthis "The actual sudo command is necessary for several aspects of this installer, \
-but it cannot be found.  Please install it before continuing.  Use another window or \
-end this script and restart it later.  In Arch Linux you may install sudo using \
-the following command:\
-\n\n       pacman -Syy base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
-        press_a_key
-    sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
-done
-ifconfigpath="$($whereispath $binaryflag ifconfig)";ifconfigpath="${ifconfigpath#*:}";ifconfigpath="${ifconfigpath# }";ifconfigpath="${ifconfigpath%% *}"
 pumppath="$($whereispath $binaryflag pump)";pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
-uniqpath="$($whereispath $binaryflag uniq)";uniqpath="${uniqpath#*:}";uniqpath="${uniqpath# }";uniqpath="${uniqpath%% *}"
-findpath="$($whereispath $binaryflag find)";findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}";
-tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
-xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
-getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
-adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
 # eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > "/tmp/fifos_and_temp_files_for_poofitee_installer\distributionby.${0#*/}\"" \
