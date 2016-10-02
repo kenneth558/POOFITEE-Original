@@ -3611,16 +3611,17 @@ until ! [[ -z "$answer" ]];do
     if [[ $answer =~ \? ]];then
 #        printf "  Since info is selected, no changes are to be made"
         if [[ $answer == "?" ]];then
-            showthis "$ghscreen1""$ghscreen2" yesno \
+            showthis "$ghscreen1""$ghscreen2" infobox \
             "HELPER SCRIPT OVERVIEW" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ f ]] || [[ $answer == "?" ]];then
-            showthis "$ghscreen1""$fwscreen" yesno \
+            showthis "$fwscreen" infobox \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             "FIREWALLING WITH THIS SCRIPT SET" \
             "$ghscreen1""$fwscreen" \
@@ -3628,9 +3629,10 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ e ]] || [[ $answer == "?" ]];then
-            showthis "$rcscreen" yesno \
+            showthis "$rcscreen" infobox \
             "REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
              \
@@ -3638,51 +3640,57 @@ until ! [[ -z "$answer" ]];do
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
-        fi
-        if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
-            showthis "$listscreen" yesno \
-            "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
-            --yes-button "Scrolled, now proceed" \
-            --no-button "Quit now" \
-            --scrolltext 22 76
-            [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ d ]] || [[ $answer == "?" ]];then
-            showthis "$dascreen" yesno \
+            showthis "$dascreen" infobox \
             "PORT KNOCKING WITH THIS SCRIPT SET" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ p ]] || [[ $answer == "?" ]];then
-            showthis "$pkscreen" yesno \
+            showthis "$pkscreen" infobox \
             "BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
+        fi
+        if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
+            showthis "$listscreen" infobox \
+            "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
+            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            --yes-button "Scrolled, now proceed" \
+            --no-button "Quit now" \
+            --scrolltext 22 76
+            [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ s ]] || [[ $answer == "?" ]];then
-            showthis "$savescreen" yesno \
+            showthis "$savescreen" infobox \
             "SAVING YOUR INSTALLED CONFIGURATION" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
         fi
         if [[ $answer =~ r ]] || [[ $answer == "?" ]];then
-            showthis "$restorescreen" yesno \
+            showthis "$restorescreen" infobox \
             "RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
             [ "$?" != "0" ] && exit
+            press_a_key
         fi
         answer=""
     else
