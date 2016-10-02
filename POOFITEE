@@ -163,7 +163,7 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
               tailawktestpid="" # To make it survive the loop scope
               until false;do
 # Check here for awk functionality with stdbuf
-                  printf "Checking $([[ "$gawkpath" == "installandcheckme" ]] && printf "gawk$([[ "$mawkpath" == "installandcheckme" ]] && printf ", mawk,") and " || [[ "$mawkpath" == "installandcheckme" ]] && printf "mawk and ")awk for functionality..."
+                  printf "Checking $([[ "$gawkpath" == "installandcheckme" ]] && printf "gawk$([[ "$mawkpath" == "installandcheckme" ]] && printf ", mawk,") and " || [[ "$mawkpath" == "installandcheckme" ]] && printf "mawk and ")awk for compatibility..."
                   echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
                   nohup $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
                   tailawktestpid="$!"
@@ -2758,6 +2758,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 printf "$line"; \
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     yesno)
         printf -- "$1\n"| \
@@ -2810,6 +2811,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 printf "$line"; \
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     msgbox)
         printf -- "$1\n"| \
@@ -2868,6 +2870,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 printf "$line"; \
             done; \
         )" $rowsfordialog $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     checklist|checkbox)
         printf -- "$1\n"| \
@@ -3223,7 +3226,7 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
@@ -3400,6 +3403,11 @@ maintitle="SELECT DESIRED OPTIONS FOR THIS INSTALLATION"
 mainbacktitle="POOFITEE $version  Main Menu"
 mainchecklisttest="\n<center>Select with spacebar/tab/etc. all or any services listed below that \
 you want, then enter/OK\n"
+if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -ne 0 ]] \
+       && ! [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ 123 ]];then
+    notdhcp="notdhcp"
+    mainchecklisttest+="<center>(Not available with this IP address: dynamic IP address change notifier)\n"
+fi
 maincheckitems=("firewalling" \
 "email remote control" \
 "dynamic IP address change notifier" \
@@ -3553,7 +3561,7 @@ services, select"
 postfix_already_conf=""
 quitrow=""
 index=0
-if ! [[ "$notdhcp" == "notdhcp" ]];then
+if [[ "$notdhcp" == "notdhcp" ]];then
     for letter in f e p l c r \? q;do
         chararray[index]=$letter
         index=$((index + 1))
@@ -3566,13 +3574,10 @@ else
 fi
 answer=""
 until ! [[ -z "$answer" ]];do
-    if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -ne 0 ]] \
-           && [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ 13 ]];then
-#           && [[ $(firewall_external_interface_not_in_privateIP_ranges;printf "$?") =~ 123 ]];then
-        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 9 \
+    if ! [[ -z "$notdhcp" ]] && [[ "$notdhcp" == "notdhcp" ]];then
+        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 8 \
         "${maincheckitems[0]}" OFF \
         "${maincheckitems[1]}" OFF \
-        "${maincheckitems[2]}" OFF \
         "${maincheckitems[3]}" OFF \
         "${maincheckitems[4]}" OFF \
         "${maincheckitems[5]}" OFF \
@@ -3580,11 +3585,10 @@ until ! [[ -z "$answer" ]];do
         "${maincheckitems[7]}" OFF \
         "${maincheckitems[8]}" OFF
     else
-        notdhcp="notdhcp"
-        mainchecklisttest+="<center>(Not available with this IP address: dynamic IP address change notifier)\n"
-        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 8 \
+        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 9 \
         "${maincheckitems[0]}" OFF \
         "${maincheckitems[1]}" OFF \
+        "${maincheckitems[2]}" OFF \
         "${maincheckitems[3]}" OFF \
         "${maincheckitems[4]}" OFF \
         "${maincheckitems[5]}" OFF \
