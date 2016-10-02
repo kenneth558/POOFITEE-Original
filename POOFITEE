@@ -3052,12 +3052,13 @@ else
                 index=$((index + 1))
             done
         else
-            layitout "$1";return
+            layitout "$1"
+            [[ "$2" =~ ^msgbox ]] && press_a_key
+            return
         fi
         layitout "$1"
         printf "\033[6n" ; read -sd R cp;cp="${cp#*[}"
         quitrow="$((${cp%;*} - 2))"
-        [[ "$2" =~ ^msgbox ]] && press_a_key
         highlightedentryid=0
         ! [[ -z  "$tputpath" ]] && $tputpath cup ${selectionrow[highlightedentryid]} ${selectioncol[highlightedentryid]}
         key=""
@@ -3215,10 +3216,10 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
-[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
-[[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
+#[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
+#[[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
 tputpath="$($whereispath $binaryflag tput)" ;tputpath="${tputpath#*:}";tputpath="${tputpath# }";tputpath="${tputpath%% *}"
 globalbacktitle="POOFITEE $version  Required Reading"
 if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then
