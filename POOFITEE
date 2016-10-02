@@ -3452,15 +3452,15 @@ they generate log file activity you've specified within some number of minutes. 
 access Firewall - Invisible To Everyone Else\"."
 ghscreen2="\n\nThe advantages of using scripting over a compiled program are significant:\
 \n\n - most importantly - robust operation in indefinitely continuous duty\
-\n\n - less script complexity means less risk of programming bugs and\
-\n      mysterious, hard-to-troubleshoot resource limitations\
-\n\n - source code is simple and extremely easy for you to customize to your\
-\n      liking\
-\n\n - iptables rule changes are implemented instantly without any process\
-\n      restarts nor conflicts with iptables rules manipulated manually\
-\n\n - system operators can customize the behavior of all aspects of\
-\n      POOFITEE support scripts without learning to compile, and those\
-\n      customizations are implemented instantly.\
+\n\n - less script complexity means less risk of programming bugs and \
+mysterious, hard-to-troubleshoot resource limitations\
+\n\n - source code is simple and extremely easy for you to customize to your \
+liking\
+\n\n - iptables rule changes are implemented instantly without any process \
+restarts nor conflicts with iptables rules manipulated manually\
+\n\n - system operators can customize the behavior of all aspects of \
+POOFITEE support scripts without learning to compile, and those \
+customizations are implemented instantly.\
 \n\nThe disadvantages of scripting to compiled languages are normally considered \
 to be execution speed of the finished program and fine control of low-level \
 system functionalities.  POOFITEE is not practically affected by either, thanks \
@@ -3483,7 +3483,7 @@ the iptables ruleset.\
 \n  -- Open specific ports to allow http, irc and/or other public services hosting\
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n\n* No testing has been done using DHCP client nor server on the private interface"
-rcscreen="$prefix""What we mean by Remote Control Via Email:  You find yourself travelling far away \
+rcscreen="$prefix""What we mean by Remote Control Via Email:  You find yourself travelling far \
 from home, and thus, far away from this computer you are configuring.  You \
 decide you need this computer to do a few things for you now before you return.  \
 One is to turn on and off one of the electrical outlets that it controls through \
@@ -3611,7 +3611,16 @@ until ! [[ -z "$answer" ]];do
     if [[ $answer =~ \? ]];then
 #        printf "  Since info is selected, no changes are to be made"
         if [[ $answer == "?" ]];then
-            showthis "$ghscreen1""$ghscreen2" infobox \
+            showthis "$ghscreen1" infobox \
+            "HELPER SCRIPT OVERVIEW" \
+            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            --yes-button "Scrolled, now proceed" \
+            --no-button "Quit now" \
+            --scrolltext 22 76
+            [ "$?" != "0" ] && exit
+            printf "\r"
+            press_a_key
+            showthis "$ghscreen2" infobox \
             "HELPER SCRIPT OVERVIEW" \
             "POOFITEE $version  Main menu will resume later  Information Screen" \
             --yes-button "Scrolled, now proceed" \
