@@ -160,22 +160,24 @@ mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" #
 if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]];then
      if ! [[ "$gawkpath" == "checkedgood" ]] && ! [[ "$mawkpath" == "checkedgood" ]] && ([[ "$1" == "checkawk" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]]);then
           if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
-              tailawktestpid="" # To make it survive the loop scope
               until false;do
 # Check here for awk functionality with stdbuf
                   printf "Checking $([[ "$gawkpath" == "installandcheckme" ]] && printf "gawk$([[ "$mawkpath" == "installandcheckme" ]] && printf ", mawk,") and " || [[ "$mawkpath" == "installandcheckme" ]] && printf "mawk and ")awk for compatibility..."
                   echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-                  nohup $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-                  tailawktestpid="$!"
+                  $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
+                  awktestpid="$!"
+                  tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
                   sleep 1
                   echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
                   sleep 1
                   if ! [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" == "testline" ]];then #try/use gawk instead
                        gawkpath="$($whereispath $binaryflag gawk)";gawkpath="${gawkpath#*:}";gawkpath="${gawkpath# }";gawkpath="${gawkpath%% *}"
                        if ! [[ -z "$gawkpath" ]];then
+                            kill $awktestpid &>/dev/null
                             kill $tailawktestpid &>/dev/null
                             $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $gawkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults &
-                            tailawktestpid="$!"
+                            awktestpid="$!"
+                            tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
                             sleep 1
                             echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
                             sleep 1
@@ -186,9 +188,11 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
                        if ! [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null)" == "testline" ]];then #warn
                             mawkpath="$($whereispath $binaryflag mawk)";mawkpath="${mawkpath#*:}";mawkpath="${mawkpath# }";mawkpath="${mawkpath%% *}"
                             if ! [[ -z "$mawkpath" ]];then
+                                 kill $awktestpid &>/dev/null
                                  kill $tailawktestpid &>/dev/null
                                  $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $mawkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-                                 tailawktestpid="$!"
+                                 awktestpid="$!"
+                                 tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
                                  sleep 1
                                  echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
                                  sleep 1
@@ -225,10 +229,10 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
 
 					echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
 					$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-					tailawktestpid="\$!"
+					awktestpid="\$!"
 					echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
 					sleep 1
-					kill \$tailawktestpid &>/dev/null
+					kill \$awktestpid &>/dev/null
 					if [[ -z "\$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" ]];then echo "This awk version fails";else echo "This awk version succeeds";fi
 					EOF
                                       press_a_key
@@ -258,7 +262,8 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
                   fi
                   break
               done
-              if [[ $(kill -0 "$tailawktestpid";echo "$?") == "0" ]];then
+              if [[ $(kill -0 "$awktestpid";echo "$?") == "0" ]];then
+                   kill $awktestpid &>/dev/null
                    kill $tailawktestpid &>/dev/null
               fi
               rm /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults &>/dev/null
@@ -3216,7 +3221,7 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
