@@ -2,7 +2,7 @@
 
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
 
--- At first blush, we thought POOFITEE was operational 2016-09-16, but a few bugs remained until 2016-10-01.  This "Original" branch is only expected to receive bug fixes of the ruleset, no installer enhancements.
+-- At first blush, we thought POOFITEE was operational 2016-09-16, but a few bugs remained until 2016-10-01.  After 2016-10-01 this "Original" branch is only expected to receive bug fixes of the ruleset, no installer enhancements.
 
 -- Tested with Ubuntu server CLI, Linux Mint, Raspberry Pi, and Pine A64 (for which you'll have to manually load the ipset module for iptables).  We expect success with many or most other Linux distros.  Future expansion still planned including source code cleanup and screen layout enhancement.  
 
