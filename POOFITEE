@@ -3296,7 +3296,7 @@ tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="
 xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
-for pgm in ifconfig uniq find tail xargs getentpath adduser;do
+for pgm in ifconfig uniq find tail xargs getent adduser;do
    if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
         localwarning+="\n$pgm needs to be installed\n"
     fi
