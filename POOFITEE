@@ -2705,7 +2705,15 @@ title="$(! [[ -z "$dialogpath" ]] && printf "\\Zb\\Z1")$3"
 # THIS PART OF THIS FUNCTION NOW EXPANDS BACKTITLE ($4 COMING IN HERE) IF TPUT IS PRESENT USING THE LAST TWO-SPACE SEQUENCE IN BACKTITLE IN WHICH TO INSERT ADDITIONAL PADDING
 backtitle="$4"
 if ! [[ -z "$4" ]] && [[ ${#4} -lt $((cols - 2)) ]];then
-    backtitle="${4%'  '*}$(printf '%.s'" " $(seq $((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4}))))${4##*'  '}"
+    if [[ "${4%'  '*}" == "${4%%'  '*}" ]];then
+        backtitle="${4%%'  '*}$(printf '%.s'" " $(seq $((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4}))))${4#*'  '}"
+    else
+        backtitle_2nd_segment="${4#*'  '}"
+        backtitle="${4%%'  '*}$(printf '%.s'" " \
+$(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 2) / 2))))\
+${backtitle_2nd_segment%'  '*}$(printf '%.s'" " \
+$(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 3) / 2))))${backtitle_2nd_segment##*'  '}"
+    fi
 fi
 screen_line=""
 # boxheightestimate="$5"
@@ -2805,8 +2813,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
 # Haven't been able to get infobox to display in whiptail with xterminals so we change to msgbox
         [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + 3)) || rowsfordialog=$(($rows - 8)) 
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
-            --nocancel \
-            --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--infobox" || printf -- "--msgbox") "$(screen_line=""; \
+            --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--$2" || printf -- "--$2") "$(screen_line=""; \
             printf -- "$1\n"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
@@ -3001,6 +3008,76 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
                 --noitem \
                 --nocancel \
                 --radiolist -- "$(screen_line=""; \
+                printf -- "$1\n"|while IFS= read -r line;do \
+                    if [[ -z "$screen_line" ]]; then \
+                        screen_line="."; \
+                    else \
+                        printf "\n"; \
+                    fi; \
+                    if [[ "${line:0:8}" == "<center>" ]];then
+                        line="${line:8}"
+                    fi; \
+                    printf "$line"; \
+                done; \
+            )"  "$rowsfordialog" $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        while IFS= read -r line;do
+            index=0
+            for argument in "${@:argnum}";do 
+                if [[ $index =~ [02468]$ ]];then
+                    [[ "$line" == "$argument" ]] && answer+="$((index / 2))\n"
+                fi
+                index=$((index + 1))
+            done
+        done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        printf -- "$answer\n" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+    ;;
+    menu)
+        printf -- "$1\n"| \
+        while IFS= read -r line;do
+            if [[ -z "$screen_line" ]]; then
+                screen_line="."
+            else
+                numoflinesinoutput="$(($numoflinesinoutput + 1))"
+printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
+            fi
+            if [[ "${line:0:8}" == "<center>" ]];then
+                line="${line:8}"  #The adjustment for centering on display must occur in the dialog command line
+            fi
+            firstofline=""
+            for ((linepointer=0;linepointer<${#line};));do
+printout=""
+                for ((i=cols-12;i>=0;i--));do #The 12 is line waste in dialog infobox
+                    if [[ $((linepointer+i)) -ge ${#line} ]];then
+printout="${line:linepointer}"
+                        linepointer=${#line}
+                        i=0
+                    elif [[ ${line:i+linepointer:1} =~ [[:space:]] ]];then
+printout="${line:linepointer:i}"
+                        ((i++))
+                        linepointer=$((linepointer+=i))
+                        i=0
+                    fi
+                done
+                if [[ -z "$firstofline" ]]; then
+                    firstofline="."
+                else
+printout="\n""$printout"
+                    numoflinesinoutput="$(($numoflinesinoutput + 1))"
+                fi
+printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
+            done
+            printf "$numoflinesinoutput" > /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
+        done
+        numoflinesinoutput="$(($(cat /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput) + 2))"
+        ! [[ -z "$whiptailpath" ]] && numoflinesinoutput="$(($numoflinesinoutput + 2))"
+        rm /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
+        [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + $(($5 + $([[ -z "$dialogpath" ]] && printf "2" || printf "4"))))) || rowsfordialog=$(($rows - 8)) 
+        $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
+                --scrolltext \
+                $([[ -z "$dialogpath" ]] && printf -- "--separate-output") \
+                --noitem \
+                --$2 -- "$(screen_line=""; \
                 printf -- "$1\n"|while IFS= read -r line;do \
                     if [[ -z "$screen_line" ]]; then \
                         screen_line="."; \
@@ -3229,7 +3306,7 @@ whiplogpath="$dialogpath"
 [[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
 tputpath="$($whereispath $binaryflag tput)" ;tputpath="${tputpath#*:}";tputpath="${tputpath# }";tputpath="${tputpath%% *}"
-globalbacktitle="POOFITEE $version  Required Reading"
+globalbacktitle="Required Reading  POOFITEE  $version"
 if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then
     failreason="  This firewalling solution does not accommodate Mac nor BSD due to \
 iptables and crontab dysfunction in those *NIXes"
@@ -3246,7 +3323,7 @@ rm /tmp/fifos_and_temp_files_for_poofitee_installer/file_create_rights_test &>/d
 if ! [[ -z "$failreason" ]];then
     failreason="<center>THANK YOU FOR TRYING THIS POOFITEE INSTALLER, BUT...\
 \nYOU CANNOT RUN POOFITEE INSTALLER WITH YOUR OPERATING SYSTEM FOR THE FOLLOWING REASON[S]:\n\n$failreason$([[ -z "$whiptailpath" ]] && printf -- "\n\nPress any key...")"
-    localbacktitle="POOFITEE $version  Exit Notice"
+    localbacktitle="Exit Notice  POOFITEE  $version"
     showthis "$failreason" infobox "$localtitle" "$localbacktitle"
     ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n4 discard
     exit
@@ -3307,8 +3384,8 @@ for pgm in ifconfig uniq find tail xargs getent adduser;do
 done
 if ! [[ -z "$localwarning" ]];then
     localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning""$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
-    localbacktitle="POOFITEE $version  Deficiency Notice"
-    showthis "$localwarning" "infobox" "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle"
+    localbacktitle="Deficiency Notice  POOFITEE  $version"
+    showthis "$localwarning" menu "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle"
     ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard
 fi
 until ! [[ -z "$sudopath" ]];do
@@ -3356,7 +3433,7 @@ contribute, see the comments within the source code of this script.\
 \n\n<center>Jesus Christ is Lord of all ... press a key/click OK to acknowledge" \
 msgbox \
 "Limitations and Copyright" \
-"POOFITEE $version  Copyright Screen"
+"Copyright Screen  POOFITEE  $version"
 pumppath="$($whereispath $binaryflag pump)";pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
@@ -3403,7 +3480,7 @@ facing interface from the following choices, but even so, without Internet acces
     done
 fi
 maintitle="SELECT DESIRED OPTIONS FOR THIS INSTALLATION"
-mainbacktitle="POOFITEE $version  Main Menu"
+mainbacktitle="Main Menu  POOFITEE  $version"
 mainchecklisttest="\n<center>Select with spacebar/tab... all or any services listed below that \
 you want, then enter/OK\n"
 if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcpc -we dhcpcd -we dhclient3|$greppath -w $external_net_interface|$wcpath -l) -eq 0 ]] \
@@ -3430,7 +3507,7 @@ maincheckitems=("firewalling" \
 "q" \
 "?")
 answer=""
-ghbacktitle="POOFITEE $version  Main Menu"
+ghbacktitle="Main Menu  POOFITEE  $version"
 ghscreen1="This set of Linux scripts can install several Internet security features useful \
 in homeowner and enterprise systems alike. Enterprise systems however, typically \
 are stranger-visible, but POOFITEE ruleset produces stranger-INvisibility.  Gone \
@@ -3560,6 +3637,7 @@ an inline (passthrough) device.  That would result in any protective \
 firewalling you'll set up next to apply only to this computer.  If instead you \
 want this firewalling computer to protect other devices with its firewalling \
 services, select"
+infobacktitle="Information Screen  POOFITEE  $version"
 postfix_already_conf=""
 quitrow=""
 index=0
@@ -3615,7 +3693,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer == "?" ]];then
             showthis "$ghscreen1" msgbox \
             "HELPER SCRIPT OVERVIEW" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3624,7 +3702,7 @@ until ! [[ -z "$answer" ]];do
 #            press_a_key # Would need with infobox
             showthis "$ghscreen2" msgbox \
             "HELPER SCRIPT OVERVIEW" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3635,7 +3713,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ f ]] || [[ $answer == "?" ]];then
             showthis "$fwscreen" msgbox \
             "FIREWALLING WITH THIS SCRIPT SET" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             "$ghscreen1""$fwscreen" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
@@ -3647,7 +3725,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ e ]] || [[ $answer == "?" ]];then
             showthis "$rcscreen" msgbox \
             "REMOTE CONTROL VIA EMAIL WITH THIS SCRIPT SET" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
              \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
@@ -3659,7 +3737,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ d ]] || [[ $answer == "?" ]];then
             showthis "$dascreen" msgbox \
             "PORT KNOCKING WITH THIS SCRIPT SET" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3670,7 +3748,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ p ]] || [[ $answer == "?" ]];then
             showthis "$pkscreen" msgbox \
             "BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3681,7 +3759,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
             showthis "$listscreen" msgbox \
             "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3692,7 +3770,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ s ]] || [[ $answer == "?" ]];then
             showthis "$savescreen" msgbox \
             "SAVING YOUR INSTALLED CONFIGURATION" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
@@ -3703,7 +3781,7 @@ until ! [[ -z "$answer" ]];do
         if [[ $answer =~ r ]] || [[ $answer == "?" ]];then
             showthis "$restorescreen" msgbox \
             "RESTORING YOUR PREVIOUSLY SAVED CONFIGURATION" \
-            "POOFITEE $version  Main menu will resume later  Information Screen" \
+            "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
             --scrolltext 22 76
