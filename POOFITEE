@@ -223,17 +223,19 @@ if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath"
 					if this script discovers the new awk version.  Code snippet will now follow,
 					adjust the awk name to what you install:
 					EOF
-                                      press_a_key
-                                      cat <<-EOF
+                    press_a_key
+                    cat <<-EOF
 					Here is the test code snippet that awk, mawk, or gawk needs to succeed with:
 
 					echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
 					$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
 					awktestpid="\$!"
+					tailawktestpid="\$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print \$2}')"
 					echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
 					sleep 1
 					kill \$awktestpid &>/dev/null
-					if [[ -z "\$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" ]];then echo "This awk version fails";else echo "This awk version succeeds";fi
+					kill \$tailawktestpid &>/dev/null
+					if [[ -z "\$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" ]];then printf "\\nThis awk version fails\\n";else printf "\\nThis awk version succeeds\\n";echo;fi
 					EOF
                                       press_a_key
                                  fi
@@ -287,10 +289,11 @@ fi
 pronotinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 # packages are in alpha order so duplicates got removed, now we need to rearrange to workable order
 # packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk
-# netfilter-persistent first, then awk/gawk/mawk/nawk
+# netfilter-persistent first, then crontab, then awk/gawk/mawk/nawk
 printf "$pronotinstalled"|while read package;do [[ "$package" == "netfilter-persistent" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" == "cronie" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 notinstalled=$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled)
 notinstalled+="\n"
 rm /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled
@@ -480,7 +483,7 @@ set_notinstalled_var () {
 [[ -z "$netfiltperspath" ]] && notinstalled+="netfilter-persistent\n"
 [[ -z "$stdbufpath" ]] && notinstalled+="coreutils\n"
 [[ -z "$mailpath" ]] && notinstalled+="mailutils\n"
-[[ -z "$crontabpath" ]] && notinstalled+="cronie\nbcron\n"
+[[ -z "$crontabpath" ]] && notinstalled+="bcron\ncronie\n"
 [[ -z "$datepath" ]] && notinstalled+="coreutils\n"
 [[ -z "$bcpath" ]] && notinstalled+="bc\n"
 [[ -z "$atpath" ]] && notinstalled+="at\n"
@@ -1512,7 +1515,7 @@ printf "." # insert friendly progress indicators
 printf "." # insert friendly progress indicators
 ! ($iptablespath -w -nvL PREROUTING -t raw             |$greppath -- " DROP       all  --  $external_net_interface"                         |$greppath -- " match-set poofitee_blacklist src"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A PREROUTING -t raw -i $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_blacklist src -j DROP &>/dev/null || printf "Failed g1")
 printf "." # insert friendly progress indicators
-! ($iptablespath -w -nvL INPUT                         |$greppath -- " LOG        all  --  "                           |$greppath -- " --log-level 4 --log-prefix \"blacklist poofitee_fw \""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -j LOG --log-level 4 --log-prefix "blacklist poofitee_fw " &>/dev/null || printf "Failed h")
+! ($iptablespath -w -nvL INPUT                         |$greppath -- " LOG        all  --  "                           |$greppath -- " --log-level 4 --log-prefix \"poofitee_fw blacklist\""|$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -j LOG --log-level 4 --log-prefix "poofitee_fw blacklist " &>/dev/null || printf "Failed h")
 printf "." # insert friendly progress indicators
 ! ($iptablespath -w -nvL INPUT                         |$greppath -- " DROP       all  --  "                                                                      |$greppath -v " match-set "|$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A INPUT -i $external_net_interface -m comment --comment "poofitee_fw" -j DROP &>/dev/null || printf "Failed i")
 printf "." # insert friendly progress indicators
@@ -3249,7 +3252,7 @@ if ! [[ -z "$failreason" ]];then
     exit
 fi
 #We'll place this installer path variable here for future use possibly to inform in the next warning section
-installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman -S pkg install  pkg_add "" xbps-install -Sy brew install port install)
+installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
 installerpath=$($whereispath $binaryflag ${installers[$((installer + installer))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
 min_bash_version_tested="4.3.11"
 attention="YOUR COOPERATION OR ATTENTION IS NEEDED"
@@ -3794,7 +3797,7 @@ until ! [[ -z "$answer" ]];do
                            been_here_before="."
                       fi
                  fi
-                 printf "\nInstalling\n"
+                 printf "\r\033[KInstalling $not_installed_single_line"
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
 # make the following into a function
@@ -3809,15 +3812,32 @@ until ! [[ -z "$answer" ]];do
 #                           printf "...Not a problem...\n"
                            if [[ -z "$iptabsavepath" ]];then
                                  eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"
-                                 iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
-                                 netfiltperspath=$($whereispath $binaryflag iptables-restore);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                                 iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
+                                 netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                                  what_needs_to_be_installed
                            else
-                                 netfiltperspath=$($whereispath $binaryflag iptables-restore);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
+                                 netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                            fi
                            iptabrestorepath="$netfiltperspath"
                       else
-                           netfilter_persistent_already_given_a_chance="anyvaluewillwork"
+                           netfilter_persistent_already_given_a_chance="already_given_a_chance"
+                      fi
+                 fi
+                 if [[ "$not_installed_single_line" =~ ^cronie ]];then
+                      if ! [[ -z "$cronie_already_given_a_chance" ]];then
+                           cronie_already_given_a_chance=""
+                           crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+#                           printf "...Not a problem...\n"
+                           if [[ -z "$crontabpath" ]];then
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"
+                                 crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+                                 what_needs_to_be_installed
+                           else
+                                 crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
+                           fi
+                           crontabpath="$crontabpath"
+                      else
+                          cronie_already_given_a_chance="already_given_a_chance"
                       fi
                  fi
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
