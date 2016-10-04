@@ -3511,7 +3511,7 @@ maincheckitems=("firewalling" \
 "copy current configuration to a storage medium" \
 "restore the previously saved configuration" \
 "helpful information, alone or in context" \
-"quit" \
+"quit (or Tab/Enter key with no selections)" \
 "f" \
 "e" \
 "d" \
