@@ -3236,6 +3236,8 @@ else
 #                              fi
                          fi
                 ;;
+                *) : # TODO: Any other key, go to next entry that begins with that character
+                ;;
                 esac
             key=""
             done
@@ -3393,6 +3395,7 @@ xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargsp
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 [[ -z "$adduserpath" ]] && adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+passwdpath="$($whereispath $binaryflag passwd)";passwdpath="${passwdpath#*:}";passwdpath="${passwdpath# }";passwdpath="${passwdpath%% *}";
 for pgm in ifconfig uniq find tail xargs getent adduser;do
     if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
         localwarning+="\n$pgm needs to be installed\n"
@@ -3983,8 +3986,9 @@ until ! [[ -z "$answer" ]];do
 #                 echo "poofitee ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                chmod 0440 /etc/sudoers.d/poofitee
                $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
-               $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash --disabled-login --disabled-password poofitee --ingroup sudo
+               $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash poofitee --ingroup sudo
                user_poofitee_created_this_run="."
+               $passwdpath -l poofitee
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
                  $sudopath -u poofitee mkdir -p "$poofitee_home_dir" &>/dev/null && chmod 700 "$poofitee_home_dir" &>/dev/null
