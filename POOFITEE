@@ -3449,9 +3449,10 @@ statement transiently.\
 \n\n2.  Arrangement for your freedom from copyright display obligation, or to \
 contribute, see the comments within the source code of this script.\
 \n\n<center>Jesus Christ is Lord of all ... press a key/click OK to acknowledge" \
-msgbox \
+infobox \
 "Limitations and Copyright" \
 "Copyright Screen  POOFITEE  $version"
+    ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
 pumppath="$($whereispath $binaryflag pump)";pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
