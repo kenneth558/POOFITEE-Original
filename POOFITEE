@@ -3990,7 +3990,7 @@ is a web page that may help you with that:\
 #                 echo "poofitee ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                chmod 0440 /etc/sudoers.d/poofitee
                $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
-               $adduserpath --home "$poofitee_home_dir" --system
+               $adduserpath poofitee --home "$poofitee_home_dir" --system
                user_poofitee_created_this_run="."
                $passwdpath -l poofitee
             fi
