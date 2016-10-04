@@ -2729,7 +2729,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
 #   NOTE THAT OUR DEVELOPMENT PLATFORM DID NOT GIVE THE '--SCROLLTEXT' OPTION FUNCTIONALITY.  ALSO NOTE THAT FreeBSD DIALOG(1) MAN PAGES STATE --SCROLLTEXT IS MAPPED TO --SCROLLBAR
     case $2 in 
     infobox)
-        printf -- "$1\n"| \
+        printf -- "$1\nQuit: escape key\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -2766,7 +2766,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
             --nocancel \
             --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--infobox" || printf -- "--msgbox") "$(screen_line=""; \
-            printf -- "$1\n"|while IFS= read -r line;do \
+            printf -- "$1\n<center>Quit: escape key\n"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
                 else \
@@ -2836,7 +2836,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     msgbox)
-        printf -- "$1\n"| \
+        printf -- "$1\nQuit: escape key\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -2879,7 +2879,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
             --nocancel \
             --scrolltext "--$2" "$(screen_line=""; \
-            printf -- "$1\n"|while IFS= read -r line;do \
+            printf -- "$1\n<center>Quit: escape key\n"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
                 else \
@@ -3040,7 +3040,7 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
         printf -- "$answer\n" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     menu)
-        printf -- "$1\n"| \
+        printf -- "$1\n<center>Quit: escape key\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -3093,7 +3093,7 @@ rowsfordialog=$(($numoflinesinoutput + $5 + $adjust_for_menu))
                 $([[ -z "$dialogpath" ]] && printf -- "--separate-output") \
                 --noitem \
                 --$2 "$(screen_line=""; \
-                printf -- "$1\n"|while IFS= read -r line;do \
+                printf -- "$1\n<center>Quit: escape key\n"|while IFS= read -r line;do \
                     if [[ -z "$screen_line" ]]; then \
                         screen_line="."; \
                     else \
@@ -3424,7 +3424,7 @@ showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
 \n\n - No ability to configure either virtual or normal interfaces for you.  Little or no \
 testing has been done in a virtual interface environment, but no problems per se are expected.\
 \n\n - No ability to differentiate between, nor work with, initsystem types.  \
-So for persistence of whatever this script installs, you're on your own.\
+So for persistence of the  this script installs, you're on your own.\
 \n\n - No command line help, package [un]installation including dependency tracking, \
 nor man (reference manual pager) support is provided.\
 \n\n - If loadable modules for iptables are not automatically loaded in your Linux \
