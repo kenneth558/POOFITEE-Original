@@ -3961,13 +3961,17 @@ until ! [[ -z "$answer" ]];do
             fi
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
         if ! [[ -z "$ipsetpath" ]];then
-            $ipsetpath list -t >&/dev/null || \
-               ( $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' || \
-               (printf "\n\nThe ipset loadable kernel module is not automatically loaded for you.\
-\nThis just happens to be the case with the particular Linux distro you're using.\
-\nYou'll have to load the ipset module manually and restart poofitee installer.  Here\
-\nis a web page that may help you with that:\
-\nhttp://www.fwbuilder.org/4.0/docs/users_guide5/Appendix.shtml\n" && exit )) #need to make the lsmod into a full path, but this checks to see whether we need to manually load the ipset maodule
+            if $ipsetpath list -t >&/dev/null;then :;else
+                if $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' &>/dev/null;then :;else
+                    showthis "The ipset loadable kernel module is not automatically loaded for you.  \
+This just happens to be the case with the particular Linux distro you're using.  \
+You'll have to load the ipset module manually and restart poofitee installer.  Here \
+is a web page that may help you with that:\
+\n\n<center>http://www.fwbuilder.org/4.0/docs/users_guide5/Appendix.shtml\n" infobox "$globaltitle" "$globalbacktitle"
+                    read -srn1;read -srn5 -t 0.001 discard
+                    exit # this checks to see whether we need to manually load the ipset maodule
+                fi
+            fi
         fi         
         while true;do
             if ($getentpath passwd|$greppath -w ^poofitee >/dev/null);then
@@ -3986,7 +3990,7 @@ until ! [[ -z "$answer" ]];do
 #                 echo "poofitee ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poofitee
                chmod 0440 /etc/sudoers.d/poofitee
                $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
-               $adduserpath --home "$poofitee_home_dir" --system --shell /bin/bash poofitee --ingroup sudo
+               $adduserpath --home "$poofitee_home_dir" --system
                user_poofitee_created_this_run="."
                $passwdpath -l poofitee
             fi
