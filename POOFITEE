@@ -3412,7 +3412,7 @@ until ! [[ -z "$sudopath" ]];do
 but it cannot be found.  Please install it before continuing.  Use another window or \
 end this script and restart it later.  In Arch Linux you may install sudo using \
 the following command:\
-\n\n       pacman -Syy base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
+\n\n       pacman -Syy --noconfirm base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
         press_a_key
     sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 done
