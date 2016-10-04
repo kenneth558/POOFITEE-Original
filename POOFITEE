@@ -332,39 +332,40 @@ if ! [[ -z $mailpath ]];then
 \nmanually get the email sending to function via the command line  to work with\
 \nwhichever mail command is shown above, \"mail\", \"mailx\", or \"sendmail\", that this\
 \nscripting has found to currently exist on your system."
-     until false;do
-          ! [[ -z "$mailadd" ]] && printf "That doesn't appear to be a valid email address.  Try again or remove it to skip\
-\nthis test and install a full, new configuration on this computer\
-\nfor sending emails from the command line.  $newemailconfigwarning"
-          echo
-          get_sendto_emailadds onlyneed1 optional
-          if [[ -z "$mailadd" ]]; then break;fi
-          read -e -r -i "$mailadd" -p "$mailcmd " mailadd
-          if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
-               continue
-          fi
-          if ! [[ -z "$mailadd" ]];then
-               printf "Sending a test email to $mailadd..."
-               eval "$timeoutpath 10 $mailcmd $mailadd"
-               if [[ "$?" == "0" ]];then
+    until false;do
+          ! [[ -z "$mailadd" ]] && printf "The mail command failed or else that doesn't appear to be a valid email address.\
+\nTry again or remove it to skip this test and install a full, new configuration\
+\non this computer for sending emails from the command line.  $newemailconfigwarning"
+        while true;do
+            echo
+            get_sendto_emailadds onlyneed1 optional
+            if [[ -z "$mailadd" ]]; then break;fi
+            read -e -r -i "$mailadd" -p "$mailcmd " mailadd
+            if [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
+                printf "Sending a test email to $mailadd..."
+                eval "$timeoutpath 10 $mailcmd $mailadd"
+                if [[ "$?" == "0" ]];then
                     printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                     read -r -n1
                     if [[ $REPLY =~ y ]];then 
-                          sendmail_works="AnyNon-ZeroLengthStringMeansTrue"
-                          echo
-                          break
+                        sendmail_works="sendmail_works"
+                        echo
+                        break
                     elif [[ $REPLY =~ [at] ]];then
-                         continue
+                        continue
                     fi
-               fi
-               printf "\n\nBased on your answer, a full, new email sending configuration will be set up on\
+                    printf "\n\nBased on your answer, a full, new email sending configuration will be set up on\
 \nthis computer.  $newemailconfigwarning"
-               printf "\n\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
-               press_a_key
-               echo
-               break
-          fi
-     done
+                    printf "\n\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
+                    press_a_key
+                    echo
+                    break 2
+                fi
+            else
+                continue 2
+            fi
+        done
+    done
 fi
 }
 install_openall () {
@@ -540,7 +541,7 @@ if ! ($sudopath -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$grepp
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $sudopath $nicepath -n-15 $sudopath $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffer ' SRC='|$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
+	nohup $sudopath $nicepath -n-15 $sudopath $tailpath -F -n 0 /var/log/kern.log 2>/dev/null|$greppath --line-buffer ' SRC='|$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 
 	SCRIPT_END
 	) > /tmp/fifos_and_temp_files_for_poofitee_installer/launch_complex_cron_line1
@@ -1854,9 +1855,9 @@ See
 \nremain in the sent folder of this email address, be sure to check for that\
 \nfeature before accepting this outgoing email server.  Press ENTER key to accept\
 \nthis outgoing email server, any other key to see if another one can be tested..."
-          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # Didn't want to mess with IFS but had to to accept and know diff between space and enter
+          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 
      done 3<"$poofitee_home_dir/$outemailprovider.outconnects.txt"  2> /dev/null #if needed to for chosen email account, this loop iterates through lines in outconnects.txt 
-# user wants a to re-select an email address
+# user wants to re-select an email address
              printf "Select a different email address for its outgoing email server:"
 done #this loop goes through the email provider outbound servers & builds connect.txt files until user selects one
 echo "$outemailadd" > "$poofitee_home_dir/outemailadd"
