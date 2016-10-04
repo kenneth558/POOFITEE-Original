@@ -3969,7 +3969,7 @@ You'll have to load the ipset module manually and restart poofitee installer.  H
 is a web page that may help you with that:\
 \n\n<center>http://www.fwbuilder.org/4.0/docs/users_guide5/Appendix.shtml\n" infobox "$globaltitle" "$globalbacktitle"
                     read -srn1;read -srn5 -t 0.001 discard
-                    exit # this checks to see whether we need to manually load the ipset maodule
+#                    exit # this checks to see whether we need to manually load the ipset maodule
                 fi
             fi
         fi         
@@ -3995,21 +3995,21 @@ is a web page that may help you with that:\
                $passwdpath -l poofitee
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
-                 $sudopath -u poofitee mkdir -p "$poofitee_home_dir" &>/dev/null && chmod 700 "$poofitee_home_dir" &>/dev/null
+                 mkdir -p "$poofitee_home_dir" &>/dev/null \
+                     && chown poofitee "$poofitee_home_dir" \
+                     && chmod 770 "$poofitee_home_dir" &>/dev/null
                  [[ "$?" == "0" ]] && break
-                 echo "Unable to use that path"
+                 echo "Unable to use the path $poofitee_home_dir"
             fi
             if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
                  $sudopath -u poofitee mkdir -p "$poofitee_home_dir/preparedness" &>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" &>/dev/null
                  [[ "$?" == "0" ]] && break
-                 echo "Unable to use that path"
+                 echo "Unable to use the path $poofitee_home_dir/preparedness"
             else
                  break
             fi
         done
         echo "$poofitee_home_dir" > poofitee_home_dir # handy with subsequent runs of this script, will know where everything is
-#       chown poofitee "$poofitee_home_dir"
-#       chmod 770 "$poofitee_home_dir"
         poofitee_home_dir="${poofitee_home_dir%%/}"
         if ! [[  -z "$iptablespath" ]];then
             back_up_iptables_ruleset current && printf "\nIf you feel the changes that this script makes to your iptables ruleset are not\
