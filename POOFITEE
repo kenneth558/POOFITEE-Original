@@ -2700,6 +2700,11 @@ if ! [[ -z "$tputpath" ]];then
     rows="$($tputpath lines)"
     cols="$(($($tputpath cols)))"
 fi
+if [[ -z "$tputpath" ]] && ! [[ -z "$resizepath" ]];then # Resizing tested slower that using tput
+    eval `$resizepath`
+   rows=$LINES
+   cols=$COLUMNS
+fi
 maxwidthforwhiplogbox=$((cols - 8))
 title="$(! [[ -z "$dialogpath" ]] && printf "\\Zb\\Z1")$3"
 # THIS PART OF THIS FUNCTION NOW EXPANDS BACKTITLE ($4 COMING IN HERE) IF TPUT IS PRESENT USING THE LAST TWO-SPACE SEQUENCE IN BACKTITLE IN WHICH TO INSERT ADDITIONAL PADDING
@@ -2774,6 +2779,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 printf "$line"; \
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        ! [[ "$?" == "0" ]] && exit
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         [[ -z "$whiptailpath" ]] && press_a_key # Would need with infobox
     ;;
@@ -2886,6 +2892,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 printf "$line"; \
             done; \
         )" $rowsfordialog $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        ! [[ "$?" == "0" ]] && exit
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     checklist|checkbox)
@@ -3072,12 +3079,20 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
         numoflinesinoutput="$(($(cat /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput) + 2))"
         ! [[ -z "$whiptailpath" ]] && numoflinesinoutput="$(($numoflinesinoutput + 2))"
         rm /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
-        [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + $(($5 + $([[ -z "$dialogpath" ]] && printf "2" || printf "4"))))) || rowsfordialog=$(($rows - 8)) 
+        if [[ "$5" == "0" ]];then
+            [[ -z "$whiptailpath" ]] && adjust_for_menu="0" || adjust_for_menu="4"
+        else
+            [[ -z "$whiptailpath" ]] && adjust_for_menu="4" || adjust_for_menu="2"
+        fi
+rowsfordialog=$(($numoflinesinoutput + $5 + $adjust_for_menu))
+#        [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + $(($5 + $([[ -z "$dialogpath" ]] && printf "2" || printf "4"))))) || rowsfordialog=$(($rows - 8))
+#        [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + $(($5 + $([[ -z "$dialogpath" ]] && printf "2" || printf "4"))))) || rowsfordialog=$(($rows - 8))
+# printf "\n$rowsfordialog\n";exit #added 5 lines to min (2), only add 2 when $5 == "0" in dialog, 6 in whiptail when linesinput is low.  Line count high: add 4 to numoflinesinoutput in whiptail, no diff in dialog)
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
                 --scrolltext \
                 $([[ -z "$dialogpath" ]] && printf -- "--separate-output") \
                 --noitem \
-                --$2 -- "$(screen_line=""; \
+                --$2 "$(screen_line=""; \
                 printf -- "$1\n"|while IFS= read -r line;do \
                     if [[ -z "$screen_line" ]]; then \
                         screen_line="."; \
@@ -3089,7 +3104,9 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
                     fi; \
                     printf "$line"; \
                 done; \
-            )"  "$rowsfordialog" $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+            )"  $(($rowsfordialog)) $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+#            )"  "$rowsfordialog" $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+        ! [[ "$?" == "0" ]] && exit
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         while IFS= read -r line;do
             index=0
@@ -3274,9 +3291,10 @@ until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[
 done
 if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
 whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
+resizepath="$($whereispath $binaryflag resize)";resizepath="${resizepath#*:}";resizepath="${resizepath# }";resizepath="${resizepath%% *}"
 pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
 greppath="$($whereispath $binaryflag grep)";greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
-ippath="$($whereispath $binaryflag ip)" ;ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
+ippath="$($whereispath $binaryflag ip)";ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
 wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
 sedpath="$($whereispath $binaryflag sed)";sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
@@ -3378,16 +3396,17 @@ getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";ge
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 [[ -z "$adduserpath" ]] && adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 for pgm in ifconfig uniq find tail xargs getent adduser;do
-   if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
+    if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
         localwarning+="\n$pgm needs to be installed\n"
     fi
 done
 if ! [[ -z "$localwarning" ]];then
-    localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning""$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
+    localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning" # "$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
     localbacktitle="Deficiency Notice  POOFITEE  $version"
-    showthis "$localwarning" menu "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle"
-    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard
+    showthis "$localwarning" msgbox "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle" 0 -- "" ""
+#    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard #Need for this line depends on which box is utilized
 fi
+
 until ! [[ -z "$sudopath" ]];do
     showthis "The actual sudo command is necessary for several aspects of this installer, \
 but it cannot be found.  Please install it before continuing.  Use another window or \
