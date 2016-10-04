@@ -2950,6 +2950,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                     fi; \
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
+                        [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                     fi; \
                     printf -- "$line"; \
                 done; \
@@ -3021,6 +3022,7 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
                     fi; \
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
+                        [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                     fi; \
                     printf -- "$line"; \
                 done; \
@@ -3099,6 +3101,7 @@ rowsfordialog=$(($numoflinesinoutput + $5 + $adjust_for_menu))
                     fi; \
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
+                        [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                     fi; \
                     printf -- "$line"; \
                 done; \
@@ -3559,11 +3562,7 @@ liking\
 restarts nor conflicts with iptables rules manipulated manually\
 \n\n - system operators can customize the behavior of all aspects of \
 POOFITEE support scripts without learning to compile, and those \
-customizations are implemented instantly.\
-\n\nThe disadvantages of scripting to compiled languages are normally considered \
-to be execution speed of the finished program and fine control of low-level \
-system functionalities.  POOFITEE is not practically affected by either, thanks \
-to the power that Linux scripting offers."
+customizations are implemented instantly."
 prefix="( As you read, please realize the difference between this installation \"helper \
 script\" that you are running now and the \"script set\" it helps you install )\
 \n"
