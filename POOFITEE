@@ -3404,15 +3404,15 @@ if ! [[ -z "$localwarning" ]];then
     showthis "$localwarning" msgbox "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle" 0 -- "" ""
 #    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard #Need for this line depends on which box is utilized
 fi
-
-showthis "The actual sudo command is necessary for several aspects of this installer, \
+if  [[ -z "$sudopath" ]];then
+    showthis "The actual sudo command is necessary for several aspects of this installer, \
 but it cannot be found.  Please install it before continuing.  Use another window or \
 end this script and restart it later.  In Arch Linux you may install sudo using \
 the following command:\
 \n\n       pacman -Syy --noconfirm base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
-! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
-sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
-
+    ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
+    sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
+fi
 #  Beginning of copyright message
 clear
 showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
