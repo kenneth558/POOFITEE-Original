@@ -1884,7 +1884,7 @@ while true;do
 \naccount, that is, that this server will read instructions out of.)\
 \n\n  Enter the email address now from which this system will retrieve instructions\
 \nto itself that you or others will send:\n"
-#     printf "$line"
+#     printf -- "$line"
      get_1_addr_from_bunch $inemailadds
           inemailadd="$emailadd";inemailacct="$emailacct";inemaildomain="$emaildomain";intopdomain="$topdomain";inemailprovider="$emailprovider";inemailpw="$emailpw"
               printf "Configuring for that email account.  Remember, you should be doing\
@@ -2308,7 +2308,7 @@ done)"
 printf "\nEmail address[es] where to send IP change notifications to:\n"
 toemailaddsIP="$($sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailaddsIP")"
 scratchpad="${toemailaddsIP##*'\n'}"
-line="${toemailaddsIP##*'\n'}";printf "$line"
+line="${toemailaddsIP##*'\n'}";printf -- "$line"
 toemailaddsIPid=1
               while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
@@ -2729,7 +2729,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
 #   NOTE THAT OUR DEVELOPMENT PLATFORM DID NOT GIVE THE '--SCROLLTEXT' OPTION FUNCTIONALITY.  ALSO NOTE THAT FreeBSD DIALOG(1) MAN PAGES STATE --SCROLLTEXT IS MAPPED TO --SCROLLBAR
     case $2 in 
     infobox)
-        printf -- "$1\nQuit: escape key\n"| \
+        printf -- "$1$([[ -z "$dialogpath" ]] && printf "\nQuit: escape key")\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -2765,8 +2765,8 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + 3)) || rowsfordialog=$(($rows - 8)) 
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
             --nocancel \
-            --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--infobox" || printf -- "--msgbox") "$(screen_line=""; \
-            printf -- "$1\n<center>Quit: escape key\n"|while IFS= read -r line;do \
+            --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--$2" || printf -- "--msgbox") -- "$(screen_line=""; \
+            printf -- "$1$([[ -z "$dialogpath" ]] && printf "\n<center>Quit: escape key")\n"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
                 else \
@@ -2776,12 +2776,10 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                     line="${line:8}"
                     [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                 fi; \
-                printf "$line"; \
+                printf -- "$line"; \
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-        ! [[ "$?" == "0" ]] && exit
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-        [[ -z "$whiptailpath" ]] && press_a_key # Would need with infobox
     ;;
     yesno)
         printf -- "$1\n"| \
@@ -2830,7 +2828,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                     line="${line:8}"
                     [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                 fi; \
-                printf "$line"; \
+                printf -- "$line"; \
             done; \
         )" $(($rowsfordialog $(! [[ -z "$whiptailpath" ]] && printf -- "+ 4 "))) $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
@@ -2889,7 +2887,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                     line="${line:8}"
                     [[ $((((cols - ${#line}) / 2) - 6)) -gt 0 ]] && line="$(printf '%.s'" " $(seq $((((cols - ${#line}) / 2) - 6))))""$line"; \
                 fi; \
-                printf "$line"; \
+                printf -- "$line"; \
             done; \
         )" $rowsfordialog $maxwidthforwhiplogbox 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         ! [[ "$?" == "0" ]] && exit
@@ -2953,7 +2951,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
                     fi; \
-                    printf "$line"; \
+                    printf -- "$line"; \
                 done; \
             )" $rowsfordialog $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
@@ -3024,7 +3022,7 @@ printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbo
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
                     fi; \
-                    printf "$line"; \
+                    printf -- "$line"; \
                 done; \
             )"  "$rowsfordialog" $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
@@ -3102,7 +3100,7 @@ rowsfordialog=$(($numoflinesinoutput + $5 + $adjust_for_menu))
                     if [[ "${line:0:8}" == "<center>" ]];then
                         line="${line:8}"
                     fi; \
-                    printf "$line"; \
+                    printf -- "$line"; \
                 done; \
             )"  $(($rowsfordialog)) $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
 #            )"  "$rowsfordialog" $maxwidthforwhiplogbox "${@:5}" 2>/tmp/fifos_and_temp_files_for_poofitee_installer/answergui
@@ -3155,7 +3153,7 @@ else
             done
         else
             layitout "$1"
-            [[ "$2" =~ ^msgbox ]] && press_a_key
+            [[ "$2" =~ ^msgbox|^infobox ]] && press_a_key
             return
         fi
         layitout "$1"
@@ -3369,7 +3367,7 @@ if  [[ -z "$sudopath" ]];then
     localwarning+="\nThe actual sudo command is necessary for several aspects of this installer, \
 but cannot be found.  Please install it before continuing.  Use another window or end this \
 script and restart it later.  In Arch Linux you may install sudo using \
-the following command:\n\n		pacman -Syy base-devel\n"
+the following command:\n\n		pacman -Syy --noconfirm base-devel\n"
 fi
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
     index=1
@@ -3407,15 +3405,13 @@ if ! [[ -z "$localwarning" ]];then
 #    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard #Need for this line depends on which box is utilized
 fi
 
-until ! [[ -z "$sudopath" ]];do
-    showthis "The actual sudo command is necessary for several aspects of this installer, \
+showthis "The actual sudo command is necessary for several aspects of this installer, \
 but it cannot be found.  Please install it before continuing.  Use another window or \
 end this script and restart it later.  In Arch Linux you may install sudo using \
 the following command:\
 \n\n       pacman -Syy --noconfirm base-devel\n" infobox "Reminder Notice" "$globalbacktitle"
-        press_a_key
-    sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
-done
+! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
+sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 
 #  Beginning of copyright message
 clear
