@@ -1745,8 +1745,8 @@ EOF1
 chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
-          [[ -z "$outemailadd" ]] && outemailadd="$(cat "$poofitee_home_dir/outemailadd")" && ! [[ -z "$outemailadd" ]] && outemailadd+="\n"
-          get_1_addr_from_bunch "$outemailadd$toemailadds"
+          [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd")
+          get_1_addr_from_bunch "$outemailadd\n$toemailadds"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
@@ -1900,7 +1900,7 @@ while true;do
                        for port in 465 995 110 993;do
                             printf "\rChecking $MAIL_PROT.$inemailprovider:$port\033[K"
 #The following script file does not exist
-                            (/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && printf \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
+                            (/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
                        done  2> /dev/null
                   done
                   if [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];then
