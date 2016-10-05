@@ -490,7 +490,6 @@ set_notinstalled_var () {
 [[ -z "$nicepath" ]] && notinstalled+="coreutils\n"
 [[ -z "$sendmail_works" ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z "$ipsetpath" ]] && notinstalled+="ipset\n"
-[[ -z "$curlpath" ]] && notinstalled+="curl\n"
 }
 install_firewall_cronentries () {
 #  Only need to confirm if there are entries in crontab
@@ -1893,7 +1892,7 @@ while true;do
               [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]] \
                  && rm "$poofitee_home_dir/$inemailprovider.inconnects.txt" 2>/dev/null
               printf  "\rYou selected address $inemailadd \033[K\n"
-              while ! [[ "$($curlpath ipecho.net/plain)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
+              while ! [[ "$($curlpath http://ipecho.net/plain)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];do
                   printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected...";read -n1 -s
               done
               while ! [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];do # this loop re-tries if no connection file is created in the loop
@@ -2292,7 +2291,7 @@ fi
 printf "The notification email you'd receive should refer to this computer by what name?"
 pcname=$(while read -e -r -i "$(hostname)" sysname;do if ! [[ -z "$sysname" ]];then echo "$sysname";break;fi;done)
 echo
-if [[ "$($curlpath ipecho.net/plain)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then 
+if [[ "$($curlpath http://ipecho.net/plain)" =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];then 
      printf "To learn any new IP address gotten, this computer will interrogate a public\nservice, \
 default is shown below.  Press enter to keep it; otherwise, change it\nto suit you:"
 else 
@@ -2300,7 +2299,7 @@ else
 default is shown below, but is NOT WORKING now.  Change it to suit you:"
 fi
 #The following line is not yet tested after changing from dig to curl
-resolver="$(while read -e -i "$curlpath ipecho.net/plain" resolver;do 
+resolver="$(while read -e -i "$curlpath http://ipecho.net/plain" resolver;do 
      echo "$resolver";break;
 done)"
 
@@ -2412,7 +2411,7 @@ webpageprotocol=https
 emailsubjectline="New IP address for \$(hostname): "
 file_to_store_ip="$poofitee_home_dir/oldip"
 #The following line is not yet tested after changing from dig to curl
-resolver="$curlpath ipecho.net/plain"
+resolver="$curlpath http://ipecho.net/plain"
 ip_from_resolver="\$(\$resolver)"
 if [[ \$ip_from_resolver =~ ^((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$ ]];
 then
@@ -4027,6 +4026,23 @@ is a web page that may help you with that:\
         ! [[ -d "$poofitee_home_dir/ramdisk" ]] && $sudopath -u poofitee mkdir "$poofitee_home_dir/ramdisk" &>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" &>/dev/null
         (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
         $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
+        if [[ "$answer" =~ f ]];then
+            printf "."
+#            echo "firewalling"
+#             printf "iptables, including ruleset and crontab entries will be set up next.\
+#\n   Press a key...";read -n1 -r
+#             echo "going off to installbuildiptables"
+#             printf "\nConfiguring..."
+             install_buildiptablessh
+#             echo "going off to tail f lines and recvg script"
+            sendmail_works_or_not
+            if [[ -z $sendmail_works ]];then
+                outemail_warnings
+                press_a_key
+            fi
+            conf_postfix
+            install_tail_f_lines_and_receiving_script
+        fi
         if [[ "$answer" =~ e ]];then
 #            printf "remote controlling"
             sendmail_works_or_not
@@ -4105,23 +4121,6 @@ is a web page that may help you with that:\
             fi
             conf_postfix
             install_port_knocking
-        fi
-        if [[ "$answer" =~ f ]];then
-            printf "."
-#            echo "firewalling"
-#             printf "iptables, including ruleset and crontab entries will be set up next.\
-#\n   Press a key...";read -n1 -r
-#             echo "going off to installbuildiptables"
-#             printf "\nConfiguring..."
-             install_buildiptablessh
-#             echo "going off to tail f lines and recvg script"
-            sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
-                outemail_warnings
-                press_a_key
-            fi
-            conf_postfix
-            install_tail_f_lines_and_receiving_script
         fi
         [[ "$answer" =~ [fp] ]] && advise_to_verify_persistency
     fi
