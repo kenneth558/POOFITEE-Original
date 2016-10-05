@@ -4027,23 +4027,6 @@ is a web page that may help you with that:\
         ! [[ -d "$poofitee_home_dir/ramdisk" ]] && $sudopath -u poofitee mkdir "$poofitee_home_dir/ramdisk" &>/dev/null && chown poofitee "$poofitee_home_dir/ramdisk" &>/dev/null
         (mount|$greppath "^tmpfs.*$poofitee_home_dir/ramdisk") &>/dev/null || mount -t tmpfs -o size=0 tmpfs "$poofitee_home_dir/ramdisk" &>/dev/null # the size when set to 0 is not limited.  Let POOFITEE use all it needs
         $greppath "^.*$poofitee_home_dir/ramdisk" < /etc/fstab &>/dev/null || echo "tmpfs      "$poofitee_home_dir/ramdisk"      tmpfs       size=0      0     0" >> /etc/fstab
-        if [[ "$answer" =~ f ]];then
-            printf "."
-#            echo "firewalling"
-#             printf "iptables, including ruleset and crontab entries will be set up next.\
-#\n   Press a key...";read -n1 -r
-#             echo "going off to installbuildiptables"
-#             printf "\nConfiguring..."
-             install_buildiptablessh
-#             echo "going off to tail f lines and recvg script"
-            sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
-                outemail_warnings
-                press_a_key
-            fi
-            conf_postfix
-            install_tail_f_lines_and_receiving_script
-        fi
         if [[ "$answer" =~ e ]];then
 #            printf "remote controlling"
             sendmail_works_or_not
@@ -4122,6 +4105,23 @@ is a web page that may help you with that:\
             fi
             conf_postfix
             install_port_knocking
+        fi
+        if [[ "$answer" =~ f ]];then
+            printf "."
+#            echo "firewalling"
+#             printf "iptables, including ruleset and crontab entries will be set up next.\
+#\n   Press a key...";read -n1 -r
+#             echo "going off to installbuildiptables"
+#             printf "\nConfiguring..."
+             install_buildiptablessh
+#             echo "going off to tail f lines and recvg script"
+            sendmail_works_or_not
+            if [[ -z $sendmail_works ]];then
+                outemail_warnings
+                press_a_key
+            fi
+            conf_postfix
+            install_tail_f_lines_and_receiving_script
         fi
         [[ "$answer" =~ [fp] ]] && advise_to_verify_persistency
     fi
