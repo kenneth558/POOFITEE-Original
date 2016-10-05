@@ -1892,7 +1892,7 @@ while true;do
 \nlocal ISP-provided email account considered for this...\n"
               [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]] \
                  && rm "$poofitee_home_dir/$inemailprovider.inconnects.txt" 2>/dev/null
-              printf  "\rYou selected address $inemailadd \033[K\n"
+              printf  "\rYou selected address $inemailadd \033[K\nPlease wait for connection port checking...\n"
               ensure_connection
               while ! [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];do # this loop re-tries if no connection file is created in the loop
                   exec 5>&-
@@ -1914,7 +1914,7 @@ while true;do
               done
 # echo;printf "Address is\n\n$inemailacct"@"$inemaildomain"."$intopdomain"
           rcpw="";rcpw1=""
-          while printf "Password for that email account:";read -s rcpw;do # This loop is for when a password is under question
+          while printf "\nPassword for that email account:";read -s rcpw;do # This loop is for when a password is under question
               printf "\n\033[KRe-type password:"
               read -s rcpw1
               printf "\r\033[K\033[1A\033[K"
