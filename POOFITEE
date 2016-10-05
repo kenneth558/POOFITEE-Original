@@ -2729,6 +2729,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
 #   NOTE THAT OUR DEVELOPMENT PLATFORM DID NOT GIVE THE '--SCROLLTEXT' OPTION FUNCTIONALITY.  ALSO NOTE THAT FreeBSD DIALOG(1) MAN PAGES STATE --SCROLLTEXT IS MAPPED TO --SCROLLBAR
     case $2 in 
     infobox)
+# Dialog won't scroll infobox!  It needs to be something besides infobox for longer messages
         printf -- "$1$([[ -z "$dialogpath" ]] && printf "\nQuit: escape key")\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
