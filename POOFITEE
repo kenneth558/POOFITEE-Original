@@ -1672,7 +1672,7 @@ while true;do
 \nemail account from which you'll read the FULL content of the notification, since\
 \ncell phone carriers often limit the length of email-to-texting conversion,\
 \ncutting short the longer texts."
-     printf "\nAddress[es] where to send notifications to (enter an empty line to end):\n"
+     printf "\n\nAddress[es] where to send notifications to (enter an empty line to end):\n\n"
      get_sendto_emailadds
 done
 if [[ -z $sendmail_works ]];then
@@ -1854,7 +1854,8 @@ See
 \nremain in the sent folder of this email address, be sure to check for that\
 \nfeature before accepting this outgoing email server.  Press ENTER key to accept\
 \nthis outgoing email server, any other key to see if another one can be tested..."
-          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2 # Didn't want to mess with IFS but had to to accept and know diff between space and enter
+          [[ "$(until IFS= read -s -n1 -t .1 domore;[[ "$?" == "0" ]] && echo ${#domore};do :;done)" -eq 0 ]] && break 2
+          printf "\nTrying next connection port.  Please wait..."
      done 3<"$poofitee_home_dir/$outemailprovider.outconnects.txt"  2> /dev/null #if needed to for chosen email account, this loop iterates through lines in outconnects.txt 
 # user wants a to re-select an email address
              printf "Select a different email address for its outgoing email server:"
@@ -2303,7 +2304,7 @@ resolver="$(while read -e -i "$curlpath http://ipecho.net/plain" resolver;do
 done)"
 
 #Is the following duplicated?
-printf "\nEmail address[es] where to send IP change notifications to:\n"
+printf "\n\nEmail address[es] where to send IP change notifications to:\n\n"
 toemailaddsIP="$($sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailaddsIP")"
 scratchpad="${toemailaddsIP##*'\n'}"
 line="${toemailaddsIP##*'\n'}";printf -- "$line"
@@ -2504,7 +2505,7 @@ get_1_addr_from_bunch() {
           emailadds="$1"
           scratchpad="${emailadds%%'\n'*}"
           emailaddid=1 ;horizptr="${#scratchpad}"
-          printf "(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
+          printf "\n(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
           while true;do #this loop get a new email account or one chosen from bunch with password
               while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
