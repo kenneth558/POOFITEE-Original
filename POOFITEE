@@ -472,7 +472,7 @@ before blacklisting.  Don't forget to verify persistency afterwards.\
 \n\n\
 Thank you for using POOFITEE.  God loves you, pass it on.\
 \n\n\
-<center>The POOFITEE development team, Kenneth L. Anderson, lead developer" infobox \
+<center>The POOFITEE development team, Kenneth L. Anderson, lead developer" msgbox \
 "IMPORTANT MESSAGE" "$globalbacktitle"
 }
 set_notinstalled_var () {
