@@ -1997,9 +1997,8 @@ done
 #     printf "\n\nLet's look at the results:\n"
 #     cat /tmp/fifos_and_temp_files_for_poofitee_installer/fifo
 #     rm /tmp/fifos_and_temp_files_for_poofitee_installer/fifo 2>/dev/null
-           (cat <<EOF
+(cat <<EOF
 #!/bin/bash
-
 # THIS SCRIPT ALLOWS FOR CONTROL VIA EMAIL
 # I suggest it be launched with a special port
 # knock logged in kern.log by virtue of an
@@ -2007,7 +2006,7 @@ done
 # identifies itself with the term "email-reader"
 # in its comments. The script searching for that
 # port-match and launching this script is called
-# process_logfile_line.  By maintaining a dynamic
+# process_source_ip.sh.  By maintaining a dynamic
 # blacklist for a while you'll better be able
 # to determine a good port for you.
 
@@ -2028,11 +2027,11 @@ done
 # programming.
 
 # Example: (roughly, please don't criticize imperfection between the lists)
-#     echo "\$(grep -e "Content-Type: text/plain; charset=UTF-8" -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" <(echo "\$mailcontentline"))" >>$poofitee_home_dir/mailcontent
+#     echo "\$(grep -e "Content-Type: text/plain; charset=UTF-8" -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" <(echo "\$mailcontentline"))" >> /home/poofitee/mailcontent
 #
 # becomes (except the email content header line becomes case-insensitive along with everything else):
 
-#     cat *.keywords > allwords.tmp; echo "\$(grep -wif allwords.tmp <(echo "\$mailcontentline"))" >> "$poofitee_home_dir/mailcontent";rm allwords.tmp
+#     cat *.keywords > allwords.tmp; echo "\$(grep -wif allwords.tmp <(echo "\$mailcontentline"))" >> /home/poofitee/mailcontent;rm allwords.tmp
 #       -the grep -f flag is what does it
 #
 # given the following files exist in the appropriate directory, and
@@ -2079,37 +2078,88 @@ done
 #       on
 #       open
 #       allow
-lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" &>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'\`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
-trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
-if [[ -f "$poofitee_home_dir/toemailadds" ]];then
-     recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
-elif [[ -f "./toemailadds" ]];then
-     recipient_list="\$(cat "./toemailadds")"
-fi
-[[ \$- = *i* ]] && echo "Connecting to email...."
-port="${line#*:}";MAIL_PROT="${line%:*}"
-MAIL_FROM="$inemailacct@$inemailprovider"
+[ \$(( \$($tailpath -n-2 \$0|$greppath -c "^#running"))) -gt 0 ] && exit
+until [ \$(( \$($tailpath -n-2 \$0|$greppath -c "^#running"))) -gt 0 ];do
+      echo "#running" >> \$0
+      sleep 1
+done
+trap "$sedpath -i '/^\#running/d' \$0" EXIT
+[[ "\$-" =~ i ]] && echo "Connecting to email...."
+port=110;MAIL_PROT="pop3"
+#echo "\${2//[0-9]}"
 [ ! -z \$2 ] && [ -z "\${2//[0-9]}" ] && [ \$2 -ge 0 ] && [ \$2 -le 65535 ] &&  port=\$2
 [ ! -z \${3,S} ] && [ \${3,S} == "s" ] && MAIL_PROT="smtp"
 [ ! -z \${3,S} ] && [ \${3,I} == "i" ] && MAIL_PROT="imap"
-accountname="\${MAIL_FROM%%@*}";domainname="\${MAIL_FROM##*@}"
-exec 5>&-
+#echo \$port
+#echo "<\$MAIL_PROT>"
+#echo "\$MAIL_FROM"
+accountname=\$(echo "\$MAIL_FROM" | $awkpath -F@ '{print \$1}');domainname=\$(echo  "\$MAIL_FROM" | $awkpath -F@ '{print \$2}')
+#echo "\$accountname and \$MAIL_PROT.\$domainname"
+#echo "/dev/tcp/\$MAIL_PROT.\$domainname/\$port"
+exec 5>&-;wait
 exec 5<>/dev/tcp/\$MAIL_PROT"."\$domainname/\$port
-[[ \$- = *i* ]] && echo "Executed the connect, now trying to read..."
+if [[ "\$?" == "1" ]];then # failed to get through to email server
+     while true;do
+          # possibilities include that the iptables ruleset has lost permitting chains or another scenario repairable by this script
+          printf "Failure to connect to pop3 email server \$(date).  Checking iptables ruleset...\n" >> "\$0.log"
+#          [[ "\$-" =~ i ]] && printf "Failure to connect to pop3 email server \$(date).  Checking iptables ruleset...\n"
+#          if [[ \$(( \$($greppath "I s_static_trusted" < buildiptables.sh|$wcpath -l) )) -gt \$(( \$($iptablespath -wnvL s_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
+#              printf "iptables ruleset in s_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "iptables ruleset in s_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n"
+#              echo "#!/bin/bash" > "\$0.repair"
+#              $greppath "I s_static_trusted" < buildiptables.sh >> "\$0.repair"
+#              chmod 700 "\$0.repair"
+#              "\$0.repair"
+#              printf "Repair attempted.  Now re-trying connection to email server...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "Repair attempted.  Now re-trying connection to email server...\n"
+#              exec 5<>/dev/tcp/\$MAIL_PROT"."\$domainname/\$port
+#              if [[ "\$?" == "1" ]];then
+#                  printf "Failed again to connect to pop3 email server \$(date).\n" >> "\$0.log"
+#                  [[ "\$-" =~ i ]] && printf "Failed again to connect to pop3 email server \$(date).\n"
+#              else
+#                   break
+#              fi
+#          else
+#              printf "iptables ruleset in s_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "iptables ruleset in s_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n"
+#          fi
+#          if [[ \$(( \$($greppath "I d_static_trusted" < buildiptables.sh|wc -l) )) -gt \$(( \$($iptablespath -wnvL d_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
+#              printf "iptables ruleset in d_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "iptables ruleset in d_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n"
+#              echo "#!/bin/bash" > "\$0.repair"
+#              $greppath "I d_static_trusted" < buildiptables.sh >> "\$0.repair"
+#              chmod 700 "\$0.repair"
+#              "\$0.repair"
+#              printf "Repair attempted.  Now re-trying connection to email server...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "Repair attempted.  Now re-trying connection to email server...\n"
+#              exec 5<>/dev/tcp/\$MAIL_PROT"."\$domainname/\$port
+#              if [[ "\$?" == "1" ]];then
+#                  printf "Failed again to connect to pop3 email server \$(date).\n" >> "\$0.log"
+#                  [[ "\$-" =~ i ]] && printf "Failed again to connect to pop3 email server \$(date).\n"
+#              fi
+#          else
+#              printf "iptables ruleset in d_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n" >> "\$0.log"
+#              [[ "\$-" =~ i ]] && printf "iptables ruleset in d_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n"
+#          fi
+          break
+     done
+fi
+[[ "\$-" =~ i ]] && echo "Executed the connect, now trying to read..."
 read -t 2 -u 5 HELO # <&5
-[ x\$1 == "x-v" ] && printf "GOT: \\n\$HELO"
+[ x\$1 == "x-v" ] && echo -e "GOT: \n\$HELO"
 [ x\$1 == "x-v" ] && echo "SENDING: username"
-printf "user $inemailacct\\r" >&5
-read -t 2 -u 5 sendyourpassword
+echo -e "user \$accountname\r" >&5
+#wait
+read -t 2 -u 5 sendyourpassword # <&5
 [ x\$1 == "x-v" ] && echo "\$sendyourpassword"
 [ x\$1 == "x-v" ] && echo "SENDING: password"
-printf "pass $rcpw\\r" >&5
-read -t 2 -u 5  maildroplockedandready
+echo -e "pass \$rcpw\r" >&5
+#wait
+read -t 2 -u 5  maildroplockedandready # <&5
 [ x\$1 == "x-v" ] && echo "\$maildroplockedandready"
 [ x\$1 == "x-v" ] && echo "SENDING: list"
-printf "list\\r" >&5
-[ -f "$poofitee_home_dir/mailcontent" ] && rm "$poofitee_home_dir/mailcontent"
+echo -e "list\r" >&5
+[ -f "\$directoryforscripts/mailcontent" ] && rm "\$directoryforscripts/mailcontent"
 numofemails=-1
 while read  -t 2 -u 5 emailtitle; do
     [ \$(( \${#emailtitle} )) -lt 3 ] && break
@@ -2120,63 +2170,63 @@ while read  -t 2 -u 5 emailtitle; do
          emailtitlenums[ \$((numofemails)) ]=\${emailtitle% *}
     fi
 done
+
 if [ \$((numofemails)) -gt -1 ]; then
-    [[ \$- = *i* ]] && echo "Retrieving \$numofemails email[s]..."
+    [[ "\$-" =~ i ]] && echo "Retrieving \$numofemails email[s]..."
     for i in \`seq 0 \$((numofemails))\`;do
-         printf "RETR \${emailtitlenums[i]}\\r" >&5
+         echo -e "RETR \${emailtitlenums[i]}\r" >&5
           boundary=""
           while read  -t 2 -u 5 mailcontentline;do
              [ \$(( \${#mailcontentline} )) -lt 2 ] && continue
              mailcontentline="\${mailcontentline:: -1} " #strip the linefeed and put space there instead
-              [[ \$- = *i* ]] && echo "\$mailcontentline" #
+              [[ "\$-" =~ i ]] && echo "\$mailcontentline" #
               if [ -z "\$boundary" ];then [ \$(echo "\$mailcontentline"|$greppath -e "^Content-Type: "|$greppath -c "; boundary=") -gt 0 ] && boundary="\$(echo "\$mailcontentline"|$greppath -e "^Content-Type: " -e "; boundary="|$awkpath -F= '{print \$2}')" && boundarymarker=1
               else
-                  echo "\$($greppath -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" -e "log" -e "end" -e "logging" <(echo "\$mailcontentline"))"|while read line;do [ \$(( \${#line} )) -gt 1 ] && echo "\$line" >> "$poofitee_home_dir/mailcontent";done
-                  [ \$($bcpath <<<"\${#mailcontentline} - \${#boundary}") -eq 2 ] && [ "\${mailcontentline:2: -1}" == "\${boundary:: -1}" ] && [ \$(( ++boundarymarker )) -gt 2 ] && (read  -t 2 -u 5 mailcontentline;read -t 2 -u 5  mailcontentline;read  -t 2 -u 5 mailcontentline;read -t 2 -u 5 mailcontentline) && break # && echo "Retrieved one message" && break
+                  echo "\$($greppath -iwe "remove" -e "undo" -e "delete" -e "whitelist" -e "permit" -e "let" -e "on" -e "open" -e "allow" -e "blacklist" -e "off" -e "stop" -e "block" -e "recent" -e "report" -e "shut" -e "close" -e "prevent" -e "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" -e "log" -e "end" -e "logging" <(echo "\$mailcontentline"))"|while read line;do [ \$(( \${#line} )) -gt 1 ] && echo "\$line" >> "\$directoryforscripts/mailcontent";done
+                  [ \$(bc <<<"\${#mailcontentline} - \${#boundary}") -eq 2 ] && [ "\${mailcontentline:2: -1}" == "\${boundary:: -1}" ] && [ \$(( ++boundarymarker )) -gt 2 ] && (read  -t 2 -u 5 mailcontentline;read -t 2 -u 5  mailcontentline;read  -t 2 -u 5 mailcontentline;read -t 2 -u 5 mailcontentline) && break # && echo "Retrieved one message" && break
               fi
           done
     done
     for i in \`seq 0 \$((numofemails))\`;do
-         echo -e "dele \${emailtitlenums[i]}\\r" >&5
+         if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "Deleting email \${emailtitlenums[i]}";fi
+         echo -e "DELE \${emailtitlenums[i]}\r" >&5
          while read -t 2 -u 5 deleteresponse;do
-              if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "\$deleteresponse";fi
-              [ \$(( \${#deleteresponse} )) -lt 1 ] && break;done
+               if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "\$deleteresponse";fi
+               [ \$(( \${#deleteresponse} )) -lt 1 ] && break
+         done
     done
-     [ -f "$poofitee_home_dir/valid_instructions_from_email" ] && rm "$poofitee_home_dir/valid_instructions_from_email"
-#This will give us the subject line of first email: $headpath -n+\$(( \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}') - 1)) mailcontent|$greppath -E '^Subject'
-#This will start us at content of first email: $tailpath -n+\$(( 2 + \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}'))) mailcontent
-     cat "$poofitee_home_dir/mailcontent" |while read line; do line1="\$(echo "\$line "|$greppath -E -o "\\b((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])( |/[1-2]?[0-9] |/3[0-2] )")" && ( echo "\$line1"|while read ipadd;do echo "\$ipadd \$line" >> "$poofitee_home_dir/valid_instructions_from_email"; done ) || (line1="\$(echo "\$line"|$greppath -wie "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "log")" && ( echo "\$line1" >> "$poofitee_home_dir/valid_instructions_from_email" ));done
-     cat "$poofitee_home_dir/valid_instructions_from_email" |while read line
+     [ -f "\$directoryforscripts/valid_instructions_from_email" ] && rm "\$directoryforscripts/valid_instructions_from_email"
+#This will give us the subject line of first email: head -n+\$(( \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}') - 1)) mailcontent|$greppath -E '^Subject'
+#This will start us at content of first email: tail -n+\$(( 2 + \$($greppath -m 1 --line-number "Content-Type: text/plain; charset=UTF-8" < mailcontent|$awkpath -F: '{print \$1}'))) mailcontent
+     cat "\$directoryforscripts/mailcontent" |while read line; do line1="\$(echo "\$line "|$greppath -E -o "\b((1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])( |/[1-2]?[0-9] |/3[0-2] )")" && ( echo "\$line1"|while read ipadd;do echo "\$ipadd \$line" >> "\$directoryforscripts/valid_instructions_from_email"; done ) || (line1="\$(echo "\$line"|$greppath -wie "recent" -e "me" -e "report" -e "what" -e "who" -e "whoami" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "log" -e "send" -e "return" -e "otp")" && ( echo "\$line1" >> "\$directoryforscripts/valid_instructions_from_email" ));done
+     cat "\$directoryforscripts/valid_instructions_from_email" |while read line
      do option=""
           [ \$($greppath -cwie "undo" -e "remove" -e "delete" -e "end" -e "stop" <(echo "\$line")) -gt 0 ] && option="-r"
-          if [ \$($greppath -cwie "report" -e "send" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($sudopath $ipsetpath list poofitee_whitelist|$awkpath 'NR>7 {print \$1}')\\"|$mailpath -s \\"As you requested\\" \\"\$recipient_list\\""
+          if [ \$($greppath -cwie "report" -e "send" -e "return" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
+              script="echo \"\$($sudopath $ipsetpath list whitelist|$awkpath 'NR>7 {print \$1}')\"|$mailpath -s \"As you requested\" \"\$recipient_list\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
-              script="echo \\"\$($sudopath $tailpath /var/log/kern.log)\\"|$mailpath -s \\"As you requested\\" \\"\$recipient_list\\""
+              script="echo \"\$($tailpath /var/log/kern.log)\"|$mailpath -s \"As you requested\" \"\$recipient_list\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
-              script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
+              script="\$directoryforscripts/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \"via email \$(date)\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
               if [ \$(( \${#option} )) -eq 0 ];then
-
-
-
-                    script="\\($sudopath $iptablespath -w -nL INPUT|$greppath \\"remove when not needed\\"\\) || \\($sudopath $iptablespath -w -I INPUT \\$($sudopath $iptablespath -w -nL PREROUTING -t raw --line-numbers|$greppath \\"privateIPs_and_bogons \\"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$($datepath) - remove when not needed\\" -j LOG"
-
-                    script+=";echo \\"$sudopath $iptablespath -w -D INPUT \\$\\($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)\\ &>/dev/null\\"|at now +15 min\\)"
-              elif \\($sudopath $iptablespath -w -nL INPUT|$greppath "remove when not needed") ;then
-                    script="\\($sudopath $iptablespath -w -nL INPUT|$greppath \\"remove when not needed\\"\\) && $sudopath $iptablespath -w -D INPUT \\$\\($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)"
+                    script="\($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\"\) || ($sudopath $iptablespath -wI INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath \"privateIPs \"|$awkpath '{print \$1 + 1}') -m comment --comment \"via email \$(date) - remove when not needed\" -j LOG"
+                    script+=";echo \"$sudopath $iptablespath -wD INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}'\)\ >/dev/null 2>/dev/null\"|at now +15 min\)"
+              elif ($sudopath $iptablespath -wnL INPUT|$greppath "remove when not needed") ;then
+                    script="\($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\"\) && $sudopath $iptablespath -wD INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}'\)"
               else
                     script=""
               fi
+#              [ \$(( \${#script} )) -ne 0 ] && echo "\$script" >> "\$directoryforscripts/buildiptables.sh"
           elif [ \$($greppath -cwi "restore ruleset" <(echo "\$line")) -gt 0 ];then
                 if [[ \$((\$(ls -s /etc/iptables/rules.v4|$awkpath '{print \$1}'))) -lt 4 ]];then
-                      cp "\$(ls -slt \$poofitee_home_dir/preparedness/rules*|$awkpath '{if (\$1>4) {print \$NF;exit}}')" "/etc/iptables/rules.v4"
+                      cp "\$(ls -slt \$directoryforscripts/preparedness/rules*|$awkpath '{if (\$1>4) {print \$NF;exit}}')" "/etc/iptables/rules.v4"
                 fi
-                $sudopath \$([[ -z "$iptabrestorepath" ]] && printf "$netfiltperspath restore" || printf "$iptabrestorepath")
-                $crontabpath -l 2>/dev/null|$sedpath '/*\\/5 \\* \\* \\* \\* .*\\/email_fetch_parse &>\\/dev\\/null\/d' > "\$poofitee_home_dir/cronentries"
-                [[ \$((\$($wcpath -l < "$poofitee_home_dir/cronentries"))) -gt 1 ]] && cat "$poofitee_home_dir/cronentries"|$sudopath $crontabpath -
+                $sudopath $netfiltperspath restore
+                $crontabpath -l|$sedpath '/*\/5 \* \* \* \* .*\/email_fetch_parse >\/dev\/null 2>&1/d' > "\$directoryforscripts/cronentries"
+                [[ \$((\$($wcpath -l < "\$directoryforscripts/cronentries"))) -gt 1 ]] && $sudopath cat "\$directoryforscripts/cronentries"|$crontabpath -
           else
-              script="$poofitee_home_dir/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
+              script="\$directoryforscripts/process_logfile_line \$(echo \$line|$awkpath '{print \$1}') \$option \"via email \$(date)\""
           fi
           echo "email_fetch_parse is sending the following command to be executed:" >> "\$0.log"
           echo "\$script"  >> "\$0.log"
@@ -2185,11 +2235,14 @@ if [ \$((numofemails)) -gt -1 ]; then
 else
      if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "No emails were in the inbox";fi
 fi
+#wait
+#exec 5>&-
 if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "SENDING: QUIT";fi
-echo -e "QUIT\\r" >&5
+echo -e "QUIT\r" >&5
+wait
 exec 5>&-
 EOF
-) >> "$poofitee_home_dir/email_fetch_parse"
+) > "$poofitee_home_dir/email_fetch_parse"
 chown poofitee "$poofitee_home_dir/email_fetch_parse"
 chmod 700 "$poofitee_home_dir/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
