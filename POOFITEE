@@ -1934,7 +1934,7 @@ while true;do
                       msgnumber=0
                       for msg in "user $inemailacct\r" "pass $rcpw\r" stat list;do
                            msgnumber=$(( msgnumber+=1 ))
-                           printf "\r\033[KSending $msg\n"
+                           printf "\r\033[KSending ${msg%'pass '*}\n"
                            printf "$msg" >&5
                          #  while true;do # this loop stores server responses for a configuration
 # using 'cat <&5' would probably timeout on most single-line reads
@@ -2080,13 +2080,7 @@ done
 #       open
 #       allow
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
-EOF
-) > "$poofitee_home_dir/email_fetch_parse"
-           (cat <<EOF
-until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" &>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
-EOF
-) >> "$poofitee_home_dir/email_fetch_parse"
-           (cat <<EOF
+until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" &>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" > "\${setting_home#*'\`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'\`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
 trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 if [[ -f "$poofitee_home_dir/toemailadds" ]];then
      recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
@@ -2163,9 +2157,13 @@ if [ \$((numofemails)) -gt -1 ]; then
               script="$poofitee_home_dir/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \\"via email \$($datepath)\\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
               if [ \$(( \${#option} )) -eq 0 ];then
-                    script="\\($sudopath $iptablespath -w -nL INPUT|$greppath \\"remove when not needed\\"\\) || ($sudopath $iptablespath -w -I INPUT \\$($sudopath $iptablespath -w -nL PREROUTING -t raw --line-numbers|$greppath \\"privateIPs_and_bogons \\"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$($datepath) - remove when not needed\\" -j LOG"
+
+
+
+                    script="\\($sudopath $iptablespath -w -nL INPUT|$greppath \\"remove when not needed\\"\\) || \\($sudopath $iptablespath -w -I INPUT \\$($sudopath $iptablespath -w -nL PREROUTING -t raw --line-numbers|$greppath \\"privateIPs_and_bogons \\"|$awkpath '{print \$1 + 1}') -m comment --comment \\"via email \$($datepath) - remove when not needed\\" -j LOG"
+
                     script+=";echo \\"$sudopath $iptablespath -w -D INPUT \\$\\($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)\\ &>/dev/null\\"|at now +15 min\\)"
-              elif ($sudopath $iptablespath -w -nL INPUT|$greppath "remove when not needed") ;then
+              elif \\($sudopath $iptablespath -w -nL INPUT|$greppath "remove when not needed") ;then
                     script="\\($sudopath $iptablespath -w -nL INPUT|$greppath \\"remove when not needed\\"\\) && $sudopath $iptablespath -w -D INPUT \\$\\($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \\"remove when not needed\\"|$awkpath '{print \$1}'\\)"
               else
                     script=""
@@ -3133,7 +3131,7 @@ else
         activeitem=1
         clear
         layitout "$backtitle\n"
-        layitout "$([[ $(((cols - ${#title}) / 2 )) -ge 1 ]] && printf -- '%.s'" " $(seq $(((cols - ${#title}) / 2 ))))""$title\n"
+        layitout "$([[ $(((cols - ${#title}) / 2 )) -ge 1 ]] && printf -- '%.s'" " $(seq $(((cols - ${#title}) / 2 ))))""$title\n\n"
         if [[ "$2" =~ ^radio|^check|^menu ]];then #hijack the loop for the entries, saving the line numbers of entry locations
             index="$argnum"
             minpadding=$((cols / 2 ))
@@ -3147,7 +3145,7 @@ else
             index="$argnum"
             maxindex=-1
             for argument in "${@:argnum}";do
-                layitout "\n"
+#                layitout "\n" # This is fine only when selections are few
                 if [[ $index =~ [02468]$ ]];then
                     maxindex=$((maxindex + 1))
                     printf "\033[6n" ; read -sd R cp;cp="${cp#*[}"
@@ -3155,12 +3153,13 @@ else
                     selectioncol[$(((index - argnum) / 2))]="$((minpadding + ${cp#*;}))"
                     [[ $((minpadding)) -gt 0 ]] && layitout "$(printf '%.s'" " $(seq $((minpadding))))"
                     layitout "$(printf -- "$([[ $2 =~ ^radio ]] && printf "( ) " || printf "[ ] ")$argument")"
-                    layitout "\n"
+                    layitout "\n"  # This is fine only when selections are few
                 else
                     selection_select_status[$(((index - 1 - argnum) / 2))]="$argument"
                 fi
                 index=$((index + 1))
             done
+#            layitout "\n" # Give some visual separation aftermenu choices
         else
             layitout "$1"
             [[ "$2" =~ ^msgbox|^infobox ]] && press_a_key
@@ -3329,10 +3328,10 @@ lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodp
 trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
 dialogpath=""
-dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
+#dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
-[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
-[[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
+#[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
+#[[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
 tputpath="$($whereispath $binaryflag tput)" ;tputpath="${tputpath#*:}";tputpath="${tputpath# }";tputpath="${tputpath%% *}"
 globalbacktitle="Required Reading  POOFITEE  $version"
 if [[ "$($unamepath)" =~ BSD ]] || [[ "$($unamepath)" =~ Darwin ]];then
@@ -3463,7 +3462,7 @@ msgbox \
 "Limitations and Copyright" \
 "Copyright Screen  POOFITEE  $version"
 # Dialog won't scroll infobox!  It needs to be something besides infobox for longer messages
-    ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
+#    ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
 pumppath="$($whereispath $binaryflag pump)";pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
