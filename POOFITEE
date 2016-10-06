@@ -2080,7 +2080,13 @@ done
 #       open
 #       allow
 lockfile_dir="$poofitee_home_dir/ramdisk" # Purpose is for easy copy-paste-reuse of lock lines
+EOF
+) > "$poofitee_home_dir/email_fetch_parse"
+           (cat <<EOF
 until (set -o noclobber;echo "\$$" > "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" &>/dev/null);do ! [[ -f "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" ]] && break;$inotifywaitpath -q -e DELETE_SELF "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile" --format \%e 2>/dev/null|while read inotifywait_output;do if [[ "\$inotifywait_output" =~ increase\ the\ amount\ of\ inotify\ watches ]];then setting_home="\${inotifywait_output:: -2}";echo "\$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" > "\${setting_home#*'`'}";echo "fs.inotify.max_user_watches = \$(( \$(cat "\${setting_home#*'`'}") + 5000 ))" >> /etc/sysctl.d/99-sysctl.conf;continue;fi;[[ "\$inotifywait_output" == "DELETE_SELF" ]] && break;done || sleep 1;done
+EOF
+) >> "$poofitee_home_dir/email_fetch_parse"
+           (cat <<EOF
 trap 'rm "\$lockfile_dir/\$(printf "\${0%/}"|printf "\${0##*/}").lockfile"' INT TERM EXIT
 if [[ -f "$poofitee_home_dir/toemailadds" ]];then
      recipient_list="\$(cat "$poofitee_home_dir/toemailadds")"
@@ -2185,7 +2191,7 @@ if [[ "\$-" =~ i ]] || [ x\$1 == "x-v" ];then echo "SENDING: QUIT";fi
 echo -e "QUIT\\r" >&5
 exec 5>&-
 EOF
-) > "$poofitee_home_dir/email_fetch_parse"
+) >> "$poofitee_home_dir/email_fetch_parse"
 chown poofitee "$poofitee_home_dir/email_fetch_parse"
 chmod 700 "$poofitee_home_dir/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
