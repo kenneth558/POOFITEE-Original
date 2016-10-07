@@ -3412,7 +3412,7 @@ if ! [[ -z "$failreason" ]];then
     exit
 fi
 #We'll place this installer path variable here for future use possibly to inform in the next warning section
-installers=("apt-get" "-y install" dnf install yum install zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
+installers=("apt-get" "-y install" dnf install yum "-y install" zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
 installerpath=$($whereispath $binaryflag ${installers[$((installer + installer))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
 min_bash_version_tested="4.3.11"
 attention="YOUR COOPERATION OR ATTENTION IS NEEDED"
