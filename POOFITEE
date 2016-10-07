@@ -2210,10 +2210,10 @@ if [ \$((numofemails)) -gt -1 ]; then
               script="\$directoryforscripts/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \"via email \$(date)\""
           elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
               if [ \$(( \${#option} )) -eq 0 ];then
-                    script="\($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\"\) || ($sudopath $iptablespath -wI INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath \"privateIPs \"|$awkpath '{print \$1 + 1}') -m comment --comment \"via email \$(date) - remove when not needed\" -j LOG"
-                    script+=";echo \"$sudopath $iptablespath -wD INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}'\)\ >/dev/null 2>/dev/null\"|at now +15 min\)"
+                    script="($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\") || ($sudopath $iptablespath -wI INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath \"privateIPs \"|$awkpath '{print \$1 + 1}') -m comment --comment \"via email \$(date) - remove when not needed\" -j LOG"
+                    script+=";echo \"$sudopath $iptablespath -wD INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')\ >/dev/null 2>/dev/null\"|at now +15 min)"
               elif ($sudopath $iptablespath -wnL INPUT|$greppath "remove when not needed") ;then
-                    script="\($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\"\) && $sudopath $iptablespath -wD INPUT \\$\($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}'\)"
+                    script="($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\") && $sudopath $iptablespath -wD INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')"
               else
                     script=""
               fi
