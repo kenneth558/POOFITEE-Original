@@ -2771,9 +2771,11 @@ if ! [[ -z "$4" ]] && [[ ${#4} -lt $((cols - 2)) ]];then
     else
         backtitle_2nd_segment="${4#*'  '}"
         backtitle="${4%%'  '*}$(printf '%.s'" " \
-$(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 2) / 2))))\
-${backtitle_2nd_segment%'  '*}$(printf '%.s'" " \
-$(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 3) / 2))))${backtitle_2nd_segment##*'  '}"
+        $(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 2) / 2))))${backtitle_2nd_segment%'  '*}$(printf '%.s'" " \
+        $(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4}$([[ $localwarning =~ bash\ shell\ version ]] && printf " + 1" || printf " + 3")) / 2))))${backtitle_2nd_segment##*'  '}" # needed to be a 3 adjust for all until whiptail in CentOS 7, then made it a 1
+#        backtitle="${4%%'  '*}$(printf '%.s'" " \
+#        $(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4} + 2) / 2))))${backtitle_2nd_segment%'  '*}$(printf '%.s'" " \
+#        $(seq $(((cols $([[ -z "$dialogpath" ]] && printf -- "+ 2") - ${#4}$([[ -z "$rhelchkconfigpath" ]] && printf " + 3" || printf " + 1")) / 2))))${backtitle_2nd_segment##*'  '}" # needed to be a 3 adjust for all until whiptail in CentOS 7, then made it a 1
     fi
 fi
 screen_line=""
@@ -2785,8 +2787,8 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
 #   NOTE THAT OUR DEVELOPMENT PLATFORM DID NOT GIVE THE '--SCROLLTEXT' OPTION FUNCTIONALITY.  ALSO NOTE THAT FreeBSD DIALOG(1) MAN PAGES STATE --SCROLLTEXT IS MAPPED TO --SCROLLBAR
     case $2 in 
     infobox)
-# Dialog won't scroll infobox!  It needs to be something besides infobox for longer messages
-        printf -- "$1$([[ -z "$dialogpath" ]] && printf "\nQuit: escape key")\n"| \
+# Dialog won't scroll infobox!  It needs to be something besides infobox for longer messages.  CentOS 7 or old bash won't respond to excape key
+        printf -- "$1$([[ -z "$dialogpath" ]] && ! [[ $localwarning =~ bash\ shell\ version ]] && printf "\nQuit: escape key")\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -2823,7 +2825,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
             --nocancel \
             --scrolltext $([[ -z "$whiptailpath" ]] && printf -- "--$2" || printf -- "--msgbox") -- "$(screen_line=""; \
-            printf -- "$1$([[ -z "$dialogpath" ]] && printf "\n<center>Quit: escape key")\n"|while IFS= read -r line;do \
+            printf -- "$1$([[ -z "$dialogpath" ]] && ! [[ $localwarning =~ bash\ shell\ version ]] && printf "\n<center>Quit: escape key")\n"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
                 else \
@@ -2892,7 +2894,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
     msgbox)
-        printf -- "$1\nQuit: escape key\n"| \
+        printf -- "$1\n$(! [[ $localwarning =~ bash\ shell\ version ]] && printf "Quit: escape key\n")"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
                 screen_line="."
@@ -2935,7 +2937,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
             --nocancel \
             --scrolltext "--$2" "$(screen_line=""; \
-            printf -- "$1\n<center>Quit: escape key\n"|while IFS= read -r line;do \
+            printf -- "$1\n$(! [[ $localwarning =~ bash\ shell\ version ]] && printf "<center>Quit: escape key\n")"|while IFS= read -r line;do \
                 if [[ -z "$screen_line" ]]; then \
                     screen_line="."; \
                 else \
@@ -3359,6 +3361,7 @@ greppath="$($whereispath $binaryflag grep)";greppath="${greppath#*:}";greppath="
 ippath="$($whereispath $binaryflag ip)";ippath="${ippath#*:}";ippath="${ippath# }";ippath="${ippath%% *}"
 wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
 sedpath="$($whereispath $binaryflag sed)";sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
+rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
     index=1
     for arg in "$@"
@@ -3518,7 +3521,6 @@ msgbox \
 #    ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
 pumppath="$($whereispath $binaryflag pump)";pumppath="${pumppath#*:}";pumppath="${pumppath# }";pumppath="${pumppath%% *}"
 # dhcp_lease_path=$($findpath / -maxdepth 5 -name dhclient*.lease* 2> /dev/null)
-rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
 # eval "$pythonpath -c \"import platform;print(platform.linux_distribution()[0])\" &> /dev/null > "/tmp/fifos_and_temp_files_for_poofitee_installer\distributionby.${0#*/}\"" \
 #    || (eval "printf \"Functionality may be limited due to inability to determine distribution type\n";press_a_key) \
 #    || eval "echo $OSTYPE > "/tmp/fifos_and_temp_files_for_poofitee_installer\distributionby.${0#*/}\""
@@ -4014,6 +4016,9 @@ until ! [[ -z "$answer" ]];do
 \npress R to retry (recommended as long as progress is being made with repeated\
 \nretries), any other alpha-numeric key to ignore:"
                            press_a_key r "<other-letter-or-number>" || break                 
+                           for package in "$not_installed_single_line";do
+                               eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
+                           done
                       fi
                  fi
             else
