@@ -4019,6 +4019,14 @@ until ! [[ -z "$answer" ]];do
                            for package in "$not_installed_single_line";do
                                eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
                            done
+                           if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
+                               cat <<-EOF
+								# Download inotify-tools source from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz then compile and install:
+								# put into /usr/share/inotifywhatever and unzip
+								# cd /usr/share/inotifywhatever
+								#./configure --prefix=/usr && make && su -c 'make install'
+								EOF
+                           fi
                       fi
                  fi
             else
