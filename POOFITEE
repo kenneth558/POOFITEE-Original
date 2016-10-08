@@ -1745,7 +1745,7 @@ EOF1
 chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
-          [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd")
+          [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd" 2>/dev/null)
           get_1_addr_from_bunch "$outemailadd\n$toemailadds"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           printf "determining best option for outgoing email server login.  You should be doing\
@@ -1871,7 +1871,7 @@ postfix_already_conf=True # set this to True or just anything non-empty
 poofitee_home_dir="$( cat poofitee_home_dir )"
 # "$($sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds")"
 inemailadds=""
-inemailadds="$( [[ -f "$poofitee_home_dir/outemailadd" ]] && cat "$poofitee_home_dir/outemailadd" || [[ -f "$poofitee_home_dir/toemailadds" ]] && $sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds" )"
+inemailadds="$( [[ -f "$poofitee_home_dir/outemailadd" ]] && cat "$poofitee_home_dir/outemailadd" 2>/dev/null || [[ -f "$poofitee_home_dir/toemailadds" ]] && $sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds" )"
 #WORKING ON: nice selector from "$poofitee_home_dir/successlogins"
 
 inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
