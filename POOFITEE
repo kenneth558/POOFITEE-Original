@@ -3937,7 +3937,7 @@ until ! [[ -z "$answer" ]];do
                            printf "Installation of\n$notinstalled\n\nis required next.  Press u to update your system's package installer first,\
 $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your system's package installer & have it run autoremove,")\
 \nany other letter or number key not to update the installer first.  \n"
-                           press_a_key u $([[ "$installerpath" =~ apt-get ]] && printf "b" || printf "any_other_key")
+                           press_a_key u $([[ "$installerpath" =~ apt-get ]] && printf "b" || printf "<other-letter-or-number>")
                            if [[ "$installerpath" =~ apt-get ]] && [[ "$REPLY" =~ [Bb] ]];then
                                 clear
                                 installeranswer="$REPLY"
@@ -4025,8 +4025,9 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       else
                            printf "The following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \npress R to retry (recommended as long as progress is being made with repeated\
-\nretries), any other alpha-numeric key to ignore:"
-                           press_a_key r "<other-letter-or-number>" || break                 
+\nretries), any other alpha-numeric key to ignore:\n"
+                           press_a_key r "<other-letter-or-number>" || break
+                           printf "\n"
                            for package in "$not_installed_single_line";do
                                eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
                  press_a_key
