@@ -125,6 +125,51 @@ version="version 0.0.1"
 #ENABLE_ROUTING (default: 0) – if set different than 0 then routing is enabled (in /proc/sys/net/ipv4/ip_forward and /proc/sys/net/ipv6/conf/all/forwarding), otherwise it’s not.
 #
 ################  FUNCTIONS FIRST, THEN MAIN:
+create_tmp_timeouttry_script () {
+(cat <<EOF1
+#!/bin/bash
+lineshere="\$($greppath -E --line-number "^:$" < \$0)"
+(cat << EOF
+#!/bin/bash
+$headpath -n "\${lineshere%::*}" \$0 > \$0.bak
+mv \$0.bak \$0
+chmod 777 \$0
+EOF
+) > /tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
+chmod 777 /tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
+/tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
+# read -s -n 1 -p "press a key before while..."
+while getopts "t:" opt; do
+# read -s -n 1 -p "press a key in while before case..."
+  case "\$opt" in
+      t) timeout=\$OPTARG;shift \$((OPTIND-1)) ;;
+  esac
+#  read -s -n 1 -p "press a key in while after case..."
+done
+# read -s -n 1 -p "press a key after both while and case..."
+
+start_watchdog(){
+  timeout="\$1"
+  (( i = timeout ))
+  while (( i > 0 ))
+  do
+      kill -0 \$\$ || exit 0
+      sleep 1
+      (( i -= 1 ))
+  done
+
+  # echo "killing process after timeout of \$timeout seconds"
+  kill \$\$
+}
+
+start_watchdog "\$timeout" 2>/dev/null &
+echo "\$@" >> "\$0"
+:
+
+EOF1
+) > "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
+chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
+}
 ensure_connection () {
           while ! [[ "$(ping -c1 opendns.com &>/dev/null;echo "$?")" == "0" ]];do
                printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected or to ignore...";read -rsn 1;read -rst 0.001 -n3
@@ -1699,50 +1744,7 @@ if [[ -z $sendmail_works ]];then
 \nresume here and enter that account name and password.  That same account could\
 \nalso be dedicated for this scripting to read commands emailed from you for it to\
 \nbe remote controlled:\n"
-
-(cat <<EOF1
-#!/bin/bash
-lineshere="\$($greppath -E --line-number "^:$" < \$0)"
-(cat << EOF
-#!/bin/bash
-$headpath -n "\${lineshere%::*}" \$0 > \$0.bak
-mv \$0.bak \$0
-chmod 777 \$0
-EOF
-) > /tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
-chmod 777 /tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
-/tmp/fifos_and_temp_files_for_poofitee_installer/cleanup.sh
-# read -s -n 1 -p "press a key before while..."
-while getopts "t:" opt; do
-# read -s -n 1 -p "press a key in while before case..."
-  case "\$opt" in
-      t) timeout=\$OPTARG;shift \$((OPTIND-1)) ;;
-  esac
-#  read -s -n 1 -p "press a key in while after case..."
-done
-# read -s -n 1 -p "press a key after both while and case..."
-
-start_watchdog(){
-  timeout="\$1"
-  (( i = timeout ))
-  while (( i > 0 ))
-  do
-      kill -0 \$\$ || exit 0
-      sleep 1
-      (( i -= 1 ))
-  done
-
-  # echo "killing process after timeout of \$timeout seconds"
-  kill \$\$
-}
-
-start_watchdog "\$timeout" 2>/dev/null &
-echo "\$@" >> "\$0"
-:
-
-EOF1
-) > "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
-chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
+create_tmp_timeouttry_script
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
           [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd" 2>/dev/null)
@@ -1876,6 +1878,7 @@ inemailadds="$( [[ -f "$poofitee_home_dir/outemailadd" ]] && cat "$poofitee_home
 
 inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
 # rm "$poofitee_home_dir/successlogins" 2>/dev/null
+create_tmp_timeouttry_script
 clear
 while true;do
      printf "(Be advised - The next configuration will determine the optimal port of an email\
@@ -2103,7 +2106,7 @@ if [[ "\$?" == "1" ]];then # failed to get through to email server
           # possibilities include that the iptables ruleset has lost permitting chains or another scenario repairable by this script
           printf "Failure to connect to pop3 email server \$(date).  Checking iptables ruleset...\n" >> "\$0.log"
 #          [[ "\$-" =~ i ]] && printf "Failure to connect to pop3 email server \$(date).  Checking iptables ruleset...\n"
-#          if [[ \$(( \$($greppath "I s_static_trusted" < buildiptables.sh|$wcpath -l) )) -gt \$(( \$($iptablespath -wnvL s_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
+#          if [[ \$(( \$($greppath "I s_static_trusted" < buildiptables.sh|$wcpath -l) )) -gt \$(( \$($iptablespath -w -nvL s_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
 #              printf "iptables ruleset in s_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n" >> "\$0.log"
 #              [[ "\$-" =~ i ]] && printf "iptables ruleset in s_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n"
 #              echo "#!/bin/bash" > "\$0.repair"
@@ -2123,7 +2126,7 @@ if [[ "\$?" == "1" ]];then # failed to get through to email server
 #              printf "iptables ruleset in s_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n" >> "\$0.log"
 #              [[ "\$-" =~ i ]] && printf "iptables ruleset in s_static_trusted chain has at least as many rules as found in backup repair script.  Making no repair...\n"
 #          fi
-#          if [[ \$(( \$($greppath "I d_static_trusted" < buildiptables.sh|wc -l) )) -gt \$(( \$($iptablespath -wnvL d_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
+#          if [[ \$(( \$($greppath "I d_static_trusted" < buildiptables.sh|wc -l) )) -gt \$(( \$($iptablespath -w -nvL d_static_trusted --line-numbers|$tailpath -n1|$awkpath '{print \$1}') )) ]];then
 #              printf "iptables ruleset in d_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n" >> "\$0.log"
 #              [[ "\$-" =~ i ]] && printf "iptables ruleset in d_static_trusted chain has fewer rules than found in backup repair script.  Repairing...\n"
 #              echo "#!/bin/bash" > "\$0.repair"
@@ -2207,13 +2210,13 @@ if [ \$((numofemails)) -gt -1 ]; then
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
               script="echo \"\$($tailpath /var/log/kern.log)\"|$mailpath -s \"As you requested\" \"\$recipient_list\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
-              script="\$directoryforscripts/openall.sh \$(echo \$line|$awkpath '{print \$1}') \$option \"via email \$(date)\""
-          elif [ \$($greppath -cwie "log" -e "logging" <(echo "\$line")) -gt 0 ];then
+              script="\$directoryforscripts/openall.sh \$(echo \"\$line\"|$awkpath '{print \$1}') \$option \"via email \$(date)\""
+          elif [ \$($greppath -cwie "log" -e "logging" <\$(echo "\$line")) -gt 0 ];then
               if [ \$(( \${#option} )) -eq 0 ];then
-                    script="($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\") || ($sudopath $iptablespath -wI INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath \"privateIPs \"|$awkpath '{print \$1 + 1}') -m comment --comment \"via email \$(date) - remove when not needed\" -j LOG"
-                    script+=";echo \"$sudopath $iptablespath -wD INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')\ >/dev/null 2>/dev/null\"|at now +15 min)"
-              elif ($sudopath $iptablespath -wnL INPUT|$greppath "remove when not needed") ;then
-                    script="($sudopath $iptablespath -wnL INPUT|$greppath \"remove when not needed\") && $sudopath $iptablespath -wD INPUT \\$($sudopath $iptablespath -wnL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')"
+                    script="($sudopath $iptablespath -w -nL INPUT|$greppath \"remove when not needed\") || ($sudopath $iptablespath -w -I INPUT \$($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath \"privateIPs \"|$awkpath '{print \$1 + 1}') -m comment --comment \"via email \$(date) - remove when not needed\" -j LOG"
+                    script+=";echo \"$sudopath $iptablespath -w -D INPUT \$($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')\ >/dev/null 2>/dev/null\"|at now +15 min)"
+              elif ($sudopath $iptablespath -w -nL INPUT|$greppath "remove when not needed") ;then
+                    script="($sudopath $iptablespath -w -nL INPUT|$greppath \"remove when not needed\") && $sudopath $iptablespath -w -D INPUT \$($sudopath $iptablespath -w -nL INPUT --line-numbers|$greppath -m 1 \"remove when not needed\"|$awkpath '{print \$1}')"
               else
                     script=""
               fi
