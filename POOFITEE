@@ -2255,7 +2255,7 @@ until read -erp "Enter a port number you will knock to initiate email to be read
 done
 emailproto="tcp"
 if [ -f "/etc/protocols" ];then
-     until read -eri "$emailproto" -p "Enter the protocol you will use in that knock: " emailproto 2>/dev/null; [[ "$($awkpath '{print $1" "$2" "$3}' < "/etc/protocols"|$greppath -wcm 1 "$emailproto")" == "1" ]];do
+     until read -erp "Enter the protocol you will use in that knock: " emailproto -i "$emailproto" 2>/dev/null; [[ "$($awkpath '{print $1" "$2" "$3}' < "/etc/protocols"|$greppath -wcm 1 "$emailproto")" == "1" ]];do
          printf "\nThe protocol must be available in /etc/protocols\n"
      done
 else
@@ -3933,12 +3933,12 @@ until ! [[ -z "$answer" ]];do
             if ! [ -z "$installerpath" ] && ! [ -z "$not_installed_single_line" ];then # install what is neededpress 
                  if [ -z "$been_here_before" ];then
                       ensure_connection
-                      if [[ "$installerpath" =~ apt-get ]];then
+                      if [[ "$installerpath" =~ apt-get|pacman ]];then
                            printf "Installation of\n$notinstalled\n\nis required next.  Press u to update your system's package installer first,\
-\npress b to both update your system's package installer & have it run autoremove,\
+$([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your system's package installer & have it run autoremove,")\
 \nany other letter or number key not to update the installer first.  \n"
-                           press_a_key u b
-                           if [[ "$REPLY" =~ [Bb] ]];then
+                           press_a_key u $([[ "$installerpath" =~ apt-get ]] && printf "b" || printf "any_other_key")
+                           if [[ "$installerpath" =~ apt-get ]] && [[ "$REPLY" =~ [Bb] ]];then
                                 clear
                                 installeranswer="$REPLY"
                                 printf "Cleaning up with apt-get autoremove\n"
@@ -3953,15 +3953,20 @@ until ! [[ -z "$answer" ]];do
                                 printf "Updating your system\'s package installer\n" # in arch, do pacman -Syuu
                                 while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                                 progress_dots="$!"
-                                apt-get update &>/dev/null
+                                if [[ "$installerpath" =~ apt-get ]];then
+                                    apt-get update &>/dev/null
+                                else
+                                    pacman --noconfirm -Syuu  &>/dev/null
+                                fi
                                 kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                            fi
                            been_here_before="."
                       fi
                  fi
-                 printf "\r\033[KInstalling $not_installed_single_line"
+                 printf "\r\033[KInstalling $not_installed_single_line\n"
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
+                 press_a_key
 # make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
 #switch_from_more_common_package_to_less_common_package netfilter-persistent netfilter-persistent iptables-persistent iptables-persistent
@@ -3974,6 +3979,7 @@ until ! [[ -z "$answer" ]];do
 #                           printf "...Not a problem...\n"
                            if [[ -z "$iptabsavepath" ]];then
                                  eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"
+                 press_a_key
                                  iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                                  netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                                  what_needs_to_be_installed
@@ -3992,6 +3998,7 @@ until ! [[ -z "$answer" ]];do
 #                           printf "...Not a problem...\n"
                            if [[ -z "$crontabpath" ]];then
                                  eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"
+                 press_a_key
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                                  what_needs_to_be_installed
                            else
@@ -4022,6 +4029,7 @@ until ! [[ -z "$answer" ]];do
                            press_a_key r "<other-letter-or-number>" || break                 
                            for package in "$not_installed_single_line";do
                                eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
+                 press_a_key
                            done
                            if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
                                cat <<-EOF
