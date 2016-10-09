@@ -915,7 +915,7 @@ get_operator_knock_choices () {
                  i=1
                  while knockport[$i]="";printf "\n";read -e -p "Knock $i port:" knockport[$i];! [[ -z "${knockport[$i]}" ]] || [[ $(($i)) -le $(($minimum_number_of_knocks)) ]];do
                       [[ -z "${knockport[$i]}" ]] && printf " You need to specify at least $minimum_number_of_knocks knocks" && continue
-                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65535 ]] || [[ -z "${knockport[$i]}" ]] ;then continue;fi
+                      if ! [[ "${knockport[$i]}" =~ ^[0-9]{1,5}$ ]] || ! [[ $(( ${knockport[$i]} )) -le 65536 ]] || [[ -z "${knockport[$i]}" ]] ;then continue;fi
                       if ! [[ -z "$likeliest_internal_net_interface" ]] && [[ -f "/etc/ssh/sshd_config" ]] && [[ "$($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')" =~ [0-9] ]] && [[ " ${knockport[$i]} " =~ \ $($greppath ^Port /etc/ssh/sshd_config|$awkpath '{print $2}')\  ]];then
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
 '{printf $2}')")")" simply because it will\
@@ -2090,7 +2090,7 @@ trap "$sedpath -i '/^\#running/d' \$0" EXIT
 [[ "\$-" =~ i ]] && echo "Connecting to email...."
 port=110;MAIL_PROT="pop3"
 #echo "\${2//[0-9]}"
-[ ! -z \$2 ] && [ -z "\${2//[0-9]}" ] && [ \$2 -ge 0 ] && [ \$2 -le 65535 ] &&  port=\$2
+[ ! -z \$2 ] && [ -z "\${2//[0-9]}" ] && [ \$2 -ge 0 ] && [ \$2 -le 65536 ] &&  port=\$2
 [ ! -z \${3,S} ] && [ \${3,S} == "s" ] && MAIL_PROT="smtp"
 [ ! -z \${3,S} ] && [ \${3,I} == "i" ] && MAIL_PROT="imap"
 #echo \$port
@@ -2250,7 +2250,7 @@ chown poofitee "$poofitee_home_dir/email_fetch_parse"
 chmod 700 "$poofitee_home_dir/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
 # belongs inserted just before both whitelist and blacklist - use the lower line number of them both
-until read -erp "Enter a port number you will knock to initiate email to be read: " emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( $emailport )) -le 65535 ]];do
+until read -erp "Enter a port number you will knock to initiate email to be read: " emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( $emailport )) -le 65536 ]];do
     printf "\nThe port number must be a number between 0 and 65535 inclusive\n"
 done
 emailproto="tcp"
