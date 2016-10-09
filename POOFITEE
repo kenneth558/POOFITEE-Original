@@ -2255,14 +2255,15 @@ until read -erp "Enter a port number you will knock to initiate email to be read
 done
 emailproto="tcp"
 if [ -f "/etc/protocols" ];then
-     until read -erp "Enter the protocol you will use in that knock: " emailproto -i "$emailproto"; [[ "$($awkpath '{print $1" "$2" "$3}' < "/etc/protocols"|$greppath -wcm 1 "$emailproto")" != "1" ]];do
+     until read -erp "Enter the protocol you will use in that knock: " emailproto -i "$emailproto"; [[ "$($awkpath '{print $1" "$2" "$3}' < "/etc/protocols"|$greppath -wcm 1 "$emailproto")" == "1" ]];do
          printf "\nThe protocol must be available in /etc/protocols\n"
      done
 else
 :
 fi
-[[ $($iptablespath -w -I PREROUTING 1 -t raw -m comment --comment "This rule ensures email-reader port knock won't get ignored" -p $emailproto --dpt $emailport -j LOG --log-prefix "fetch email " &>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
-          }
+[[ $($iptablespath -w -I PREROUTING 1 -t raw -m comment --comment "This rule ensures email-reader port knock won't get ignored" -p $emailproto --dport $emailport -j LOG --log-prefix "fetch email " &>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+}
+
 install_dynIPch () {
 #dhcp_lease_path
 # mac=ipconfig getpacket (interface name)
