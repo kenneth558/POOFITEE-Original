@@ -3951,14 +3951,14 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            if [[ "$REPLY" =~ [UuBb] ]];then
                                 clear
                                 printf "Updating your system\'s package installer\n" # in arch, do pacman -Syuu
-                                while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
-                                progress_dots="$!"
                                 if [[ "$installerpath" =~ apt-get ]];then
+                                    while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
+                                    progress_dots="$!"
                                     apt-get update &>/dev/null
+                                    kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                                 else
-                                    pacman --noconfirm -Syuu  &>/dev/null
+                                    pacman --noconfirm -Syuu  # &>/dev/null
                                 fi
-                                kill $progress_dots; trap 'kill $progress_dots' SIGTERM
                            fi
                            been_here_before="."
                       fi
