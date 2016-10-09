@@ -1080,9 +1080,9 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
 install_port_knocking () {
             REPLY=""
             until [[ "$REPLY" =~ [yn] ]]; do
-               printf "The OTP feature is not yet finished.  Read how it will work and code it yourself\
-\nif you want to...\n"
-               read -e -r -n1 -p "Use OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
+               printf "\nThe OTP feature is not yet finished.  Read how it will work and code it yourself\
+\nif you want to..."
+               read -e -r -n1 -p "\nUse OTPs (One-Time-Passwords)? (y, n, or ? for help) Client side is not free:"
                REPLY="${REPLY,}"
                [[ "$REPLY" =~ \? ]] && ( \
 printf "\n  Client configuration is available under different licensing terms if you need\
