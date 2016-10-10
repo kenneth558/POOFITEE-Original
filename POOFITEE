@@ -3966,7 +3966,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                  printf "\r\033[KInstalling $not_installed_single_line\n"
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed &>/dev/null
-                 press_a_key
+#                 press_a_key
 # make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
 #switch_from_more_common_package_to_less_common_package netfilter-persistent netfilter-persistent iptables-persistent iptables-persistent
