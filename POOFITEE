@@ -4077,7 +4077,7 @@ is a web page that may help you with that:\
                $sedpath -i '/^sudo:.*,poofitee/b; s/^sudo:.*/&,poofitee/' /etc/group
                $adduserpath poofitee --home "$poofitee_home_dir" --system
                user_poofitee_created_this_run="."
-               $passwdpath -l poofitee
+               $passwdpath -l poofitee &>/dev/null
             fi
             if ! [[ -d "$poofitee_home_dir" ]];then
                  mkdir -p "$poofitee_home_dir" &>/dev/null \
