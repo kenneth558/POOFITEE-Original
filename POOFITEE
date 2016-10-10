@@ -4063,6 +4063,7 @@ is a web page that may help you with that:\
             else
                 poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
                 [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$poofitee_home_dir"
+                [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
                 clear
                 printf "Specify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
