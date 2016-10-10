@@ -3929,7 +3929,7 @@ until ! [[ -z "$answer" ]];do
 #             exit
 #        fi
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
-            clear
+            [ -z "$been_here_before" ] && clear
             if ! [ -z "$installerpath" ] && ! [ -z "$not_installed_single_line" ];then # install what is neededpress 
                  if [ -z "$been_here_before" ];then
                       ensure_connection
@@ -3976,10 +3976,9 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       if ! [[ -z "$netfilter_persistent_already_given_a_chance" ]];then
                            netfilter_persistent_already_given_a_chance=""
                            iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
-#                           printf "...Not a problem...\n"
                            if [[ -z "$iptabsavepath" ]];then
                                  eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"
-                 press_a_key
+#                 press_a_key
                                  iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                                  netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
                                  what_needs_to_be_installed
@@ -3995,10 +3994,9 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       if ! [[ -z "$cronie_already_given_a_chance" ]];then
                            cronie_already_given_a_chance=""
                            crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
-#                           printf "...Not a problem...\n"
                            if [[ -z "$crontabpath" ]];then
                                  eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"
-                 press_a_key
+#                 press_a_key
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                                  what_needs_to_be_installed
                            else
@@ -4030,7 +4028,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            printf "\n"
                            for package in "$not_installed_single_line";do
                                eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
-                 press_a_key
+#                 press_a_key
                            done
                            if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
                                cat <<-EOF
@@ -4264,7 +4262,7 @@ done
 #
 # - install package xtables-addons-source
 # - build it with module-assistant auto-install (you can shorten it to m-a a-i) xtables-addons
-
+#
 #  building the ipset module (package 'ipset_source') with module-assistant:
 #
 # $sudopath -i
