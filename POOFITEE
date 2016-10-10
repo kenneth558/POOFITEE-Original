@@ -390,12 +390,12 @@ if ! [[ -z $mailpath ]];then
           fi
           if ! [[ -z "$mailadd" ]];then
                printf "Sending a test email to $mailadd..."
-               eval "$timeoutpath 10 $mailcmd $mailadd"
+               eval "$timeoutpath 10 $mailcmd $mailadd &>/dev/null"
                if [[ "$?" == "0" ]];then
                     printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                     read -r -n1
                     if [[ $REPLY =~ y ]];then 
-                          sendmail_works="AnyNon-ZeroLengthStringMeansTrue"
+                          sendmail_works="sendmail_works"
                           echo
                           break
                     elif [[ $REPLY =~ [at] ]];then
