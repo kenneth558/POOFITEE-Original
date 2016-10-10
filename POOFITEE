@@ -1754,7 +1754,12 @@ create_tmp_timeouttry_script
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
           [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd" 2>/dev/null)
-          get_1_addr_from_bunch "$outemailadd$(! [[ -z "$outemailadd" ]] && printf "\n")$toemailadds"
+          bunch="$outemailadd"
+          ! [[ -z "$outemailadd" ]] && bunch+="\n"
+          bunch+="$toemailadds"
+          ! [[ -z "$toemailadds" ]] && bunch+="\n"
+          bunch+="$inemailadds"
+          get_1_addr_from_bunch "$bunch"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
@@ -1895,7 +1900,12 @@ while true;do
 \n\n  Enter the email address now from which this system will retrieve instructions\
 \nto itself that you or others will send:\n"
 #     printf -- "$line"
-     get_1_addr_from_bunch $inemailadds
+     bunch="$inemailadds"
+     ! [[ -z "$inemailadds" ]] && bunch+="\n"
+     bunch+="$outemailadd"
+     ! [[ -z "$outemailadd" ]] && bunch+="\n"
+     bunch+="$toemailadds"
+     get_1_addr_from_bunch "$bunch"
           inemailadd="$emailadd";inemailacct="$emailacct";inemaildomain="$emaildomain";intopdomain="$topdomain";inemailprovider="$emailprovider";inemailpw="$emailpw"
               printf "Configuring for that email account.  Remember, you should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
