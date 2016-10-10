@@ -354,6 +354,12 @@ if ! [[ -z $mailpath ]];then
      mailadd=""
      mailcmd="echo $0 \"test at $($datepath).  Press y\"|$mailpath"
 #    printf "\n\nOne aspect of an option you selected will be to send you alert notices to your\
+     if [[ -f "$poofitee_home_dir/toemailadds" ]];then
+           adds=$(cat "$poofitee_home_dir/toemailadds")
+     elif [[ -f "./toemailadds" ]];then
+           adds=$(cat "./toemailadds")
+     fi
+
      cat <<-EOF
 
 			One aspect of an option you selected will be to send you alert notices to your
@@ -367,7 +373,7 @@ if ! [[ -z $mailpath ]];then
 			a test email through and verify reception of it, possibly on a different
 			computing device.
 
-			Enter that email address: 
+			$(! [[ -z "$adds" ]] && printf "Optionally select, modify, or enter new, then e" || printf "E")nter that email address: 
 	EOF
 	newemailconfigwarning="Installing a new configuration is definitely NOT what you want\
 \nif this computer is already or will be in use in a business email service role,\
