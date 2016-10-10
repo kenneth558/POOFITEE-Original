@@ -352,7 +352,7 @@ sendmail_works_or_not () {
 sendmail_works=""
 if ! [[ -z $mailpath ]];then
      mailadd=""
-     mailcmd="echo $0 \"test.  Press y\"|$mailpath"
+     mailcmd="echo $0 \"test at $($datepath).  Press y\"|$mailpath"
 #    printf "\n\nOne aspect of an option you selected will be to send you alert notices to your\
      cat <<-EOF
 
@@ -1837,7 +1837,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ $answer =~ p ]] && notemsg+="Port knocking\n"
           printf "Test using "${line%:*}"".""$outemailprovider"":""${line#*:}" \
 \nas outgoing email server from firewall/dynamic IP notifier \
-\nItems being installed:\n$( printf "${notemsg:: -2}" )"|$mailpath -s "Test notification from firewall install script" "$(echo "${toemailadds:: -2}"|$sedpath 's/\\n/,/g')"
+\nItems being installed:\n$( printf "${notemsg:: -2}" ), at $($datepath)"|$mailpath -s "Test notification from firewall install script" "$(echo "${toemailadds:: -2}"|$sedpath 's/\\n/,/g')"
 #          cat \
 << See
 If error: “SASL authentication failed; server smtp.gmail.com”,
