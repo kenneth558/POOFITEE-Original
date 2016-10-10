@@ -2566,7 +2566,7 @@ get_1_addr_from_bunch() {
           emailadds="$1"
           scratchpad="${emailadds%%'\n'*}"
           emailaddid=1 ;horizptr="${#scratchpad}"
-          printf "\n(up/down-arrows will select, or edit into an entirely different account name)\n$scratchpad"
+          printf "\n(up/down-arrows will scroll, or edit into an entirely different account name)\n$scratchpad"
           while true;do #this loop get a new email account or one chosen from bunch with password
               while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
