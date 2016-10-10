@@ -511,7 +511,7 @@ this installation:\
 \n\n\
 You must next twice or thrice verify persistence...that is, functionality after reboots.  Especially \
 check for iptables black and whitelist rules in $ipsetpath being persistent.  At a \
-minimum, $ipsetpath and iptables both need to be made persistent by you.\
+minimum, ipset and iptables rulesets both need to be made persistent by you.\
 \n\n\
 Note: if you need the pseudo-application layer firewalling, you'll next need to \
 code the \"process_logfile_line\" script to your needs.  Then modify the iptables \
@@ -1884,8 +1884,8 @@ postfix_already_conf=True # set this to True or just anything non-empty
           install_rc () {
 poofitee_home_dir="$( cat poofitee_home_dir )"
 # "$($sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds")"
-#inemailadd=""
-#inemailadd="$( [[ -f "$poofitee_home_dir/outemailadd" ]] && cat "$poofitee_home_dir/outemailadd" 2>/dev/null || [[ -f "$poofitee_home_dir/toemailadds" ]] && $sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds" )"
+inemailadd=""
+inemailadd="$( [[ -f "$poofitee_home_dir/inemailadd" ]] && cat "$poofitee_home_dir/inemailadd" 2>/dev/null)"
 #WORKING ON: nice selector from "$poofitee_home_dir/successlogins"
 
 #inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
@@ -1909,6 +1909,13 @@ while true;do
      ! [[ -z "$toemailadds" ]] && bunch+="$toemailadds"
      get_1_addr_from_bunch "$bunch"
           inemailadd="$emailadd";inemailacct="$emailacct";inemaildomain="$emaildomain";intopdomain="$topdomain";inemailprovider="$emailprovider";inemailpw="$emailpw"
+         if ! [[ -z "$inemailadd" ]];then
+             inemailaddforfiling="$(printf "$inemailadd"|$awkpath 1 ORS=',')"
+             [[ "${inemailaddforfiling: -1}" == "," ]] && inemailaddforfiling="${inemailaddforfiling:: -1}"
+             printf "$(printf "$inemailaddforfiling\n")" > "$poofitee_home_dir/inemailadd"
+             break
+         fi
+
               printf "Configuring for that email account.  Remember, you should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for this...\n"
