@@ -1748,7 +1748,7 @@ create_tmp_timeouttry_script
 while true;do  #this loop allows user to change the email account for outbound server & builds connect.txt file
      while true; do #this loop forces an address to be chosen from the bunch, then goes through all connections found for it
           [[ -z "$outemailadd" ]] && outemailadd=$(cat "$poofitee_home_dir/outemailadd" 2>/dev/null)
-          get_1_addr_from_bunch "$outemailadd\n$toemailadds"
+          get_1_addr_from_bunch "$outemailadd\n$toemailadds\n"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
