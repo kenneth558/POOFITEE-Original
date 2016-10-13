@@ -1834,7 +1834,7 @@ while true;do  #this loop allows user to change the email account for outbound s
 \nenvironment existing on this computer.  Please configure it first, then re-launch\
 \nPOOFITEE installer."
               exit
-          elif "$($headpath -n1 "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply" == *is\ empty* ]];then
+          elif ! [[ "$($headpath -n1 "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply" == *is\ empty* ]];then
                printf "\nFor the next step, the mail queue needs to be flushed.  You will lose the\
 \nfollowing emails that haven't been sent.  Press a key to acknowledge..."
                printf "$( $postqueuepath -p )"
