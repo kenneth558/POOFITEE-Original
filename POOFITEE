@@ -176,6 +176,56 @@ ensure_connection () {
                break
           done
 }
+test_this_awk () {
+    ! [[ -f  "${awkspaths[$awks_index]}" ]] && return 1
+    echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
+    echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults # This line might be optional depending on whether next line does this rain or shine
+    $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 "${awkspaths[$awks_index]}" '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
+    awktestpid="$!"
+    tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|"$awkpath" '{print $2}')"
+    sleep 1
+    echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
+    sleep 1
+    kill $awktestpid &>/dev/null
+    kill $tailawktestpid &>/dev/null
+    if [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" =~ testline ]];then
+        return 0
+    else
+        return 1
+    fi
+}  2>/dev/null #redirection needed because in our development environment mawk breaks pipe and spews out an error
+set_awks_paths () {
+for awks_index_set in "${!awks[@]}";do
+    [[ "${awks_installed_states[$awks_index_set]}" == succeeded ]] && return 2
+    awk_path_tmp="$($whereispath $binaryflag ${awks[$awks_index_set]})"
+    awk_path_tmp="${awk_path_tmp#*:}"
+    awk_path_tmp="${awk_path_tmp#* }"
+    awkspaths[$awks_index_set]="${awk_path_tmp%% *}"
+    if [[ "$1" == "label_olds" ]];then
+        ! [[ -z "${awkspaths[$awks_index_set]}" ]] && awks_installed_states[$awks_index_set]=old || awks_installed_states[$awks_index_set]=not
+    fi
+done
+}
+install_or_upgrade_then_test_this_awktype () {
+    printf "Installing ${awks[$awks_index]}\n"
+    while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
+    progress_dots="$!"
+    eval "$xargspath -a <(printf "${awks[$awks_index]}") -r -- $sudopath $installerpath" &>/dev/null
+    install_result="$?"
+    kill $progress_dots; trap 'kill $progress_dots' SIGTERM
+    if [[ "$install_result" == "0" ]];then
+        set_awks_paths
+        if [[ $(test_this_awk;echo "$?") == "0" ]];then
+            return 0
+        else
+            printf "${awks[$awks_index]} installed but failed to work with tail -f command\n"
+        fi
+    else
+        printf "${awks[$awks_index]} failed to install\n"
+    fi
+    return 1
+}
+
 what_needs_to_be_installed () {
 [[ -z "$inotifywaitpath" ]] && inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
 [[ -z "$iptablespath" ]] && iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
@@ -202,121 +252,72 @@ what_needs_to_be_installed () {
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
 [[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
-if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]];then
-     if ! [[ "$gawkpath" == "checkedgood" ]] && ! [[ "$mawkpath" == "checkedgood" ]] && ([[ "$1" == "checkawk" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]]);then
-          if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
-              until false;do
-# Check here for awk functionality with stdbuf
-                  printf "Checking $([[ "$gawkpath" == "installandcheckme" ]] && printf "gawk$([[ "$mawkpath" == "installandcheckme" ]] && printf ", mawk,") and " || [[ "$mawkpath" == "installandcheckme" ]] && printf "mawk and ")awk for compatibility..."
-                  echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-                  $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $awkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-                  awktestpid="$!"
-                  tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
-                  sleep 1
-                  echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-                  sleep 1
-                  if ! [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" == "testline" ]];then #try/use gawk instead
-                       gawkpath="$($whereispath $binaryflag gawk)";gawkpath="${gawkpath#*:}";gawkpath="${gawkpath# }";gawkpath="${gawkpath%% *}"
-                       if ! [[ -z "$gawkpath" ]];then
-                            kill $awktestpid &>/dev/null
-                            kill $tailawktestpid &>/dev/null
-                            $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $gawkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults &
-                            awktestpid="$!"
-                            tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
-                            sleep 1
-                            echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-                            sleep 1
-                       else
-#install gawk, then check gawk.  If success later, change awkpath
-                            gawkpath="installandcheckme"
-                       fi
-                       if ! [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null)" == "testline" ]];then #warn
-                            mawkpath="$($whereispath $binaryflag mawk)";mawkpath="${mawkpath#*:}";mawkpath="${mawkpath# }";mawkpath="${mawkpath%% *}"
-                            if ! [[ -z "$mawkpath" ]];then
-                                 kill $awktestpid &>/dev/null
-                                 kill $tailawktestpid &>/dev/null
-                                 $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 $mawkpath '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-                                 awktestpid="$!"
-                                 tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print $2}')"
-                                 sleep 1
-                                 echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-                                 sleep 1
-                            else
-#install mawk, then check mawk.  If success later, change awkpath and break this loop
-                                 mawkpath="installandcheckme"
-                                 break
-                            fi
-                            if ! [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null)" == "testline" ]];then #warn
-                                 if [[ "$gawkpath" != "installandcheckme" ]];then
-                                      cat <<-EOF
-					WARNING:
-					One or more features that you selected will require another version of awk than
-					this system has currently - the version of $awkpath
-					on this system does not receive input via the stdbuf command like it will need 
-					to.  This is a common deficiency with some versions of awk.  This install script
-					is not advanced enough to locate the right version of awk to install for you.  
-					The best fix for this condition is that you manually upgrade awk, mawk, or gawk, 
-					verifying that the new version succeeds with the code snippet below, then 
-					restart this poofitee installer again.  If you decide to keep your current
-					version[s] of awk/gawk and install a separate version for poofitee only so that
-					none of your other scripts run the new awk version that poofitee needs, restart 
-					this installer script with the command line argument added as follows:
+if [[ "$1" == "checkawk" ]];then
+    awks=(awk gawk mawk nawk)
+    for function_state in "" oldtested upgrade;do
+        set_awks_paths $([[ -z "$function_state" ]] && printf "label_olds")
+        [[ $(($?)) == 2 ]] && break
+        for awks_index in "${!awks[@]}";do
+            case $function_state in
+            "")
+                ! [[ "${awks_installed_states[$awks_index]}" == "old" ]] && continue
+                if [[ $(test_this_awk;echo "$?") == "0" ]];then
+                    awkpath="${awkspaths[$awks_index]}"
+                    break 2
+                else
+                    awks_installed_states[$awks_index]="oldtoupgrade"
+                fi
+            ;;
+            oldtested)
+                ! [[ "${awks_installed_states[$awks_index]}" == "not" ]] && continue
+            ;;&
+            upgrade)
+                ! [[ "${awks_installed_states[$awks_index]}" == "oldtoupgrade" ]] && continue
+            ;;&
+            oldtested|upgrade)
+                [[ $(install_or_upgrade_then_test_this_awktype;echo "$?") == "0" ]] && awkpath="${awkspaths[$awks_index]}" && break 2
+                awks_installed_states[$awks_index]=failed
+            ;;
+            esac
+        done
+    done
+    if [[ "${awks_installed_states[$awks_index]}" == "failed" ]];then
+        cat <<-EOF
+		WARNING:
+		One or more features that you selected will require another version of awk than
+		this system has currently - the version of $awkpath
+		on this system does not receive input via the stdbuf command like it will need 
+		to.  This is a common deficiency with some versions of awk.  This install script
+		is not advanced enough to locate the right version of awk to install for you.  
+		The best fix for this condition is that you manually upgrade awk, mawk, or gawk, 
+		verifying that the new version succeeds with the code snippet below, then 
+		restart this poofitee installer again.  If you decide to keep your current
+		version[s] of awk/gawk and install a separate version for poofitee only so that
+		none of your other scripts run the new awk version that poofitee needs, restart 
+		this installer script with the command line argument added as follows:
 
-					poofitee awk=/substitute_real_path_here/substitute_gawk_mawk_awk_etc_here
+		poofitee awk=/substitute_real_path_here/substitute_gawk_mawk_awk_etc_here
 
-					You may use another terminal window to upgrade awk and resume in this one to see
-					if this script discovers the new awk version.  Code snippet will now follow,
-					adjust the awk name to what you install:
-					EOF
-                    press_a_key
-                    cat <<-EOF
-					Here is the test code snippet that awk, mawk, or gawk needs to succeed with:
+		You may use another terminal window to upgrade awk and resume in this one to see
+		if this script discovers the new awk version.  Code snippet will now follow,
+		adjust the awk name to what you install:
+		EOF
+        press_a_key
+        cat <<-EOF
+		Here is the test code snippet that awk, mawk, or gawk needs to succeed with:
 
-					echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-					$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
-					awktestpid="\$!"
-					tailawktestpid="\$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print \$2}')"
-					echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-					sleep 1
-					kill \$awktestpid &>/dev/null
-					kill \$tailawktestpid &>/dev/null
-					if [[ -z "\$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" ]];then printf "\\nThis awk version fails\\n";else printf "\\nThis awk version succeeds\\n";echo;fi
-					EOF
-                                      press_a_key
-                                 fi
-                            else
-                                 if ! [[ -z "$mawkpath" ]];then
-                                      awkpath="$mawkpath"
-                                      mawkpath="checkedgood"
-                                      gawkpath=""
-                                 fi
-                                 break
-                            fi
-                       else
-                            if ! [[ -z "$gawkpath" ]];then
-                                 awkpath="$gawkpath"
-                                 mawkpath=""
-                                 gawkpath="checkedgood"
-                            fi
-                            break
-                       fi
-                  else
-                       if ! [[ -z "$awkpath" ]];then
-                            mawkpath=""
-                            gawkpath="checkedgood"
-                       fi
-                       break
-                  fi
-                  break
-              done
-              if [[ $(kill -0 "$awktestpid";echo "$?") == "0" ]];then
-                   kill $awktestpid &>/dev/null
-                   kill $tailawktestpid &>/dev/null
-              fi
-              rm /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults &>/dev/null
-              rm /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed &>/dev/null
-          fi
-     fi
+		echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
+		$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 awk '{print \$1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
+		awktestpid="\$!"
+		tailawktestpid="\$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|$awkpath '{print \$2}')"
+		echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
+		sleep 1
+		kill \$awktestpid &>/dev/null
+		kill \$tailawktestpid &>/dev/null
+		if [[ -z "\$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" ]];then printf "\\nThis awk version fails\\n";else printf "\\nThis awk version succeeds\\n";echo;fi
+		EOF
+        press_a_key
+    fi
 fi
 notinstalled=""
 if [[ $answer =~ f ]];then
@@ -333,21 +334,21 @@ if [[ $answer =~ p ]];then
 fi
 pronotinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 # packages are in alpha order so duplicates got removed, now we need to rearrange to workable order
-# packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk
-# netfilter-persistent first, then crontab, then awk/gawk/mawk/nawk
+# packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk, example shown commented below, but awk is dealt with elsewhere instead of here
+# netfilter-persistent first, then crontab, then awk/gawk/mawk/nawk for example
 printf "$pronotinstalled"|while read package;do [[ "$package" == "netfilter-persistent" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" == "cronie" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+# printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+# printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 notinstalled=$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled)
 notinstalled+="\n"
 rm /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
 not_installed_single_line="${not_installed_single_line:: -1}"
-press_a_key
 [ -z "$not_installed_single_line" ] && return 0
 return "$(printf "$notinstalled"|$wcpath -l)"
-} 2>/dev/null #redirection needed because in our development environment mawk breaks pipe and spews out an error
+}
 sendmail_works_or_not () {
 sendmail_works=""
 if ! [[ -z $mailpath ]];then
@@ -526,8 +527,6 @@ Thank you for using POOFITEE.  God loves you, pass it on.\
 "IMPORTANT MESSAGE" "$globalbacktitle"
 }
 set_notinstalled_var () {
-! [[ -z "$gawkpath" ]] && [[ "$gawkpath" == "installandcheckme" ]] && notinstalled+="gawk\n"
-! [[ -z "$mawkpath" ]] && [[ "$mawkpath" == "installandcheckme" ]] && notinstalled+="mawk\n"
 [[ -z "$inotifywaitpath" ]] && notinstalled+="inotify-tools\n"
 [[ -z "$iptablespath" ]] && notinstalled+="iptables\n"
 [[ -z "$netfiltperspath" ]] && notinstalled+="netfilter-persistent\n"
@@ -3451,7 +3450,7 @@ num_of_installers=$(((num_of_installers +1) / 2))
 for installer_index in `seq 0 $num_of_installers`;do
     installer_index=$((installer_index * 2))
     installerpath="$($whereispath $binaryflag ${installers[$((installer_index))]})";installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
-    ! [[ -z "$installerpath" ]] && break
+    ! [[ -z "$installerpath" ]] && installerpath+="  ${installers[$(($installer_index + 1))]}" && break
 done
 min_bash_version_tested="4.3.11"
 attention="YOUR COOPERATION OR ATTENTION IS NEEDED"
@@ -3760,6 +3759,7 @@ infobacktitle="Information Screen  POOFITEE  $version"
 postfix_already_conf=""
 quitrow=""
 index=0
+# TODO: compress the following if construct into just a for construct
 if [[ "$notdhcp" == "notdhcp" ]];then
     for letter in f e p l c r \? q;do
         chararray[index]=$letter
