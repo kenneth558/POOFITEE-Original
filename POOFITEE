@@ -201,7 +201,7 @@ what_needs_to_be_installed () {
 [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
 [[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
-[[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"
+[[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
 if ! [[ -z "$1" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]];then
      if ! [[ "$gawkpath" == "checkedgood" ]] && ! [[ "$mawkpath" == "checkedgood" ]] && ([[ "$1" == "checkawk" ]] || [[ "$gawkpath" == "installandcheckme" ]] || [[ "$mawkpath" == "installandcheckme" ]]);then
           if [[ $answer =~ [fpe] ]] && ! [[ -z "$awkpath" ]];then
@@ -344,16 +344,15 @@ notinstalled+="\n"
 rm /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled
 not_installed_single_line="$(printf "$notinstalled"|$awkpath '{gsub("\\n"," ");printf $0" "}')"
 not_installed_single_line="${not_installed_single_line:: -1}"
+press_a_key
 [ -z "$not_installed_single_line" ] && return 0
 return "$(printf "$notinstalled"|$wcpath -l)"
-} 2>/dev/null #redirection needed because in my development environment mawk breaks pipe and spews out an error
+} 2>/dev/null #redirection needed because in our development environment mawk breaks pipe and spews out an error
 sendmail_works_or_not () {
-#functionize the following, name it 
 sendmail_works=""
 if ! [[ -z $mailpath ]];then
      mailadd=""
      mailcmd="echo $0 \"test at $($datepath).  Press y\"|$mailpath"
-#    printf "\n\nOne aspect of an option you selected will be to send you alert notices to your\
      if [[ -f "$poofitee_home_dir/toemailadds" ]];then
            adds=$(cat "$poofitee_home_dir/toemailadds")
      elif [[ -f "./toemailadds" ]];then
@@ -3446,7 +3445,14 @@ if ! [[ -z "$failreason" ]];then
 fi
 #We'll place this installer path variable here for future use possibly to inform in the next warning section
 installers=("apt-get" "-y install" dnf install yum "-y install" zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
-installerpath=$($whereispath $binaryflag ${installers[$((installer + installer))]});installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
+num_of_installers="${!installers[*]}"
+num_of_installers="${num_of_installers##* }"
+num_of_installers=$(((num_of_installers +1) / 2))
+for installer_index in `seq 0 $num_of_installers`;do
+    installer_index=$((installer_index * 2))
+    installerpath="$($whereispath $binaryflag ${installers[$((installer_index))]})";installerpath="${installerpath#*:}";installerpath="${installerpath# }";installerpath="${installerpath%% *}";installerpath="${installerpath%%:*}"
+    ! [[ -z "$installerpath" ]] && break
+done
 min_bash_version_tested="4.3.11"
 attention="YOUR COOPERATION OR ATTENTION IS NEEDED"
 if ! [[ "$($sortpath <<<"$(printf "$BASH_VERSION\n$min_bash_version_tested")"|$headpath -n 1)" == "$min_bash_version_tested" ]];then
@@ -3499,10 +3505,10 @@ for pgm in ifconfig uniq find tail xargs getent adduser;do
         localwarning+="\n$pgm needs to be installed\n"
     fi
 done
+localbacktitle="Deficiency Notice  POOFITEE  $version"
 if ! [[ -z "$localwarning" ]];then
     localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning" # "$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
-    localbacktitle="Deficiency Notice  POOFITEE  $version"
-    showthis "$localwarning" msgbox "YOUR COOPERATION OR ATTENTION IS NEEDED" "$localbacktitle" 0 -- "" ""
+    showthis "$localwarning" msgbox "$attention" "$localbacktitle" 0 -- "" ""
 #    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard #Need for this line depends on which box is utilized
 fi
 if  [[ -z "$sudopath" ]];then
@@ -3529,7 +3535,7 @@ kernel as it is configured, some options of poofitee will end execution \
 of this script early and inform you to manually load the ipset module, \
 a one-time necessary event. Currently, poofitee is not advanced enough to \
 load kernel modules itself.\
-\n\n - The source code is full of extraneous reminders helpful to the script\'s development team.\
+\n\n - The source code is not beautified and full of extraneous reminders helpful to the script\'s development team.\
 \n\n - Enhancements are being added weekly or even more often\
 \n\n\n<center>Your suggestions for improvements are solicited and \
 welcome.  Use the POOFITEE Wiki to offer them...\
@@ -3928,20 +3934,20 @@ until ! [[ -z "$answer" ]];do
                   done
                   if [[ -z "$installerpath" ]] && ! [[ "$ackd" == "true" ]];then
                        not_advanced_enough="1"
-                       printf "\n                  UNABLE TO INSTALL ANY PROGRAMS ON YOUR SYSTEM\
-\n\nThis POOFITEE installer version is not advanced enough to install needed\
-\nprograms$(! [[ -z "$not_advanced_enough" ]] && printf \
-" on systems such as yours that don\'t use one of the more common package\
-\ninstallers to install packages").\
-\n\nFor this install script to serve its purpose,  you'll need to install all\
-\nnecessary programs yourself before anything referenced hereafter can succeed.\
-\nConsider yourself lucky if this script does anything at all for you beyond this\
-\npoint, but do understand that the programs most certainly won't get installed.\
+                       showthis "\n<center>$attention\
+\n\nThis POOFITEE installer version is not advanced enough to install needed \
+programs$(! [[ -z "$not_advanced_enough" ]] && printf \
+" on systems such as yours that don\'t use one of the more common package \
+installers to install packages").\
+\n\nFor this install script to serve its purpose,  you'll need to install all \
+necessary programs yourself before anything referenced hereafter can succeed.  \
+Consider yourself lucky if this script does anything at all for you beyond this \
+point, but do understand that the programs most certainly won't get installed.\
 \n\nThe necessary programs that won't get installed until you install them are:\
 \n$notinstalled\
-\n\nYou may install those packages OR a more common package installer for this\
-\ninstaller to work with (in another terminal window, of course) and resume here.\
-\n\n"
+\n\nYou may install those packages OR a more common package installer for this \
+installer to work with (in another terminal window, of course) and resume here." \
+                       msgbox "$attention" "$localbacktitle" 0 -- "" ""
                        press_a_key
                        ackd="true"
                   elif [[ -z "$installerpath" ]];then
@@ -3970,7 +3976,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            if [[ "$installerpath" =~ apt-get ]] && [[ "$REPLY" =~ [Bb] ]];then
                                 clear
                                 installeranswer="$REPLY"
-                                printf "\r\033[KCleaning up with apt-get autoremove\r"
+                                printf "\r\033[KCleaning up with apt-get autoremove...\n"
                                 while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                                 progress_dots="$!"
                                 apt-get autoremove -y &>/dev/null
@@ -3978,8 +3984,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                                 REPLY="$installeranswer"
                            fi
                            if [[ "$REPLY" =~ [UuBb] ]];then
-                                clear
-                                printf "\r\033[KUpdating your system\'s package installer\r" # in arch, do pacman -Syuu
+                                printf "\r\033[KUpdating your system\'s package installer...\n" # in arch, do pacman -Syuu
                                 if [[ "$installerpath" =~ apt-get ]];then
                                     while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                                     progress_dots="$!"
@@ -3989,12 +3994,12 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                                     pacman --noconfirm -Syuu  # &>/dev/null
                                 fi
                            fi
-                           been_here_before="."
+                           been_here_before="been_here_before"
                       fi
                  fi
-                 printf "\r\033[KInstalling $not_installed_single_line\r"
-                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
-                 what_needs_to_be_installed &>/dev/null
+                 printf "\r\033[KInstalling $not_installed_single_line...\n"
+                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" # 2>/dev/null
+                 what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
 #                 press_a_key
 # make the following into a function
 #switch_from_more_common_package_to_less_common_package dnsutils dig ldns drill
@@ -4044,7 +4049,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                  elif [ $? != "0" ] && [ "$(what_needs_to_be_installed;echo "$?")" != "0" ];then
                       if [[ -z "$update_tried" ]];then
                            update_tried="yes"
-                           printf "\r\033[KUpdating your system\'s package installer\r"
+                           printf "\r\033[KUpdating your system\'s package installer...\n"
                            while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
                            progress_dots="$!"
                            apt-get update &>/dev/null
@@ -4061,11 +4066,11 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            done
                            if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
                                cat <<-EOF
-								# Download inotify-tools source from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz then compile and install:
-								# put into /usr/share/inotifywhatever and unzip
-								# cd /usr/share/inotifywhatever
-								#./configure --prefix=/usr && make && su -c 'make install'
-								EOF
+				# Download inotify-tools source from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz then compile and install:
+				# put into /usr/share/inotifywhatever and unzip
+				# cd /usr/share/inotifywhatever
+				#./configure --prefix=/usr && make && su -c 'make install'
+				EOF
                            fi
                       fi
                  fi
