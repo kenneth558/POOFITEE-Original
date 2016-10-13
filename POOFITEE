@@ -3386,6 +3386,7 @@ until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[
 done
 if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
 whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
+[[ -z "$binaryflag" ]] && "$whereispath -b whereis" && binaryflag="-b"
 resizepath="$($whereispath $binaryflag resize)";resizepath="${resizepath#*:}";resizepath="${resizepath# }";resizepath="${resizepath%% *}"
 pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
 greppath="$($whereispath $binaryflag grep)";greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
