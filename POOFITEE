@@ -334,13 +334,13 @@ if [[ $answer =~ p ]];then
 fi
 pronotinstalled="$(printf "$notinstalled"|$sortpath|$uniqpath)\n"
 # packages are in alpha order so duplicates got removed, now we need to rearrange to workable order
-# packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk, example shown commented below, but awk is dealt with elsewhere instead of here
+# packages that need to be tried once and changed go first, then awk/gawk/mawk/nawk, example shown commented below, but those are dealt with elsewhere instead of here
 # netfilter-persistent first, then crontab, then awk/gawk/mawk/nawk for example
 printf "$pronotinstalled"|while read package;do [[ "$package" == "netfilter-persistent" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" == "cronie" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" == "cronie" ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 # printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 # printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && ! [[ "$package" =~ ^gawk$|^mawk$|^nawk$ ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
-printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && echo "$package" > /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
+printf "$pronotinstalled"|while read package;do [[ "$package" != "netfilter-persistent" ]] && [[ "$package" != "cronie" ]] && echo "$package" >> /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled;done
 notinstalled=$(cat /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled)
 notinstalled+="\n"
 rm /tmp/fifos_and_temp_files_for_poofitee_installer/notinstalled
@@ -3386,7 +3386,6 @@ until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[
 done
 if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
 whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
-[[ -z "$binaryflag" ]] && "$whereispath -b whereis" &>/dev/null && binaryflag="-b"
 resizepath="$($whereispath $binaryflag resize)";resizepath="${resizepath#*:}";resizepath="${resizepath# }";resizepath="${resizepath%% *}"
 pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
 greppath="$($whereispath $binaryflag grep)";greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
@@ -4311,3 +4310,4 @@ done
 #
 # ip sets can then be created and used as per documentation. See http://ubuntuforums.org/showthread.php?t=1590923 for an example.
 #
+
