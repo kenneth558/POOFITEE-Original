@@ -1199,7 +1199,7 @@ HOLD_UNTIL_ABLE
 \nSeven seconds maximum is allowed between each knock.  After the knock sequence\
 \nis completed successfully, the knocking computer will be given only 17 seconds\
 \nin which to establish valid communication, and the knock sequence must be\
-\nrepeated for each future session.  ";press_a_key )
+\nrepeated for each future session.  ";press_a_key;printf "\n")
             done
             printf "\n\nSetting up port knocking.\
 \nTip: For added obfuscation against packet-sniffing eavesdroppers, you can\
@@ -2936,21 +2936,17 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 screen_line="."
             else
                 numoflinesinoutput="$(($numoflinesinoutput + 1))"
-#printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
             fi
             if [[ "${line:0:8}" == "<center>" ]];then
                 line="${line:8}"  #The adjustment for centering on display must occur in the dialog command line
             fi
             firstofline=""
             for ((linepointer=0;linepointer<${#line};));do
-#printout=""
                 for ((i=cols-12;i>=0;i--));do #The 12 is line waste in dialog infobox
                     if [[ $((linepointer+i)) -ge ${#line} ]];then
-#printout="${line:linepointer}"
                         linepointer=${#line}
                         i=0
                     elif [[ ${line:i+linepointer:1} =~ [[:space:]] ]];then
-#printout="${line:linepointer:i}"
                         ((i++))
                         linepointer=$((linepointer+=i))
                         i=0
@@ -2959,10 +2955,8 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 if [[ -z "$firstofline" ]]; then
                     firstofline="."
                 else
-#printout="\n""$printout"
                     numoflinesinoutput="$(($numoflinesinoutput + 1))"
                 fi
-#printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
             done
             printf "$numoflinesinoutput" > /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
         done
@@ -2996,21 +2990,17 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 screen_line="."
             else
                 numoflinesinoutput="$(($numoflinesinoutput + 1))"
-#printf "\n" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
             fi
             if [[ "${line:0:8}" == "<center>" ]];then
                 line="${line:8}"  #The adjustment for centering on display must occur in the dialog command line
             fi
             firstofline=""
             for ((linepointer=0;linepointer<${#line};));do
-#printout=""
                 for ((i=cols-12;i>=0;i--));do #The 12 is line waste in dialog infobox
                     if [[ $((linepointer+i)) -ge ${#line} ]];then
-#printout="${line:linepointer}"
                         linepointer=${#line}
                         i=0
                     elif [[ ${line:i+linepointer:1} =~ [[:space:]] ]];then
-#printout="${line:linepointer:i}"
                         ((i++))
                         linepointer=$((linepointer+=i))
                         i=0
@@ -3019,17 +3009,14 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
                 if [[ -z "$firstofline" ]]; then
                     firstofline="."
                 else
-#printout="\n""$printout"
                     numoflinesinoutput="$(($numoflinesinoutput + 1))"
                 fi
-#printf -- "$printout" >> /tmp/fifos_and_temp_files_for_poofitee_installer/sandbox
             done
             printf "$numoflinesinoutput" > /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
         done
         numoflinesinoutput="$(($(cat /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput) + 2))"
         ! [[ -z "$whiptailpath" ]] && numoflinesinoutput="$(($numoflinesinoutput + 2))"
         rm /tmp/fifos_and_temp_files_for_poofitee_installer/numoflinesinoutput
-#        [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + 3)) || rowsfordialog=$(($rows - 8))
         [[ $((rows - numoflinesinoutput)) -gt 11 ]] && rowsfordialog=$(($numoflinesinoutput + $(($5 + $([[ -z "$dialogpath" ]] && printf "2" || printf "4"))))) || rowsfordialog=$(($rows - 8)) 
         $whiplogpath $colors --title "$title" --backtitle "$backtitle" \
                 --scrolltext \
@@ -3063,7 +3050,7 @@ colors=$([[ -z "$whiptailpath" ]] && printf -- "--colors")
         done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
         printf -- "$answer\n" > /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     ;;
-    radiobox|radiolist)
+    radiobox|radiolist) #not ever used, this section may need to be debugged
         printf -- "$1\n"| \
         while IFS= read -r line;do
             if [[ -z "$screen_line" ]]; then
@@ -3615,27 +3602,9 @@ if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcp
     notdhcp="notdhcp"
     mainchecklisttest+="<center>(Not available with this IP address: dynamic IP address change notifier)\n"
 fi
-maincheckitems=("firewalling" \
-"email remote control" \
-"dynamic IP address change notifier" \
-"port knocking" \
-"lists (white, black, & static_trusted) to/from storage" \
-"copy current configuration to a storage medium" \
-"restore the previously saved configuration" \
-"helpful information, alone or in context" \
-"quit (or Tab/Enter key with no selections)" \
-"f" \
-"e" \
-"d" \
-"p" \
-"c" \
-"l" \
-"r" \
-"q" \
-"?")
 answer=""
 ghbacktitle="Main Menu  POOFITEE  $version"
-ghscreen1="This Linux script can install several Internet security features useful \
+ghscreen1="\nThis Linux script can install several Internet security features useful \
 in homeowner and enterprise systems alike. Enterprise systems however, typically \
 are stranger-visible, but POOFITEE ruleset produces stranger-INvisibility.  Gone \
 are the complex, buggy \"badguy detection\" algorithms of other firewalls.  More \
@@ -3644,7 +3613,8 @@ a \"tail -f\" bash script line monitoring kernel log events for the purpose of \
 launching a script.  So POOFITEE is a firewall-plus paradigm, not a running \
 program.  For a similar reason, it is not an iptables front-end and does not \
 interfere with manual iptables manipluation, allowing you to fine-tune the rule-\
-set yourself.  Only trusted addresses can initiate a dialog under the POOFITEE \
+set yourself.\
+\n\nOnly trusted addresses can initiate a connection under the POOFITEE \
 ruleset.  Of course, those source addresses can be spoofed, but when spoofed, a \
 two-way connection capable of stealing information is not really possible: the \
 legitimate computer owning the spoofed trusted address will receive return \
@@ -3668,20 +3638,24 @@ restarts nor conflicts with iptables rules manipulated manually\
 \n\n - system operators can customize the behavior of all aspects of \
 POOFITEE support scripts without learning to compile, and those \
 customizations are implemented instantly."
-prefix="( As you read, please realize the difference between this installation \"helper \
+prefix="<center>( As you read, please realize the difference between this installation \"helper \
 script\" that you are running now and the \"script set\" it helps you install )\
-\n"
+\n\n"
 postfix="\n\n* No testing has been done using DHCP client nor server on the private interface"
 fwscreen="$prefix""To configure firewalling, port-knocking, or email remote control, iptables & \
-netfilter-persistent are required if not already present.  These are standard \
-for any Linux firewalling.  As far as manual control of iptables during run \
+a persistence method are required if not already present.  These are standard \
+for any Linux firewalling.  POOFITEE will load the packages from your distro's \
+repositories, but not all distros offer POOFITEE-compatible netfilter-\
+persistent.  If that is your situation, POOFITEE installer will let you know.\
+\n\nAs far as manual control of iptables during run \
 time, POOFITEE plays fair.  It will simply configure iptables - an \
 initial configuration by the helper script, then periodic configurations of \
 iptables throughout the course of normal operations by the installed script set.  \
 Unlike what exists with ufw, shorewall, and fail2ban, no ongoing integration \
 with iptables will exist to interfere at any time with direct user adjustment of \
 the iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
+\n\n<center>FUTURE:
+\nFirewalling options this install script will alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to allow http, irc and/or other public services hosting\
 \n  -- Force single-interface firewalling even though two interfaces exist""$postfix"
@@ -3690,9 +3664,10 @@ from home, and thus, far away from this computer you are configuring.  You \
 decide you need this computer to do a few things for you now before you return.  \
 One is to turn on and off one of the electrical outlets that it controls through \
 a USB-connected Arduino board.  You also remember that there is an old iptables \
-rule whitelisting an IP address that belongs no longer belongs to you, so you \
-need your home system to remove it from the iptables whitelist.  This and more \
-is possible if you just connect that Arduino you've built and run this script.  \
+rule whitelisting an IP address that no longer belongs to you, so you \
+need your home system to remove it from the iptables whitelist.\
+\n\nThis and more is possible if you just connect that Arduino you've built and \
+run the script installed with this selection.  \
 This helper script will need from you name and password of the email account \
 that this computer will retrieve the emails from that you send to it.  This \
 helper script will test its functionality and give you a choice of which port \
@@ -3700,7 +3675,11 @@ number you want to use (knock) to trigger your system to read and parse emails. 
 Ideally, you would want to choose a port number that never gets probed by \
 the hackers of the world.  Logging probed ports (configured in the firewall \
 section of this helper script) would be a handy reference here.""$postfix"
-dascreen="$prefix""To configure firewalling, port-knocking, or email remote control, iptables &\
+dascreen="$prefix""This feature is offered on the menu only when the IP address is \
+a DHCP-supplied Internet-routable address.  One or more email addresses that \
+you supply will receive a notice of the new IP address when it changes."\
+"$postfix"
+pkscreen="$prefix""To configure firewalling, port-knocking, or email remote control, iptables & \
 netfilter-persistent are required if not already present.  These are standard\
 for any Linux firewalling.  As far as manual control of iptables during run\
 time, this script set is friendly.  It will simply configure iptables - an\
@@ -3709,28 +3688,13 @@ iptables throughout the course of normal operations by the installed script set.
 Unlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
 with iptables will exist to interfere at any time with direct user adjustment of\
 the iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
+\n\nFirewalling options this install script can alter from the script set defaults:\
 \n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
 \n  -- Open specific ports to offer public services\
 \n  -- Force single-interface firewalling even though two interfaces exist\
 \n  -- Alter the IP address of the private-side interface from 192.168.3.1"\
 "$postfix"
-pkscreen="$prefix""To configure firewalling, port-knocking, or email remote control, iptables &\
-netfilter-persistent are required if not already present.  These are standard\
-for any Linux firewalling.  As far as manual control of iptables during run\
-time, this script set is friendly.  It will simply configure iptables - an\
-initial configuration by the helper script, then periodic configurations of\
-iptables throughout the course of normal operations by the installed script set.\
-Unlike what exists with ufw, shorewall, and fail2ban, no ongoing integration\
-with iptables will exist to interfere at any time with direct user adjustment of\
-the iptables ruleset.\
-\nFirewalling options this install script can alter from the script set defaults:\
-\n  -- Stop probe logging/blacklisting to save space or if you're just not curious\
-\n  -- Open specific ports to offer public services\
-\n  -- Force single-interface firewalling even though two interfaces exist\
-\n  -- Alter the IP address of the private-side interface from 192.168.3.1"\
-"$postfix"
-listscreen="These lists are specific to an iptables extention called ipset.  This menu \
+listscreen="\nThese lists are specific to an iptables extention called ipset.  This menu \
 option allows you to enter, archive or transfer the ip address lists that you\
 may have compiled from using POOFITEE or through another means.  Each list is of\
 ip addresses is handled in two forms not intended to be mixed: CIDR &\
@@ -3743,13 +3707,13 @@ asked to indicate whether you are configuring ipset to utilize the list or lists
 of your choice inputted from stdin (keyboard or a normal file), displaying the\
 lists active in ipset as currently running, or saving to storage the list or\
 lists of your choice from ipset as currently configured."
-savescreen="Selecting this is only meaningful if one or more of the above selections is also \
+savescreen="\nSelecting this is only meaningful if one or more of the above selections is also \
 selected or has previously been configured.  Saving the configuration with this\
 choice is a convenient way for you to replicate the configuration on other\
 servers or prepare for an operating system upgrade on this one.  You'll be\
 given a choice where to store the saved configuration, whether locally or on\
 removeable media or remotely."
-restorescreen="This is a convenient way to replicate the configuration on other servers or on \
+restorescreen="\nThis is a convenient way to replicate the configuration on other servers or on \
 this one after an operating system upgrade without answering the setup questions\
 all over again.  This can be highly important when you don't know for sure that\
 the person who needs to configure will know or remember the details of this\
@@ -3764,47 +3728,38 @@ infobacktitle="Information Screen  POOFITEE  $version"
 postfix_already_conf=""
 quitrow=""
 index=0
-# TODO: compress the following if construct into just a for construct
-if [[ "$notdhcp" == "notdhcp" ]];then
-    for letter in f e p l c r \? q;do
-        chararray[index]=$letter
-        index=$((index + 1))
-    done
-else
-    for letter in f e d p l c r \? q;do
-        chararray[index]=$letter
-        index=$((index + 1))
-    done
-fi
+
+maincheckitems=("firewalling" \
+"email remote control")
+[[ -z "$notdhcp" ]] && maincheckitems+=("dynamic IP address change notifier")
+maincheckitems+=("port knocking" \
+"lists (white, black, & static_trusted) to/from storage" \
+"copy current configuration to a storage medium" \
+"restore the previously saved configuration" \
+"helpful information, alone or in context" \
+"quit (or Enter/Tab key with no selections)")
+maincheckitems+=("f" \
+"e")
+[[ -z "$notdhcp" ]] && maincheckitems+=("d") 
+maincheckitems+=("p" \
+"l" \
+"c" \
+"r" \
+"?" \
+"q" )
+for menu_entry_index in "${!maincheckitems[@]}";do :;done
+menu_entry_index=$(((menu_entry_index + 1) / 2))
+for ((index=0;index<menu_entry_index;index++));do
+    chararray[index]+="${maincheckitems[$((menu_entry_index + index))]}"
+done
 answer=""
+maincheckitems_unarrayed=""
+for list_index in `seq 0 $((menu_entry_index - 1))`;do maincheckitems_unarrayed+="\"${maincheckitems[list_index]}\" OFF ";done
 until ! [[ -z "$answer" ]];do
-    if ! [[ -z "$notdhcp" ]] && [[ "$notdhcp" == "notdhcp" ]];then
-        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 8 \
-        "${maincheckitems[0]}" OFF \
-        "${maincheckitems[1]}" OFF \
-        "${maincheckitems[3]}" OFF \
-        "${maincheckitems[4]}" OFF \
-        "${maincheckitems[5]}" OFF \
-        "${maincheckitems[6]}" OFF \
-        "${maincheckitems[7]}" OFF \
-        "${maincheckitems[8]}" OFF
-    else
-        showthis "$mainchecklisttest" checklist "$maintitle" "$mainbacktitle" 9 \
-        "${maincheckitems[0]}" OFF \
-        "${maincheckitems[1]}" OFF \
-        "${maincheckitems[2]}" OFF \
-        "${maincheckitems[3]}" OFF \
-        "${maincheckitems[4]}" OFF \
-        "${maincheckitems[5]}" OFF \
-        "${maincheckitems[6]}" OFF \
-        "${maincheckitems[7]}" OFF \
-        "${maincheckitems[8]}" OFF
-    fi
-#    [ "$?" == "0" ] && exit
-#clear
+    eval "showthis \"$mainchecklisttest\" checklist \"$maintitle\" \"$mainbacktitle\" \"$menu_entry_index\"" "$maincheckitems_unarrayed"
     answer=""
-    while read line;do # change numbers to letters for compatibility with original code
-        ! [[ -z "$line" ]] && answer+=${chararray[$((line))]}
+    while read line;do # change numbers to letters for compatibility with non-dialog/whiptail environment
+        ! [[ -z "$line" ]] && answer+=${chararray[$line]}
     done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
 #    rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     if [[ $answer =~ q ]] || [[ ${#answer} -eq 0 ]];then
@@ -3860,7 +3815,7 @@ until ! [[ -z "$answer" ]];do
         fi
         if [[ $answer =~ d ]] || [[ $answer == "?" ]];then
             showthis "$dascreen" msgbox \
-            "PORT KNOCKING WITH THIS SCRIPT SET" \
+            "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
             "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
@@ -3871,7 +3826,7 @@ until ! [[ -z "$answer" ]];do
         fi
         if [[ $answer =~ p ]] || [[ $answer == "?" ]];then
             showthis "$pkscreen" msgbox \
-            "BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS" \
+            "PORT KNOCKING WITH THIS SCRIPT SET" \
             "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
@@ -3882,7 +3837,7 @@ until ! [[ -z "$answer" ]];do
         fi
         if [[ $answer =~ l ]] || [[ $answer == "?" ]];then
             showthis "$listscreen" msgbox \
-            "EMAIL NOTIFY OF DYNAMIC IP ADDRESS CHANGE WITH THIS SCRIPT SET" \
+            "BLACK, WHITE, & STATIC_TRUSTED FIREWALL LISTS" \
             "$infobacktitle" \
             --yes-button "Scrolled, now proceed" \
             --no-button "Quit now" \
@@ -4003,7 +3958,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       fi
                  fi
                  printf "\r\033[KInstalling $not_installed_single_line...\n"
-                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" # 2>/dev/null
+                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
 #                 press_a_key
 # make the following into a function
@@ -4016,7 +3971,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            netfilter_persistent_already_given_a_chance=""
                            iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                            if [[ -z "$iptabsavepath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                                  netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
@@ -4034,7 +3989,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            cronie_already_given_a_chance=""
                            crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                            if [[ -z "$crontabpath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                                  what_needs_to_be_installed
@@ -4066,14 +4021,22 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            press_a_key r "<other-letter-or-number>" || break
                            printf "\n"
                            for package in "$not_installed_single_line";do
-                               eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath"
+                               eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath" 2>/dev/null
 #                 press_a_key
                            done
                            if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
                                cat <<-EOF
-				# Download inotify-tools source from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz then compile and install:
+				# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
 				# put into /usr/share/inotifywhatever and unzip
 				# cd /usr/share/inotifywhatever
+				#./configure --prefix=/usr && make && su -c 'make install'
+				EOF
+                           fi
+                           if [[ "$not_installed_single_line" =~ netfilter-persistent ]];then :
+                               cat <<-EOF
+				# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
+				# put into /usr/share/whateverfornetfilterpersistent and unzip
+				# cd /usr/share/whateverfornetfilterpersistent
 				#./configure --prefix=/usr && make && su -c 'make install'
 				EOF
                            fi
@@ -4315,4 +4278,3 @@ done
 #
 # ip sets can then be created and used as per documentation. See http://ubuntuforums.org/showthread.php?t=1590923 for an example.
 #
-
