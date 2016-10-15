@@ -482,7 +482,6 @@ if ! [[ -z $mailpath ]];then
      fi
 
      cat <<-EOF
-
 			One aspect of an option you selected will be to send you alert notices to your
 			email account.  For emailing alerts to you, specialized configuration is
 			required so this computer can send emails from the command line.  We'll send a
@@ -1883,6 +1882,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           ! [[ -z "$inemailadd" ]] && bunch+="$inemailadd"
           get_1_addr_from_bunch "$bunch"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
+          echo "$outemailadd" >> "$poofitee_home_dir/outemailadd"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
@@ -1907,36 +1907,36 @@ while true;do  #this loop allows user to change the email account for outbound s
      while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a smtp connection for outgoing email
           chmod 644 /etc/postfix/main.cf
           [[ "$($greppath -c ^myhostname </etc/postfix/main.cf)" == "0" ]] \
-              && printf "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
+              && echo "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^myhostname.*/myhostname = '"$(hostname)"'/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^relayhost </etc/postfix/main.cf)" == "0" ]] \
-              && printf "relayhost = ["${line%:*}"."$outemailprovider"]:"${line#*:} >> /etc/postfix/main.cf \
+              && echo "relayhost = ["${line%:*}"."$outemailprovider"]:"${line#*:} >> /etc/postfix/main.cf \
               || $sedpath -i 's/^relayhost.*/relayhost = ['"${line%:*}.$outemailprovider]:${line#*:}"'/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^mech_list: cram-md5 </etc/postfix/sasl/smtpd.conf)" == "0" ]] \
-              && printf "mech_list: cram-md5" >> /etc/postfix/sasl/smtpd.conf
+              && echo "mech_list: cram-md5" >> /etc/postfix/sasl/smtpd.conf
           [[ "$($greppath -c ^smtp_sasl_auth_enable </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_sasl_auth_enable = yes" >> /etc/postfix/main.cf \
+              && echo "smtp_sasl_auth_enable = yes" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_auth_enable.*/smtp_sasl_auth_enable = yes/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_sasl_security_options </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_sasl_security_options = noanonymous" >> /etc/postfix/main.cf \
+              && echo "smtp_sasl_security_options = noanonymous" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_security_options.*/smtp_sasl_security_options = noanonymous/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_sasl_password_maps </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" >> /etc/postfix/main.cf \
+              && echo "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_sasl_password_maps.*/smtp_sasl_password_maps = hash:\/etc\/postfix\/sasl_passwd/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_tls_security_level </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_tls_security_level = encrypt" >> /etc/postfix/main.cf \
+              && echo "smtp_tls_security_level = encrypt" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_tls_security_level.*/smtp_tls_security_level = encrypt/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^smtp_tls_CAfile </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_tls_CAfile = /etc/postfix/cacert.pem" >> /etc/postfix/main.cf \
+              && echo "smtp_tls_CAfile = /etc/postfix/cacert.pem" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_tls_CAfile.*/smtp_tls_CAfile = \/etc\/postfix\/cacert.pem/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^[[]"${line%:*}"".""$outemailprovider""]:""${line#*:}" </etc/postfix/sasl_passwd)" == "0" ]] \
-              && printf "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd":"$outemailpw" >> /etc/postfix/sasl_passwd \
+              && echo "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd":"$outemailpw" >> /etc/postfix/sasl_passwd \
               || $sedpath -i 's/^[[]'"${line%:*}.$outemailprovider]:${line#*:}"'.*/'"[${line%:*}.$outemailprovider]:${line#*:}     $outemailadd:$outemailpw"'/g' /etc/postfix/sasl_passwd
           [[ "$($greppath -c ^smtp_generic_maps </etc/postfix/main.cf)" == "0" ]] \
-              && printf "smtp_generic_maps = hash:/etc/postfix/generic" >> /etc/postfix/main.cf \
+              && echo "smtp_generic_maps = hash:/etc/postfix/generic" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_generic_maps.*/smtp_generic_maps = hash:\/etc\/postfix\/generic/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^root@$(hostname) </etc/postfix/generic)" == "0" ]] \
-              && printf "root@$(hostname)           $outemailadd" >> /etc/postfix/generic \
+              && echo "root@$(hostname)           $outemailadd" >> /etc/postfix/generic \
               || $sedpath -i 's/^'"root@$(hostname)"'.*/'"root@$(hostname)           $outemailadd"'/g' /etc/postfix/generic
           chown postfix /etc/postfix
           chown postfix /etc/postfix/generic
@@ -2000,7 +2000,6 @@ See
 # user wants a to re-select an email address
              printf "Select a different email address for its outgoing email server:"
 done #this loop goes through the email provider outbound servers & builds connect.txt files until user selects one
-echo "$outemailadd" > "$poofitee_home_dir/outemailadd"
 chown poofitee "$poofitee_home_dir/outemailadd"
 chmod 600 "$poofitee_home_dir/outemailadd"
 fi
@@ -3607,6 +3606,7 @@ showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
 testing has been done in a virtual interface environment, but no problems per se are expected.\
 \n\n - No ability to differentiate between, nor work with, initsystem types.  \
 So for persistence of the  this script installs, you're on your own.\
+\n\n - Limited ability to configure postfix.\
 \n\n - No command line help, package [un]installation including dependency tracking, \
 nor man (reference manual pager) support is provided.\
 \n\n - If loadable modules for iptables are not automatically loaded in your Linux \
@@ -4044,7 +4044,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            been_here_before="been_here_before"
                       fi
                  fi
-                 printf "\r\033[KInstalling $not_installed_single_line...\n"
+                 printf "\r\033[KInstalling $not_installed_single_line...\r"
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
 #                 press_a_key
@@ -4157,7 +4157,7 @@ is a web page that may help you with that:\
                 printf "\nSpecify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
-\nlevel you will want:\n"
+\nlevel you will want:\n\n"
                read -eri "$poofitee_home_dir" poofitee_home_dir
                echo
                echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
