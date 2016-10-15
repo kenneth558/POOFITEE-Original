@@ -3599,8 +3599,6 @@ the following command:\
     ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
     sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 fi
-#layitout "$logo" dupinreverse truncate
-#press_a_key
 #  Beginning of copyright message
 #clear
 showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
@@ -4298,6 +4296,9 @@ is a web page that may help you with that:\
         fi
         [[ "$answer" =~ [fep] ]] && advise_to_verify_persistency
         end_warnings
+        press_a_key
+        layitout "$logo" dupinreverse truncate
+
     fi
 done
 
