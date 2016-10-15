@@ -171,10 +171,11 @@ EOF1
 chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
 }
 ensure_connection () {
-          while ! [[ "$(ping -c1 opendns.com &>/dev/null;echo "$?")" == "0" ]];do
-               printf "\r\033[KNo internet connection found with full DNS.  Press a key when corrected or to ignore...";read -rsn 1;read -rst 0.001 -n3
-               break
-          done
+    [[ "$1" == "v" ]] && printf -- "\r\033[KChecking for a connection to the Internet..."
+    ping -c1 opendns.com &>/dev/null
+    [[ $(echo "$?") == "0" ]] && \
+        ([[ "$1" == "v" ]] && printf -- "fine\r\033[K") || \
+        (printf "\r\033[KNo internet connection found with full DNS.  To ignore ";press_a_key;read -rsn 1 discard;read -rst 0.001 -n4 discard)
 }
 test_this_awk () {
     ! [[ -f  "${awkspaths[$awks_index]}" ]] && return 1
@@ -253,6 +254,10 @@ mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" #
 [[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
 if [[ "$1" == "checkawk" ]];then
+    if [ -z "$been_here_before" ];then
+        clear
+        printf "Verifying that a compatible version of awk is present..."
+    fi
     awks=(awk gawk mawk nawk)
     for function_state in "" oldtested upgrade;do
         set_awks_paths $([[ -z "$function_state" ]] && printf "label_olds")
@@ -281,6 +286,7 @@ if [[ "$1" == "checkawk" ]];then
             esac
         done
     done
+    [ -z "$been_here_before" ] && printf "fine\r\033[K"
     if [[ "${awks_installed_states[$awks_index]}" == "failed" ]];then
         cat <<-EOF
 		WARNING:
@@ -554,7 +560,7 @@ if [[ -z "$user_poofitee_created_this_run" ]];then
 \n$poofitee_home_dir/cronentries, or else it is totally void of entries.\
 \nIf you are certain it is rightfully empty, press 'p' to proceed anyway,\
 \notherwise press ctrl-c and troubleshoot the problem...\n"
-          read -rsn1;read -rsn3 -t 0.001 discard
+          read -rsn1;read -rsn4 -t 0.001 discard
           ! [[ $REPLY =~ [Pp] ]] && return 1
      fi
 fi
@@ -924,7 +930,7 @@ get_operator_knock_choices () {
                          printf "You are advised against specifying your ssh port "$(printf "("$($greppath ^Port /etc/ssh/sshd_config|$awkpath \
 '{printf $2}')")")" simply because it will\
 \ninterfere with you testing your sequence through an ssh session.  Do you still\
-\nwant to specify this port? (y/n) ";read  -rn1;read -rst 0.001 -n3 discard;! [[ $REPLY =~ [Yy] ]] && continue
+\nwant to specify this port? (y/n) ";read  -rn1;read -rst 0.001 -n4 discard;! [[ $REPLY =~ [Yy] ]] && continue
                       fi
                       printf "\nKnock $i protocol (choose from \"all\" [any protocol is acceptable] or those listed\
 \nin /etc/protocols.  TCP with SYN flag is defaulted below and will function if\
@@ -938,7 +944,7 @@ get_operator_knock_choices () {
                            until false; do
                                 if ! [[ -z "$if_first_knock_is_ACK_message" ]] && [[ "$i" == "1" ]];then
                                      printf "$if_first_knock_is_ACK_message"
-                                     read -rn 1;read -rst 0.001 -n3 discard
+                                     read -rn 1;read -rst 0.001 -n4 discard
                                      [[ $REPLY =~ [Rr] ]] && continue 2
                                      ! [[ $REPLY =~ [Kk] ]] && break
                                 else
@@ -947,7 +953,7 @@ get_operator_knock_choices () {
 \nsniffing hackers so it looks like a normal communication packet, do you want the\
 \nserver to reply to this knock (with a REJECT$(! [[ -z "$if_first_knock_is_ACK_message" ]] && \
 printf ", and of course only if the previous\nknocks in the sequence have been received correctly)" || printf ")")? (y/n): "
-                                     read -rn 1;read -rst 0.001 -n3 discard
+                                     read -rn 1;read -rst 0.001 -n4 discard
                                      if ! [[ $REPLY =~ [Yy] ]]; then
                                           [[ $REPLY =~ [Nn] ]] && break
                                           continue
@@ -1019,7 +1025,7 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
      while IFS= read -s -n1 -r char;do # [[ -z "$char" ]] && break
           if [[ "$(printf "%d" "'$char")" == "27" ]];then # 'escape or extended key has been detected, single quote is important
                      if [[ $(read -rst 0.001 -n1;echo $REPLY) == "[" ]];then
-                           read -rst 0.001 -n1;read -rst 0.001 -n1 discard
+                           read -rst 0.001 -n1;read -rst 0.001 -n4 discard
                            if [[ "$REPLY" == "B" ]] && ! [[ $(( $mstrlinenumber )) -gt $(( $mstrnumoflines )) ]];then #down-arrow pressed
                                 mstrlinenumber="$(( $mstrlinenumber + 1 ))"
                                 move_cursor_to_next_entry_in_list
@@ -1490,7 +1496,7 @@ printf "\n"
 	Would you like to enable IP forwarding persistently and have iptables masquerade
 	your internal network so it has Internet access? y/n:
 	EOF
-     read -rn1;read -rsn3 -t 0.001 discard
+     read -rn1;read -rsn4 -t 0.001 discard
      printf "." # insert friendly progress indicators
      if [[ $REPLY =~ [Yy] ]];then
           printf "." # insert friendly progress indicators
@@ -1589,7 +1595,7 @@ printf "." # insert friendly progress indicators
 printf "." # insert friendly progress indicators
 ! ($iptablespath -w -nvL OUTPUT                        |$greppath -- " DROP       all  --  \*            $external_net_interface"    |$greppath -- " match-set poofitee_full_bogons_cidr dst"|$greppath "poofitee_fw") >/dev/null && ($iptablespath -w -A OUTPUT -o $external_net_interface -m comment --comment "poofitee_fw" -m set --match-set poofitee_full_bogons_cidr dst -j DROP &>/dev/null || printf "Failed n1")
 printf "." # insert friendly progress indicators
-read -n3 -t 0.001 discard
+read -n5 -t 0.001 discard
 printf "." # insert friendly progress indicators
 if ! [[ -z $likeliest_internal_net_interface ]] && [[ $(cat /proc/sys/net/ipv4/ip_forward) == "1" ]] && ! [[ $iptables_masquerading == false ]];then
      printf "." # insert friendly progress indicators
@@ -1713,8 +1719,9 @@ SANDBOX
        conf_postfix () {
 ! [[ -z "$postfix_already_conf" ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
-while true;do
-     clear;printf "$( [[ -z $sendmail_works ]] && echo "Three" || echo "Two more" ) emailing functions need email addresses.  Provide at least one email\
+while [[ -z "$got_sendto_emailadds" ]];do
+#     clear;printf "$( [[ -z "$sendmail_works" ]] && echo "Three" || echo "Two more" ) emailing functions need email addresses.  Provide at least one email\
+     printf "\n\n$( [[ -z "$sendmail_works" ]] && echo "Three" || echo "Two more" ) emailing functions need email addresses.  Provide at least one email\
 \naddress now.  The address[es] asked for now is/are the one or more that will\
 \nreceive the various notifications sent out by this system.  Commonly, this would\
 \nbe at least two addresses - one for a text message to a cell phone, the other an\
@@ -1723,8 +1730,9 @@ while true;do
 \ncutting short the longer texts."
      printf "\n\nAddress[es] where to send notifications to (enter an empty line to end):\n\n"
      get_sendto_emailadds
+     got_sendto_emailadds="got_sendto_emailadds"
 done
-if [[ -z $sendmail_works ]];then
+if [[ -z "$sendmail_works" ]];then
               printf "\nNow, a single email address with its password is needed for an outgoing email\
 \nserver somewhere to authenticate the outgoing email traffic (it's come to this\
 \nbecause of spammers).  Enter now the email account name to use for an outgoing\
@@ -1882,9 +1890,10 @@ chown poofitee "$poofitee_home_dir/outemailadd"
 chmod 600 "$poofitee_home_dir/outemailadd"
 fi
 postfix_already_conf=True # set this to True or just anything non-empty
-          }
+}
 
-          install_rc () {
+install_rc () {
+! [[ -z "$install_rc_done" ]] && return
 poofitee_home_dir="$( cat poofitee_home_dir )"
 # "$($sedpath 's/,/\n/g' <"$poofitee_home_dir/toemailadds")"
 inemailadd=""
@@ -1894,9 +1903,9 @@ inemailadd="$( [[ -f "$poofitee_home_dir/inemailadd" ]] && cat "$poofitee_home_d
 #inemailacct="${inemailadd%@*}";inemailprovider="${inemailadd#*@}";inemaildomain="${inemailprovider%.*}";intopdomain="${inemailprovider#*.}";inemailsubdomain="pop";
 # rm "$poofitee_home_dir/successlogins" 2>/dev/null
 create_tmp_timeouttry_script
-clear
+#clear
 while true;do
-     printf "(Be advised - The next configuration will determine the optimal port of an email\
+     printf "\n\n(Be advised - The next configuration will determine the optimal port of an email\
 \nserver to connect to when retrieving emailed instructions.  You should now\
 \nensure that your Internet connection is the same one that will be used in final\
 \noperation if your email account will be hosted by your local ISP.  The email\
@@ -2021,7 +2030,7 @@ if [[ -f "$poofitee_home_dir/toemailadds" ]];then
 elif [[ -f "./toemailadds" ]];then
      toemailadds="$(cat "./toemailadds")"
 fi
-until ! [[ -z $toemailadds ]];do
+until ! [[ -z "$got_sendto_emailadds" ]];do
      get_sendto_emailadds
 done
 #     printf "\n\nLet's look at the results:\n"
@@ -2294,6 +2303,7 @@ until ! ($iptablespath -w -nL PREROUTING -t raw             |$greppath -- "^LOG 
     $iptablespath -w -D PREROUTING $($iptablespath -w -nL PREROUTING -t raw --line-numb      |$greppath -- "^.....LOG     "|$greppath -- "fetch email " |$greppath -- " dpt:"|$greppath "This rule ensures email-reader port knock won't get ignored"|$awkpath '{printf $1;exit}') -t raw &>/dev/null
 done
 [[ $($iptablespath -w -I PREROUTING 1 -t raw -m comment --comment "This rule ensures email-reader port knock won't get ignored" -p $emailproto --dport $emailport -j LOG --log-prefix "fetch email " &>/dev/null;echo "$?") == "0" ]] || printf "Failed 22"
+install_rc_done="install_rc_done"
 }
 
 install_dynIPch () {
@@ -3500,7 +3510,7 @@ localbacktitle="Deficiency Notice  POOFITEE  $version"
 if ! [[ -z "$localwarning" ]];then
     localwarning="<center>Your operating system is not entirely adequate:\n\n""$localwarning" # "$([[ -z "$whiptailpath" ]] && printf -- "\n\npress any key, Ctrl-c aborts....")"
     showthis "$localwarning" msgbox "$attention" "$localbacktitle" 0 -- "" ""
-#    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n3 discard #Need for this line depends on which box is utilized
+#    ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n4 discard #Need for this line depends on which box is utilized
 fi
 if  [[ -z "$sudopath" ]];then
     showthis "The actual sudo command is necessary for several aspects of this installer, \
@@ -3512,7 +3522,7 @@ the following command:\
     sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 fi
 #  Beginning of copyright message
-clear
+#clear
 showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
 \n\n\nSpecifically -\
 \n\n - No ability to configure either virtual or normal interfaces for you.  Little or no \
@@ -3571,7 +3581,7 @@ if  [[ -z "$external_net_interface" ]];then
     ! [[ -z "$internal_net_interfaces" ]] && internal_net_interfaces+="\n"
     until ! [[ -z "$external_net_interface" ]];do
         rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui 2>/dev/null
-        clear
+#        clear
         showthis "\n<center>Unable to identify an Internet connection\n\nType in/select the name of the Internet-\
 facing interface from the following choices, but even so, without Internet access no dependency packages can be installed (obviously):\n" \
             radiolist "$attention" "$globalbacktitle" $(printf "$internal_net_interfaces"|$wcpath -l) \
@@ -3766,7 +3776,7 @@ until ! [[ -z "$answer" ]];do
         $tputpath cup $((quitrow)) 0
         exit
     fi
-    clear
+#    clear
     if [[ $answer =~ \? ]];then
 #        printf "  Since info is selected, no changes are to be made"
         if [[ $answer == "?" ]];then
@@ -3876,7 +3886,7 @@ until ! [[ -z "$answer" ]];do
 #      -- if an installer is not found, inform operator to install listed programs
 # In Ubuntu (and probably Debian), install the ipset and xtables-addons-source packages. Then, run module-assistant auto-install xtables-addons, and ipset is ready to test
 #  packages required to install everything
-        echo
+#        echo  # Not desired with dialog nor whiptail due to their poor appearance scrolling
         notinstalled="."
         until [ -z "$notinstalled" ];do  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
             until ! [ -z "$goahead" ] && ! [ -z "$ackd" ] && [ "$goahead" == "true" ] || [ "$ackd" == "true" ];do
@@ -3924,17 +3934,16 @@ installer to work with (in another terminal window, of course) and resume here."
 #             exit
 #        fi
 # Might need to manually add to /etc/network/interfaces: pre-down /etc/init.d/netfilter-persistent save
-            [ -z "$been_here_before" ] && clear
             if ! [ -z "$installerpath" ] && ! [ -z "$not_installed_single_line" ];then # install what is neededpress 
                  if [ -z "$been_here_before" ];then
-                      ensure_connection
+                      ensure_connection v
                       if [[ "$installerpath" =~ apt-get|pacman ]];then
                            printf "Installation of\n$notinstalled\nis required next.  Press u to update your system's package installer first,\
 $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your system's package installer & have it run autoremove,")\
 \nany other letter or number key not to update the installer first.  \n"
                            press_a_key u $([[ "$installerpath" =~ apt-get ]] && printf "b" || printf "<other-letter-or-number>")
                            if [[ "$installerpath" =~ apt-get ]] && [[ "$REPLY" =~ [Bb] ]];then
-                                clear
+#                                clear
                                 installeranswer="$REPLY"
                                 printf "\r\033[KCleaning up with apt-get autoremove...\n"
                                 while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
@@ -4054,7 +4063,7 @@ This just happens to be the case with the particular Linux distro you're using. 
 You'll have to load the ipset module manually and restart poofitee installer.  Here \
 is a web page that may help you with that:\
 \n\n<center>http://www.fwbuilder.org/4.0/docs/users_guide5/Appendix.shtml\n" infobox "$globaltitle" "$globalbacktitle"
-                    read -srn1;read -srn5 -t 0.001 discard
+                    read -srn1;read -srn4 -t 0.001 discard
 #                    exit # this checks to see whether we need to manually load the ipset maodule
                 fi
             fi
@@ -4066,7 +4075,7 @@ is a web page that may help you with that:\
                 poofitee_home_dir="$([[ -f poofitee_home_dir ]] && cat poofitee_home_dir)"
                 [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="$poofitee_home_dir"
                 [[ -z "$poofitee_home_dir" ]] && poofitee_home_dir="/home/poofitee"
-                clear
+#                clear
                 printf "\nSpecify a home directory which will be created for user poofitee, which is where\
 \nthese scripts will be installed.  No deeper subdirectory will be used than what\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
@@ -4114,7 +4123,7 @@ is a web page that may help you with that:\
         if [[ "$answer" =~ e ]];then
 #            printf "remote controlling"
             sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
+            if [[ -z "$sendmail_works" ]];then
                  outemail_warnings
                  press_a_key
             fi
@@ -4173,7 +4182,7 @@ is a web page that may help you with that:\
         if [[ "$answer" =~ d ]] && ! [[ "$notdhcp" == "notdhcp" ]];then
 #             printf "dynamic IP change notify"
             sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
+            if [[ -z "$sendmail_works" ]];then
                 outemail_warnings
                 press_a_key
             fi
@@ -4183,7 +4192,7 @@ is a web page that may help you with that:\
         fi
         if [[ "$answer" =~ p ]];then
             sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
+            if [[ -z "$sendmail_works" ]];then
                 outemail_warnings
                 press_a_key
             fi
@@ -4200,7 +4209,7 @@ is a web page that may help you with that:\
              install_buildiptablessh
 #             echo "going off to tail f lines and recvg script"
             sendmail_works_or_not
-            if [[ -z $sendmail_works ]];then
+            if [[ -z "$sendmail_works" ]];then
                 outemail_warnings
                 press_a_key
             fi
