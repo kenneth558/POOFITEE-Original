@@ -1,6 +1,6 @@
 #! /bin/bash
 logo="\
-\n......................................................................................................@...\
+......................................................................................................@...\
 \n......................................................................................................@...\
 \n......................................................................................................@...\
 \n.....................................................................................................@@...\
@@ -114,9 +114,6 @@ logo="\
 \n.................................................................................................@@@@.....\
 \n.........................................................................................................@"
 #logo outer badge shape (eyebrows, face) fills left side of screen, then each line gets repeated backwards just to right side of screen
-#printf -- "Do this string ."|while read line;do
-#    printf -- "$line"|$awkpath '{printf $0;for (i=length($0);i>0;i--){printf substr($0,i,1)}print ""}' #
-#done
 version="version 0.0.1"
 #
 # Downloading this script: YOU SHOULDN'T COPY/PASTE BECAUSE THERE ARE ADJACENT SPACES THAT WOULD GET CONSOLIDATED THAT WAY.  Instead, download with raw or download the file
@@ -2818,7 +2815,8 @@ printf "press $(! [[ -z "$1$2" ]] && printf "$1/$2" || printf "any key"), Ctrl-c
 read -rsn 1;read -rst 0.001 -n4 discard
 [[ "$REPLY" == "$1" ]] && return 0 || return 1
 }
-layitout () {
+
+layitout () { # For this to work
     printf -- "$1\n"| \
       while IFS= read -r line;do
          if [[ -z "$screen_line" ]]; then
@@ -2831,23 +2829,32 @@ layitout () {
              ! [[ -z "$line" ]] && line="$([[ $(((cols - ${#line}) / 2 )) -ge 1 ]] && printf -- '%.s'" " $(seq $(((cols - ${#line}) / 2 ))))""$line"
          fi
          firstofline=""
+         [[ "$2" == dupinreverse ]] && line="$(printf -- "$line\n"|while read _line;do printf -- "$_line"|$awkpath '{printf $0;for (i=length($0);i>0;i--){printf substr($0,i,1)}print ""}';done)"
          for ((linepointer=0;linepointer<${#line};));do 
              printout=""
              for ((i=cols;i>=0;i--));do
                  if [[ $((linepointer+i)) -ge ${#line} ]];then
                      printout="${line:linepointer}"
-                     linepointer=${#line}
                      i=0
+                     linepointer=${#line}
+                 elif [[ "$3" == truncate ]];then
+                     printout="${line:linepointer:i}"
+                     i=0
+                     linepointer=${#line}
                  elif [[ ${line:i+linepointer:1} =~ [[:space:]] ]];then
                      printout="${line:linepointer:i}"
                      ((i++))
-                     linepointer=$((linepointer+=i))
                      i=0
+                     linepointer=$((linepointer+=i))
                  elif [[ $((i)) -lt $((cols)) ]] && [[ ${line:i+linepointer:1} =~ - ]] && [[ ${line:i+linepointer-1:1} =~ [[:alnum:]] ]];then
                      ((i++))
                      printout="${line:linepointer:i}"
-                     linepointer=$((linepointer+=i))
                      i=0
+                     linepointer=$((linepointer+=i))
+                 elif [[ $((i)) -eq 0 ]];then
+                     printout="${line:cols}"
+                     i=0
+                     linepointer=$((linepointer+=cols))
                  fi
              done
              if [[ -z "$firstofline" ]]; then
@@ -3592,6 +3599,8 @@ the following command:\
     ! [[ -z "$dialogpath" ]] && (printf "\r";press_a_key)
     sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 fi
+#layitout "$logo" dupinreverse truncate
+#press_a_key
 #  Beginning of copyright message
 #clear
 showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
