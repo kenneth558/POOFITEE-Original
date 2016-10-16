@@ -289,7 +289,7 @@ ensure_connection () {
     [[ "$1" == "v" ]] && printf -- "Checking for a connection to the Internet..."
     ping -c1 opendns.com &>/dev/null
     if [[ $(echo "$?") == "0" ]];then
-        [[ "$1" == "v" ]] && printf -- "fine\n" || return
+        [[ "$1" == "v" ]] && printf -- "OK\n" || return
     else
         printf "\r\033[KNo internet connection found with full DNS.  To ignore "
         press_a_key
@@ -404,7 +404,7 @@ if [[ "$1" == "checkawk" ]];then
             esac
         done
     done
-    [ -z "$been_here_before" ] && printf "fine\n"
+    [ -z "$been_here_before" ] && printf "OK\n"
     if [[ "${awks_installed_states[$awks_index]}" == "failed" ]];then
         cat <<-EOF
 		WARNING:
@@ -1885,7 +1885,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           ! [[ -z "$inemailadd" ]] && bunch+="$inemailadd"
           get_1_addr_from_bunch "$bunch"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
-          echo "$outemailadd" >> "$poofitee_home_dir/outemailadd"
+          echo "$outemailadd" > "$poofitee_home_dir/outemailadd"
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
@@ -2725,7 +2725,7 @@ get_1_addr_from_bunch() {
           emailadds="$1"
           scratchpad="${emailadds%%'\n'*}"
           emailaddid=1 ;horizptr="${#scratchpad}"
-          printf "\n(up/down-arrows will scroll, or edit into an entirely different account name)\n$scratchpad"
+          printf "\n(up/down-arrows will scroll, or edit into an entirely different account name)\n\n$scratchpad"
           while true;do #this loop get a new email account or one chosen from bunch with password
               while IFS= read  -rsn1 char;do
                    if [[ "$(printf "%d" "'$char")" == "27" ]];then # '
