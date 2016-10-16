@@ -288,9 +288,12 @@ chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
 ensure_connection () {
     [[ "$1" == "v" ]] && printf -- "Checking for a connection to the Internet..."
     ping -c1 opendns.com &>/dev/null
-    [[ $(echo "$?") == "0" ]] && \
-        ([[ "$1" == "v" ]] && printf -- "fine\n" || return) || \
-        (printf "\r\033[KNo internet connection found with full DNS.  To ignore ";press_a_key;read -rsn 1 discard;read -rst 0.001 -n4 discard)
+    if [[ $(echo "$?") == "0" ]];then
+        [[ "$1" == "v" ]] && printf -- "fine\n" || return
+    else
+        printf "\r\033[KNo internet connection found with full DNS.  To ignore "
+        press_a_key
+    fi
 }
 test_this_awk () {
     ! [[ -f  "${awkspaths[$awks_index]}" ]] && return 1
