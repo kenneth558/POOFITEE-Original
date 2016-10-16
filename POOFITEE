@@ -1956,14 +1956,15 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ $(/etc/init.d/postfix reload &>/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply");then
               printf "This POOFITEE version is not advanced enough to configure postfix in the\
-\nenvironment existing on this computer.  Presumeably, this is due to this script\
-\nbeing unable to restart postfix via the init system used.  Please manually\
-\nrestart postfix in another window so it will resume operation using the new\
-\nsettings POOFITEE has given it, then continue.  If email sending functionality\
-\nrequires more than simply restarting postfix, you\'ll need to determine how to\
-\nconfigure email sending.  Take note of the port/protocol settings just\
-\ndisplayed for you to use for configuring.  Re-launch this installer when you\'ve\
-\naccomplished that.  "
+\nenvironment existing on this computer.  Presumeably, this is due to the\
+\nlimitation of this script to restart postfix via the init system used.  Please\
+\nmanually restart postfix (in a different terminal session if you want) so it\
+\nwill resume operation using the new settings POOFITEE has given it, then\
+\ncontinue here with this installer.  If the email sending functionality of this\
+\ncomputer is being hindered by more than simply needing postfix restarted,\
+\nyou\'ll need to determine how to configure email sending - take note of the\
+\nport/protocol settings just displayed for your use in configuring.  Re-\
+\nlaunch this installer when you\'ve accomplished that.  "
               press_a_key
           elif ! [[ "$($headpath -n1 "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply")" == *is\ empty* ]];then
                printf "\nFor the next step, the mail queue needs to be flushed.  You will lose the\
