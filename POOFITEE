@@ -286,10 +286,10 @@ EOF1
 chmod 700 "/tmp/fifos_and_temp_files_for_poofitee_installer/timeouttry.sh"
 }
 ensure_connection () {
-    [[ "$1" == "v" ]] && printf -- "\r\033[KChecking for a connection to the Internet..."
+    [[ "$1" == "v" ]] && printf -- "Checking for a connection to the Internet..."
     ping -c1 opendns.com &>/dev/null
     [[ $(echo "$?") == "0" ]] && \
-        ([[ "$1" == "v" ]] && printf -- "fine\r\033[K" || return) || \
+        ([[ "$1" == "v" ]] && printf -- "fine\n" || return) || \
         (printf "\r\033[KNo internet connection found with full DNS.  To ignore ";press_a_key;read -rsn 1 discard;read -rst 0.001 -n4 discard)
 }
 test_this_awk () {
@@ -370,8 +370,8 @@ mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" #
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
 if [[ "$1" == "checkawk" ]];then
     if [ -z "$been_here_before" ];then
-        clear
-        printf "Verifying that a compatible version of awk is present..."
+        clear #then position cursor at bottom of screen
+        printf "\e[$rows;1HVerifying that a compatible version of awk is present..."
     fi
     awks=(awk gawk mawk nawk)
     for function_state in "" oldtested upgrade;do
@@ -401,7 +401,7 @@ if [[ "$1" == "checkawk" ]];then
             esac
         done
     done
-    [ -z "$been_here_before" ] && printf "fine\r\033[K"
+    [ -z "$been_here_before" ] && printf "fine\n"
     if [[ "${awks_installed_states[$awks_index]}" == "failed" ]];then
         cat <<-EOF
 		WARNING:
@@ -2874,7 +2874,7 @@ showthis () {
  # $5 and following is list of checklist or menu entries
  # integrate with press_a_key? rows=24 cols=80
  #NOTE: BECAUSE OF THE NEED FOR tput IN THIS FUNCTION, WE MUST NOT REDIRECT STDERR OF THE CALLING STATEMENT TO THIS FUNCTION
- # THEREFORE THE WHIPLOG ANSWER WILL BE CONTROLLED WITHIN HERE, THE FILE NAME IS THEN HARDCODED BOTH HERE AND IN THE CALLER 
+ # THEREFORE THE WHIPLOG ANSWER WILL BE CONTROLLED WITHIN HERE, THE FILE NAME CONTAINING THE ANSWER IS THEN HARDCODED BOTH HERE AND IN THE CALLER 
 if ! [[ -z "$tputpath" ]];then
     rows="$($tputpath lines)"
     cols="$(($($tputpath cols)))" 
@@ -3867,7 +3867,7 @@ infobacktitle="Information Screen  POOFITEE  $version"
 postfix_already_conf=""
 quitrow=""
 index=0
-while [[ $answer != q ]];do
+while [[ $answer != q ]];do # B/C the while loop scope wouldn't allow the answer to continue to the actions if the loop ended before then, the loop encompasses the entire main process so help screens can be displayed indefinitely
     if [[ -z "$answer" ]];then # Determined that no command line selections were entered
         eval "showthis \"$mainchecklisttest\" checklist \"$maintitle\" \"$mainbacktitle\" \"$menu_entry_index\"" "$maincheckitems_unarrayed"
         answer=""
@@ -3876,7 +3876,7 @@ while [[ $answer != q ]];do
         done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
     fi
     if [[ $answer =~ q ]] || [[ ${#answer} -eq 0 ]];then
-        $tputpath cup $((quitrow)) 0
+        [[ -z "$whiplogpath" ]] && $tputpath cup $((quitrow)) 0 || clear
         exit
     fi
 #    clear
@@ -3981,7 +3981,6 @@ while [[ $answer != q ]];do
             printf "\r"
 #            press_a_key # Would need with infobox
         fi
-        answer=""
     else
 #  1.  Accept selections from main screen
 #  2.  determine if any packages need installing, warn if no known installer found
