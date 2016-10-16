@@ -3572,8 +3572,8 @@ if ! [[ -z "$answer2" ]];then
 one and only one of each, in a single string"
 fi
 if ! [[ -z "$failreason" ]];then
-    failreason="<center>THANK YOU FOR TRYING THIS POOFITEE INSTALLER, BUT...\
-\nYOU CANNOT RUN POOFITEE INSTALLER THIS WAY FOR THE FOLLOWING REASON[S]:\n\n$failreason$([[ -z "$whiptailpath" ]] && printf -- "\n\nPress any key...")"
+    failreason="<center>Thank you for trying this POOFITEE installer, but...\
+\n<center>You cannot run POOFITEE installer this way for the following reason[s]:\n\n$failreason$([[ -z "$whiptailpath" ]] && printf -- "\n\nPress any key...")"
     localbacktitle="Unable to execute  POOFITEE  $version"
     showthis "$failreason" infobox "Exit Notice" "$localbacktitle"
     ! [[ -z "$dialogpath" ]] && read -sn1;read -rst 0.001 -n4 discard
