@@ -289,7 +289,7 @@ ensure_connection () {
     [[ "$1" == "v" ]] && printf -- "\r\033[KChecking for a connection to the Internet..."
     ping -c1 opendns.com &>/dev/null
     [[ $(echo "$?") == "0" ]] && \
-        ([[ "$1" == "v" ]] && printf -- "fine\r\033[K") || \
+        ([[ "$1" == "v" ]] && printf -- "fine\r\033[K" || return) || \
         (printf "\r\033[KNo internet connection found with full DNS.  To ignore ";press_a_key;read -rsn 1 discard;read -rst 0.001 -n4 discard)
 }
 test_this_awk () {
@@ -1908,7 +1908,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/main.cf
           [[ "$($greppath -c ^myhostname </etc/postfix/main.cf)" == "0" ]] \
               && echo "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
-              || $sedpath -i 's/^myhostname.*/myhostname = '"$(hostname)"'/g' /etc/postfix/main.cf
+              || $sedpath -i 's/^myhostname.*/myhostname = '"$(hostname)"'\n/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^relayhost </etc/postfix/main.cf)" == "0" ]] \
               && echo "relayhost = ["${line%:*}"."$outemailprovider"]:"${line#*:} >> /etc/postfix/main.cf \
               || $sedpath -i 's/^relayhost.*/relayhost = ['"${line%:*}.$outemailprovider]:${line#*:}"'/g' /etc/postfix/main.cf
