@@ -518,7 +518,8 @@ if ! [[ -z $mailpath ]];then
 \n 1.  This is another chance for you to edit that address in place, and\
 \n 2.  In case this installer script isn't advanced enough to achieve email\
 \n     sending functionality without your intervention, it will be useful to\
-\n     you to verify your success.\n"
+\n     you to verify your success.\
+\nYou can just press enter to proceed...\n"
           read -eri "$mailadd" -p "$mailcmd " mailadd
           if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                continue
