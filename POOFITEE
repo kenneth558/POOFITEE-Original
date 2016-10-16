@@ -513,12 +513,12 @@ if ! [[ -z $mailpath ]];then
           echo
           get_sendto_emailadds onlyneed1 optional
           if [[ -z "$mailadd" ]]; then break;fi
-          echo "The line below is the command used to test email-sending functionality.  The\
+          printf "The line below is the command used to test email-sending functionality.  The\
 \nemail address at the end of it is being displayed to you for two reasons -\
 \n 1.  This is another chance for you to edit that address in place, and\
 \n 2.  In case this installer script isn't advanced enough to achieve email\
 \n     sending functionality without your intervention, it will be useful to\
-\n     you to verify your success."
+\n     you to verify your success.\n"
           read -eri "$mailadd" -p "$mailcmd " mailadd
           if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                continue
