@@ -513,6 +513,12 @@ if ! [[ -z $mailpath ]];then
           echo
           get_sendto_emailadds onlyneed1 optional
           if [[ -z "$mailadd" ]]; then break;fi
+          echo "The line below is the command used to test email-sending functionality.  The\
+\nemail address at the end of it is being displayed to you for two reasons -\
+\n 1.  This is another chance for you to edit that address in place, and\
+\n 2.  In case this installer script isn't advanced enough to achieve email\
+\n     sending functionality without your intervention, it will be useful to\
+\n     you to verify your success."
           read -eri "$mailadd" -p "$mailcmd " mailadd
           if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                continue
@@ -531,8 +537,8 @@ if ! [[ -z $mailpath ]];then
                          continue
                     fi
                fi
-               printf "\n\nBased on your answer, a full, new email sending configuration will be set up on\
-\nthis computer.  $newemailconfigwarning"
+               printf "\n\nThe results indicate that a full, new email sending configuration will be set\
+\nup on this computer.  $newemailconfigwarning"
                printf "\n\nIf you are unsure this is what you want, press ctrl-c before continuing\n"
                press_a_key
                echo
@@ -1954,6 +1960,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chown postfix /etc/postfix/sasl_passwd*
 
           [[ $(/etc/init.d/postfix reload &>/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
+          [[ "$?" != "0" ]] && postfix start # Don't redirect stderr b/c user needs to see the results
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply");then
               printf "This POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
@@ -1963,8 +1970,10 @@ while true;do  #this loop allows user to change the email account for outbound s
 \ncontinue here with this installer.  If the email sending functionality of this\
 \ncomputer is being hindered by more than simply needing postfix restarted,\
 \nyou\'ll need to determine how to configure email sending - take note of the\
-\nport/protocol settings just displayed for your use in configuring.  Re-\
-\nlaunch this installer when you\'ve accomplished that.  "
+\nport/protocol settings just displayed for your use in configuring, and for\
+\ntesting the configuration, take note of the email-sending command that was\
+\ndisplayed earlier.  Return here or re-launch this installer when you\'ve\
+\naccomplished that.  "
               press_a_key
           elif ! [[ "$($headpath -n1 "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply")" == *is\ empty* ]];then
                printf "\nFor the next step, the mail queue needs to be flushed.  You will lose the\
