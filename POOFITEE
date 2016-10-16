@@ -3575,6 +3575,7 @@ findpath="$($whereispath $binaryflag find)";findpath="${findpath#*:}";findpath="
 tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
 xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
+timeoutpath="$($whereispath $binaryflag timeout)";timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 [[ -z "$adduserpath" ]] && adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
 passwdpath="$($whereispath $binaryflag passwd)";passwdpath="${passwdpath#*:}";passwdpath="${passwdpath# }";passwdpath="${passwdpath%% *}";
@@ -3600,21 +3601,28 @@ the following command:\
 fi
 #  Beginning of copyright message
 #clear
-showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN EXPERIMENTAL STATUS\
+showthis "\n<center>POOFITEE IS CURRENTLY AVAILABLE IN \
+EXPERIMENTAL STATUS\
 \n\n\nSpecifically -\
-\n\n - No ability to configure either virtual or normal interfaces for you.  Little or no \
-testing has been done in a virtual interface environment, but no problems per se are expected.\
+\n\n - No ability to configure either virtual or normal interfaces for you.  Little \
+or no testing has been done in a virtual interface environment, but no problems per \
+se are expected.\
 \n\n - No ability to differentiate between, nor work with, initsystem types.  \
 So for persistence of the  this script installs, you're on your own.\
-\n\n - Limited ability to configure postfix.\
+\n\n - Limited ability to configure postfix.  Enclosed postscript configuration was \
+developed under a single Linux distro with a single postscript version.\
 \n\n - No command line help, package [un]installation including dependency tracking, \
-nor man (reference manual pager) support is provided.\
+nor man (the standard reference manual pager for _Nix's) support is provided.\
+\n\n - Command line options limited to a single string containing main menu \
+selection letter keys.  If provided when launched, the main menu solicitation for \
+user input is bypassed.\
 \n\n - If loadable modules for iptables are not automatically loaded in your Linux \
 kernel as it is configured, some options of poofitee will end execution \
 of this script early and inform you to manually load the ipset module, \
 a one-time necessary event. Currently, poofitee is not advanced enough to \
 load kernel modules itself.\
-\n\n - The source code is not beautified and full of extraneous reminders helpful to the script\'s development team.\
+\n\n - The source code is not beautified and full of extraneous reminders helpful \
+to the script\'s development team.\
 \n\n - Enhancements are being added weekly or even more often\
 \n\n\n<center>Your suggestions for improvements are solicited and \
 welcome.  Use the POOFITEE Wiki to offer them...\
@@ -3690,7 +3698,7 @@ if [[ $($pspath aux|$greppath -vw grep|$greppath -we pump -we dhclient -we udhcp
     notdhcp="notdhcp"
     mainchecklisttest+="<center>(Not available with this IP address: dynamic IP address change notifier)\n"
 fi
-answer=""
+answer="$1"
 ghbacktitle="Main Menu  POOFITEE  $version"
 ghscreen1="\nThis Linux script can install several Internet security features useful \
 in homeowner and enterprise systems alike. Enterprise systems however, typically \
@@ -3835,21 +3843,21 @@ maincheckitems+=("p" \
 "r" \
 "?" \
 "q" )
-for menu_entry_index in "${!maincheckitems[@]}";do :;done
+for menu_entry_index in "${!maincheckitems[@]}";do :;done # Determine index value of last entry in maincheckitems to prepare to iterate through first half of array
 menu_entry_index=$(((menu_entry_index + 1) / 2))
 for ((index=0;index<menu_entry_index;index++));do
     chararray[index]+="${maincheckitems[$((menu_entry_index + index))]}"
 done
-answer=""
+! [[ -z "$1" ]] && answer="$1" || answer="" # First command line argument can consist only of main menu entry selection letter keys in which case execution will begin unattended
 maincheckitems_unarrayed=""
 for list_index in `seq 0 $((menu_entry_index - 1))`;do maincheckitems_unarrayed+="\"${maincheckitems[list_index]}\" OFF ";done
-until ! [[ -z "$answer" ]];do
+if [[ -z "$answer" ]];then # Determined that no command line selections were entered
     eval "showthis \"$mainchecklisttest\" checklist \"$maintitle\" \"$mainbacktitle\" \"$menu_entry_index\"" "$maincheckitems_unarrayed"
     answer=""
     while read line;do # change numbers to letters for compatibility with non-dialog/whiptail environment
         ! [[ -z "$line" ]] && answer+=${chararray[$line]}
     done < /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
-#    rm /tmp/fifos_and_temp_files_for_poofitee_installer/answergui
+fi
     if [[ $answer =~ q ]] || [[ ${#answer} -eq 0 ]];then
         $tputpath cup $((quitrow)) 0
         exit
@@ -4300,7 +4308,7 @@ is a web page that may help you with that:\
         layitout "$logo" dupinreverse truncate
 
     fi
-done
+# done
 
 #IPSet RANDOM NOTES FOLLOW FROM DIFFERENT SITES.  DO WEB SEARCH ON THEM FOR MORE DETAILS
 #
