@@ -2001,7 +2001,14 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/master.cf
           cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
           stop_progress_wheel
-          /etc/init.d/postfix reload 2>/dev/null || /etc/systemctl restart postfix 2>/dev/null || $postfixpath start 2>/dev/null || $postfixpath reload
+          if [[ -f /etc/init.d/postfix ]];then
+               /etc/init.d/postfix reload
+          elif [[ -f /etc/systemctl ]];then
+              /etc/systemctl restart postfix
+          elif ! $postfixpath start;then
+              $postfixpath reload
+          fi
+#          /etc/init.d/postfix reload 2>/dev/null || /etc/systemctl restart postfix 2>/dev/null || $postfixpath start 2>/dev/null || $postfixpath reload
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "$tmpfiles/postqueue_reply");then
               printf "\nThis POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
@@ -4135,7 +4142,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                  start_progress_wheel
                  for package in `printf "\"$not_installed_single_line\""|$sedpath 's/ /" "/g'`;do
                      package="${package:1: -1}"
-                     eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" # 2>/dev/null
+                     eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" 2>/dev/null
 #                     eval "$xargspath -a <(printf -- "$package") -r -- $sudopath $installerpath" 2>/dev/null
                  done
                  what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
@@ -4150,7 +4157,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            netfilter_persistent_already_given_a_chance=""
                            iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                            if [[ -z "$iptabsavepath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $installerpath" # 2>/dev/null
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $installerpath" 2>/dev/null
 #                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
@@ -4169,7 +4176,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            cronie_already_given_a_chance=""
                            crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                            if [[ -z "$crontabpath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $installerpath" # 2>/dev/null
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $installerpath" 2>/dev/null
 #                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
@@ -4191,9 +4198,9 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       if [[ -z "$update_tried" ]];then
                            update_tried="yes"
                            printf "\r\e[KUpdating your system\'s package installer..."
-#                           start_progress_wheel
+                           start_progress_wheel
                            apt-get update &>/dev/null
-#                           stop_progress_wheel
+                           stop_progress_wheel
                       else
                            stop_progress_wheel
                            printf "\r\e[KThe following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
