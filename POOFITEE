@@ -301,6 +301,7 @@ ensure_connection () {
     fi
 }
 start_progress_wheel () {
+[[ -z "$progress_wheel_pid" ]] && return 1
 while true;do
     if ! $pspath a|$greppath -v grep|$greppath preconfigure &>/dev/null;then
         progress_wheel_angles_index=$(((progress_wheel_angles_index + 1) % 4)) # parametric arithmetic doesn't need variable initialized (no exist == 0)
