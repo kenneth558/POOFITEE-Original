@@ -519,7 +519,7 @@ if ! [[ -z $mailpath ]];then
 \n 2.  In case this installer script isn't advanced enough to achieve email\
 \n     sending functionality without your intervention, it will be useful to\
 \n     you to verify your success.\
-\nYou can just press enter to proceed...\n"
+\nYou can just press enter to proceed...\n\n"
           read -eri "$mailadd" -p "$mailcmd " mailadd
           if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
                continue
@@ -1939,17 +1939,21 @@ while true;do  #this loop allows user to change the email account for outbound s
           [[ "$($greppath -c ^smtp_tls_CAfile </etc/postfix/main.cf)" == "0" ]] \
               && echo "smtp_tls_CAfile = /etc/postfix/cacert.pem" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_tls_CAfile.*/smtp_tls_CAfile = \/etc\/postfix\/cacert.pem/g' /etc/postfix/main.cf
-          [[ "$($greppath -c ^[[]"${line%:*}"".""$outemailprovider""]:""${line#*:}" </etc/postfix/sasl_passwd)" == "0" ]] \
-              && echo "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd":"$outemailpw" >> /etc/postfix/sasl_passwd \
-              || $sedpath -i 's/^[[]'"${line%:*}.$outemailprovider]:${line#*:}"'.*/'"[${line%:*}.$outemailprovider]:${line#*:}     $outemailadd:$outemailpw"'/g' /etc/postfix/sasl_passwd
+          if [[ -f "/etc/postfix/sasl_passwd" ]];then
+              [[ "$($greppath -c ^[[]"${line%:*}"".""$outemailprovider""]:""${line#*:}" </etc/postfix/sasl_passwd)" == "0" ]] \
+                  && echo "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd"":""$outemailpw" >> /etc/postfix/sasl_passwd \
+                  || $sedpath -i 's/^[[]'"${line%:*}.$outemailprovider]:${line#*:}"'.*/'"[${line%:*}.$outemailprovider]:${line#*:}     $outemailadd:$outemailpw"'/g' /etc/postfix/sasl_passwd
+          else
+              echo "[""${line%:*}"".""$outemailprovider""]:""${line#*:}""    $outemailadd"":""$outemailpw" >> /etc/postfix/sasl_passwd
+          fi
           [[ "$($greppath -c ^smtp_generic_maps </etc/postfix/main.cf)" == "0" ]] \
               && echo "smtp_generic_maps = hash:/etc/postfix/generic" >> /etc/postfix/main.cf \
               || $sedpath -i 's/^smtp_generic_maps.*/smtp_generic_maps = hash:\/etc\/postfix\/generic/g' /etc/postfix/main.cf
           [[ "$($greppath -c ^root@$(hostname) </etc/postfix/generic)" == "0" ]] \
               && echo "root@$(hostname)           $outemailadd" >> /etc/postfix/generic \
               || $sedpath -i 's/^'"root@$(hostname)"'.*/'"root@$(hostname)           $outemailadd"'/g' /etc/postfix/generic
-          chown postfix /etc/postfix
-          chown postfix /etc/postfix/generic
+          chown root /etc/postfix
+          chown root /etc/postfix/generic.db
           chmod 600 /etc/postfix/sasl_passwd
           eval "$postmappath /etc/postfix/sasl_passwd"
           eval "$postmappath /etc/postfix/generic"
@@ -1961,7 +1965,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chown postfix /etc/postfix/sasl_passwd*
 
           [[ $(/etc/init.d/postfix reload &>/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
-          [[ "$?" != "0" ]] && postfix start # Don't redirect stderr b/c user needs to see the results
+          [[ "$?" != "0" ]] && postfix start &>1 # Don't redirect stderr b/c user needs to see the results
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply");then
               printf "This POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
@@ -4087,7 +4091,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            been_here_before="been_here_before"
                       fi
                  fi
-                 printf "\r\033[KInstalling $not_installed_single_line...\r"
+                 printf "\r\033[KInstalling $not_installed_single_line..."
                  eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
                  what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
 #                 press_a_key
