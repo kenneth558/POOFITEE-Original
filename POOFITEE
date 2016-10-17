@@ -313,7 +313,9 @@ progress_wheel_pid="$!"
 trap 'kill $progress_wheel_pid' SIGTERM
 }
 stop_progress_wheel () {
+[[ -z "$progress_wheel_pid" ]] return 1
 kill "$progress_wheel_pid"|while read discard;do :;done
+progress_wheel_pid=""
 trap - SIGTERM
 printf -- " \e[1D"
 return 0
