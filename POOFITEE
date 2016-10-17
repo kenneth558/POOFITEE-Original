@@ -2001,7 +2001,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/master.cf
           cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
           stop_progress_wheel
-          /etc/init.d/postfix reload 2>/dev/null|| /etc/systemctl restart postfix 2>/dev/null|| $postfixpath start 2>/dev/null|| $postfixpath reload
+          /etc/init.d/postfix reload 2>/dev/null || /etc/systemctl restart postfix 2>/dev/null || $postfixpath start 2>/dev/null || $postfixpath reload
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "$tmpfiles/postqueue_reply");then
               printf "\nThis POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
@@ -4256,6 +4256,7 @@ is a web page that may help you with that:\
 \nyou specify here, so include any final isolating or descriptive subdirectory\
 \nlevel you will want:\n\n"
                read -eri "$poofitee_home_dir" poofitee_home_dir
+               ! [[ -d "/etc/sudoers.d" ]] && mkdir /etc/sudoers.d && chmod 0440 /etc/sudoers.d
                echo
                echo "poofitee ALL=NOPASSWD:ALL" > /etc/sudoers.d/poofitee
 #                 echo "poofitee ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/poofitee
@@ -4273,9 +4274,12 @@ is a web page that may help you with that:\
                  echo "Unable to use the path $poofitee_home_dir"
             fi
             if ! [[ -d "$poofitee_home_dir/preparedness" ]];then
-                 $sudopath -u poofitee mkdir -p "$poofitee_home_dir/preparedness" &>/dev/null && chmod 700 "$poofitee_home_dir/preparedness" &>/dev/null
+                 mkdir -p "$poofitee_home_dir/preparedness" &>/dev/null \
+                     && chown poofitee "$poofitee_home_dir/preparedness" \
+                     && chmod 770 "$poofitee_home_dir/preparedness" &>/dev/null
                  [[ "$?" == "0" ]] && break
                  echo "Unable to use the path $poofitee_home_dir/preparedness"
+                 exit
             else
                  break
             fi
