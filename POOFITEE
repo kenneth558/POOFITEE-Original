@@ -315,7 +315,7 @@ trap 'kill $progress_wheel_pid' SIGTERM
 }
 stop_progress_wheel () {
 [[ -z "$progress_wheel_pid" ]] && return 1
-kill "$progress_wheel_pid"|while read discard;do :;done
+kill "$progress_wheel_pid" 2>&1|while read discard;do :;done
 progress_wheel_pid=""
 trap - SIGTERM
 printf -- " \e[1D"
@@ -355,7 +355,8 @@ install_or_upgrade_then_test_this_awktype () {
     printf "Installing ${awks[$awks_index]}\n"
     while true;do ps a|$greppath -v grep|$greppath preconfigure &>/dev/null || printf ".";sleep 1;done &
     progress_dots="$!"
-    eval "$xargspath -a <(printf "${awks[$awks_index]}") -r -- $sudopath $installerpath" &>/dev/null
+    eval "$xargspath -a <(printf "${awks[$awks_index]}") -r -- $installerpath" &>/dev/null
+#    eval "$xargspath -a <(printf "${awks[$awks_index]}") -r -- $sudopath $installerpath" &>/dev/null
     install_result="$?"
     kill $progress_dots; trap 'kill $progress_dots' SIGTERM
     if [[ "$install_result" == "0" ]];then
@@ -4104,7 +4105,7 @@ installer to work with (in another terminal window, of course) and resume here."
                  if [ -z "$been_here_before" ];then
                       ensure_connection v
                       if [[ "$installerpath" =~ apt-get|pacman ]];then
-                           layitout "Installation of\n$notinstalled\nis required next.  Press u to update your system's package installer first,\
+                           printf "Installation of\n$notinstalled\nis required next.  Press u to update your system's package installer first,\
 $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your system's package installer & have it run autoremove,")\
 \nany other letter or number key not to update the installer first.  \n"
                            press_a_key u $([[ "$installerpath" =~ apt-get ]] && printf "b" || printf "<other-letter-or-number>")
@@ -4132,7 +4133,11 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                  fi
                  printf "\r\e[KInstalling $not_installed_single_line..."
                  start_progress_wheel
-                 eval "$xargspath -a <(printf "$not_installed_single_line") -r -- $sudopath $installerpath" 2>/dev/null
+                 for package in `printf "\"$not_installed_single_line\""|$sedpath 's/ /" "/g'`;do
+                     package="${package:1: -1}"
+                     eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" # 2>/dev/null
+#                     eval "$xargspath -a <(printf -- "$package") -r -- $sudopath $installerpath" 2>/dev/null
+                 done
                  what_needs_to_be_installed # &>/dev/null #sending to null was to try to avoid some screen clutter, but it stops execution dead even before function
 #                 press_a_key
 # make the following into a function
@@ -4145,7 +4150,8 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            netfilter_persistent_already_given_a_chance=""
                            iptabsavepath=$($whereispath $binaryflag iptables-save);iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                            if [[ -z "$iptabsavepath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"  2>/dev/null
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $installerpath" # 2>/dev/null
+#                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/netfilter/iptables/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  iptabsavepath=$($whereispath $binaryflag "iptables-save");iptabsavepath="${iptabsavepath#*:}";iptabsavepath="${iptabsavepath# }";iptabsavepath="${iptabsavepath%% *}"
                                  netfiltperspath=$($whereispath $binaryflag "iptables-restore");netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
@@ -4163,7 +4169,8 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            cronie_already_given_a_chance=""
                            crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                            if [[ -z "$crontabpath" ]];then
-                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"  2>/dev/null
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $installerpath" # 2>/dev/null
+#                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/cronie/bcron/1') -r -- $sudopath $installerpath"  2>/dev/null
 #                 press_a_key
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                                  what_needs_to_be_installed
@@ -4190,31 +4197,16 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       else
                            stop_progress_wheel
                            printf "\r\e[KThe following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
-\npress R to retry (recommended as long as progress is being made with repeated\
-\nretries), any other alpha-numeric key to ignore:\n"
+\nInstall manually or press R to retry (recommended as long as progress is being\
+\nmade with repeated retries), any other alpha-numeric key to ignore:\n"
                            press_a_key r "<other-letter-or-number>" || break
                            printf "\n"
-                           for package in "$not_installed_single_line";do
-                               start_progress_wheel
-                               eval "$xargspath -a <(printf "$package") -r -- $sudopath $installerpath" 2>/dev/null
-#                 press_a_key
+                           start_progress_wheel
+                           for package in `printf "\"$not_installed_single_line\""|$sedpath 's/ /" "/g'`;do
+                               package="${package:1: -1}"
+                               eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" 2>/dev/null
+#                               eval "$xargspath -a <(printf -- "$package") -r -- $sudopath $installerpath" # 2>/dev/null
                            done
-                           if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
-                               cat <<-EOF
-				# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
-				# put into /usr/share/inotifywhatever and unzip
-				# cd /usr/share/inotifywhatever
-				#./configure --prefix=/usr && make && su -c 'make install'
-				EOF
-                           fi
-                           if [[ "$not_installed_single_line" =~ netfilter-persistent ]];then :
-                               cat <<-EOF
-				# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
-				# put into /usr/share/whateverfornetfilterpersistent and unzip
-				# cd /usr/share/whateverfornetfilterpersistent
-				#./configure --prefix=/usr && make && su -c 'make install'
-				EOF
-                           fi
                       fi
                  fi
             else
@@ -4222,6 +4214,22 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
             fi
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
         stop_progress_wheel
+        if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
+             cat <<-EOF
+		# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
+		# put into /usr/share/inotifywhatever and unzip
+		# cd /usr/share/inotifywhatever
+		#./configure --prefix=/usr && make && su -c 'make install'
+		EOF
+        fi
+        if [[ "$not_installed_single_line" =~ netfilter-persistent ]];then :
+             cat <<-EOF
+		# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
+		# put into /usr/share/whateverfornetfilterpersistent and unzip
+		# cd /usr/share/whateverfornetfilterpersistent
+		#./configure --prefix=/usr && make && su -c 'make install'
+		EOF
+        fi
         if ! [[ -z "$ipsetpath" ]];then
             if $ipsetpath list -t >&/dev/null;then :;else
                 if $lsmodpath|$greppath -e '^xt_set ' -e '^ip_set '  -e '^ipset ' -e '^xtset ' &>/dev/null;then :;else
