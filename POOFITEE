@@ -370,6 +370,7 @@ what_needs_to_be_installed () {
 [[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
 [[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
+[[ -z "$postfixpath" ]] && postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}"
 [[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
 if [[ "$1" == "checkawk" ]];then
     if [ -z "$been_here_before" ];then
@@ -668,6 +669,7 @@ set_notinstalled_var () {
 [[ -z "$atpath" ]] && notinstalled+="at\n"
 [[ -z "$nicepath" ]] && notinstalled+="coreutils\n"
 [[ -z "$sendmail_works" ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
+[[ -z "$sendmail_works" ]] && [[ -z $postfixpath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z "$ipsetpath" ]] && notinstalled+="ipset\n"
 }
 install_firewall_cronentries () {
@@ -1965,7 +1967,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chown postfix /etc/postfix/sasl_passwd*
 
           [[ $(/etc/init.d/postfix reload &>/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
-          [[ "$?" != "0" ]] && postfix start &>1 # Don't redirect stderr b/c user needs to see the results
+          [[ "$?" != "0" ]] && $postfixpath start &>1 # Don't redirect stderr b/c user needs to see the results
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply");then
               printf "This POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
