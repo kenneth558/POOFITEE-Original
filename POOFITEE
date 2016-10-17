@@ -1964,10 +1964,10 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/cacert.pem
           chmod 644 /etc/postfix/master.cf
           cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
-          chown postfix /etc/postfix/sasl_passwd*
 
           [[ $(/etc/init.d/postfix reload &>/dev/null;echo $?) == "0" ]] || /etc/systemctl restart postfix
           [[ "$?" != "0" ]] && $postfixpath start &>1 # Don't redirect stderr b/c user needs to see the results
+          $postfixpath reload &>1 # Don't redirect stderr b/c user needs to see the results
           if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "/tmp/fifos_and_temp_files_for_poofitee_installer/postqueue_reply");then
               printf "This POOFITEE version is not advanced enough to configure postfix in the\
 \nenvironment existing on this computer.  Presumeably, this is due to the\
