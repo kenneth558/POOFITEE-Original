@@ -2133,7 +2133,8 @@ while true;do
           while true;do
               if [[ -z "$rcpw" ]];then
                  printf "\nPassword for that email account\
-\n(or <enter> twice to try a different email account):";read -s rcpw;do # This loop is for when a password is under question
+\n(or <enter> twice to try a different email account):"
+                 read -s rcpw # This loop is for when a password is under question
                  printf "\n\e[KRe-type password:"
                  read -s rcpw1
                  printf "\r\e[K\e[1A\e[K"
