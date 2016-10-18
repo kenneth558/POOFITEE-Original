@@ -1242,9 +1242,8 @@ get_sendto_emailadds () {  # can take one optional arg, "onlyneed1" which will c
          toemailaddsforfiling="$(printf "$toemailadds"|$awkpath 1 ORS=',')"
          [[ "${toemailaddsforfiling: -1}" == "," ]] && toemailaddsforfiling="${toemailaddsforfiling:: -1}"
          printf "$(printf "$toemailaddsforfiling\n")" > "$poofitee_home_dir/toemailadds"
-         break
+         got_sendto_emailadds="got_sendto_emailadds"
      fi
-
 }
 install_port_knocking () {
             REPLY=""
