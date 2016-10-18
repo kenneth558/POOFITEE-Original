@@ -2170,14 +2170,12 @@ while true;do
                                 sleep 2 &
                                 sid="$!"
                                 until ! [[ $(kill -0 "$pid";echo "$?") == "0" ]] || ! [[ $(kill -0 "$sid";echo "$?") == "0" ]]; do
-                                :
+                                    :
                                 done
                                 if [[ $(kill -0 "$pid";echo "$?") == "0" ]];then
-                                    { kill "$pid";wait;} &>/dev/null
-                                    break
-                                else
-                                    break
+                                    kill "$pid" 2>&1|while read discard;do :;done
                                 fi
+                                break
                            done 2>/dev/null
                       done
                       stop_busy_spinner
