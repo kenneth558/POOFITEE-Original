@@ -2129,14 +2129,19 @@ while true;do
                   fi
               done
 # echo;printf "Address is\n\n$inemailacct"@"$inemaildomain"."$intopdomain"
-          rcpw="";rcpw1=""
-          while printf "\nPassword for that email account:";read -s rcpw;do # This loop is for when a password is under question
-              printf "\n\e[KRe-type password:"
-              read -s rcpw1
-              printf "\r\e[K\e[1A\e[K"
-              [[ -z "$rcpw$rcpw1" ]] && break 2
-              ! [[ "$rcpw" == "$rcpw1" ]] && continue
-              rm fifo 2>/dev/null
+          rcpw="$emailpw";rcpw1="$emailpw"
+          while true;do
+              if [[ -z "$rcpw" ]];then
+                 printf "\nPassword for that email account\
+\n(or <enter> twice to try a different email account):";read -s rcpw;do # This loop is for when a password is under question
+                 printf "\n\e[KRe-type password:"
+                 read -s rcpw1
+                 printf "\r\e[K\e[1A\e[K"
+                 [[ -z "$rcpw$rcpw1" ]] && break 2
+                 ! [[ "$rcpw" == "$rcpw1" ]] && continue
+                 emailpw="$rcpw"
+              fi
+              rm $tmpfiles/fifo 2>/dev/null
 # mkfifo $tmpfiles/fifo doesn't function ideally
               while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a pop connection ${line%:*}"."$outemailprovider"]:"${line#*:}
                   while true;do # This loop for exact settings retry
@@ -2148,7 +2153,7 @@ while true;do
                       printf "$HELO" >> $tmpfiles/fifo 
 # printf "\n$HELO"
                       msgnumber=0
-                      for msg in "user $inemailacct\r" "pass $rcpw\r" stat list;do
+                      for msg in "user $inemailacct\r" "pass $inemailpw\r" stat list;do
                            msgnumber=$(( msgnumber+=1 ))
                            printf "\r\e[KSending ${msg%'pass '*}\n"
                            printf "$msg" >&5
@@ -2200,7 +2205,9 @@ while true;do
                   done # This loop for exact settings retry
               done 3<"$poofitee_home_dir/$inemailprovider.inconnects.txt" 2> /dev/null
             # if we have even a single success, break
-                     [ -f "$poofitee_home_dir/successlogins" ] && break 2
+              [ -f "$poofitee_home_dir/successlogins" ] && break 2
+              rcpw=""
+              printf "No connection succeeded.  Is name and password correct?\n"
           done # This loop is for when a password is under question
 done # This loop is to change the account
 if [[ -f "$poofitee_home_dir/toemailadds" ]];then
