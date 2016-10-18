@@ -1928,6 +1928,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           get_1_addr_from_bunch "$bunch"
           outemailadd="$emailadd";outemailacct="$emailacct";outemaildomain="$emaildomain";outtopdomain="$topdomain";outemailprovider="$emailprovider";outemailpw="$emailpw"
           echo "$outemailadd" > "$poofitee_home_dir/outemailadd"
+#Much of the remainder of this function not executing!
           printf "determining best option for outgoing email server login.  You should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for your outgoing email server...\n"
@@ -2100,9 +2101,7 @@ while true;do
              inemailaddforfiling="$(printf "$inemailadd"|$awkpath 1 ORS=',')"
              [[ "${inemailaddforfiling: -1}" == "," ]] && inemailaddforfiling="${inemailaddforfiling:: -1}"
              printf "$(printf "$inemailaddforfiling\n")" > "$poofitee_home_dir/inemailadd"
-             break
          fi
-
               printf "Configuring for that email account.  Remember, you should be doing\
 \nthis step from the Internet location of final operation if you have/want your\
 \nlocal ISP-provided email account considered for this...\n"
