@@ -2005,23 +2005,18 @@ while true;do  #this loop allows user to change the email account for outbound s
                /etc/init.d/postfix reload
           elif [[ -f /etc/systemctl ]];then
               /etc/systemctl restart postfix
-          elif ! $postfixpath start;then
+          elif ! ($postfixpath start);then
               $postfixpath reload
           fi
-#          /etc/init.d/postfix reload 2>/dev/null || /etc/systemctl restart postfix 2>/dev/null || $postfixpath start 2>/dev/null || $postfixpath reload
-          if [[ "$?" != "0" ]] || ! ($postqueuepath -p > "$tmpfiles/postqueue_reply");then
-              printf "\nThis POOFITEE version is not advanced enough to configure postfix in the\
-\nenvironment existing on this computer.  Presumeably, this is due to the\
-\nlimitation of this script to restart postfix via the init system used.  Please\
-\nmanually restart postfix (in a different terminal session if you want) so it\
-\nwill resume operation using the new settings POOFITEE has given it, then\
-\ncontinue here with this installer.  If the email sending functionality of this\
-\ncomputer is being hindered by more than simply needing postfix restarted,\
-\nyou\'ll need to determine how to configure email sending - take note of the\
-\nport/protocol settings just displayed for your use in configuring, and for\
-\ntesting the configuration, take note of the email-sending command that was\
-\ndisplayed earlier.  Return here or re-launch this installer when you\'ve\
-\naccomplished that.  "
+          if ! ([[ "$?" == "0" ]] && [[ "$($postqueuepath -p > "$tmpfiles/postqueue_reply";echo $?)" == "0" ]]);then
+              printf "\nPOOFITEE installer is unable to ensure that postfix is configured properly\
+\nenough to send out emails.  We\'ll test email sending now to find out.  If it\
+\nends up not working, you\'ll need to determine how to configure email sending\
+\nmanually.  Just in case, take note of the port/protocol settings just displayed\
+\nfor your use in configuring - and for testing the configuration, take note of\
+\nthe email-sending command that was displayed earlier.  Return here or re-\
+\nlaunch this installer when you\'ve accomplished that if the following test\
+\nfails.  "
               press_a_key
           elif ! [[ "$($headpath -n1 "$tmpfiles/postqueue_reply")" == *is\ empty* ]];then
                printf "\nFor the next step, the mail queue needs to be flushed.  You will lose the\
@@ -3582,6 +3577,7 @@ such as yours simply because it's cron=scheduled 'tail -F ... /var/log/syslog' e
 which is available only on OS platforms using ELF."
 fi
 mkdir "$tmpfiles" 2>/dev/null
+chmod 777 "$tmpfiles"
 touch $tmpfiles/file_create_rights_test 2>/dev/null
 if ! (rm $tmpfiles/* &>/dev/null);then
     [[ -z "$failreason" ]] || failreason+="\n\n"
