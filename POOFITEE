@@ -288,11 +288,11 @@ chmod 700 "$tmpfiles/timeouttry.sh"
 ensure_connection () {
     if [[ "$1" == "v" ]];then
        printf -- "Checking for a connection to the Internet..."
-       start_progress_wheel
+       start_progress_spinner
     fi
     ping -c1 opendns.com &>/dev/null
     connected="$?"
-    [[ "$1" == "v" ]] && stop_progress_wheel
+    [[ "$1" == "v" ]] && stop_progress_spinner
     if [[ $connected == "0" ]];then
         [[ "$1" == "v" ]] && printf -- "OK\n" || return
     else
@@ -300,23 +300,23 @@ ensure_connection () {
         press_a_key
     fi
 }
-start_progress_wheel () {
-! [[ -z "$progress_wheel_pid" ]] && return 1
+start_progress_spinner () {
+! [[ -z "$progress_spinner_pid" ]] && return 1
 while true;do
     if ! $pspath a|$greppath -v grep|$greppath preconfigure &>/dev/null;then
-        progress_wheel_angles_index=$(((progress_wheel_angles_index + 1) % 4)) # parametric arithmetic doesn't need variable initialized (no exist == 0)
-        printf -- "${progress_wheel_angles[$progress_wheel_angles_index]}"
+        progress_spinner_angles_index=$(((progress_spinner_angles_index + 1) % 4)) # parametric arithmetic doesn't need variable initialized (no exist == 0)
+        printf -- "${progress_spinner_angles[$progress_spinner_angles_index]}"
         printf -- "\e[1D"
     fi
     sleep 0.15
     done &
-progress_wheel_pid="$!"
-trap 'kill $progress_wheel_pid' SIGTERM
+progress_spinner_pid="$!"
+trap 'kill $progress_spinner_pid' SIGTERM
 }
-stop_progress_wheel () {
-[[ -z "$progress_wheel_pid" ]] && return 1
-kill "$progress_wheel_pid" 2>&1|while read discard;do :;done
-progress_wheel_pid=""
+stop_progress_spinner () {
+[[ -z "$progress_spinner_pid" ]] && return 1
+kill "$progress_spinner_pid" 2>&1|while read discard;do :;done
+progress_spinner_pid=""
 trap - SIGTERM
 printf -- " \e[1D"
 return 0
@@ -403,7 +403,7 @@ if [[ "$1" == "checkawk" ]];then
     if [ -z "$been_here_before" ];then
         clear #then position cursor at bottom of screen
         printf "\e[$rows;1HVerifying that a compatible version of awk is present..."
-        start_progress_wheel
+        start_progress_spinner
     fi
     awks=(awk gawk mawk nawk)
     for function_state in "" oldtested upgrade;do
@@ -434,7 +434,7 @@ if [[ "$1" == "checkawk" ]];then
         done
     done
     if [ -z "$been_here_before" ];then
-        stop_progress_wheel
+        stop_progress_spinner
         printf "OK\n"
     fi
     if [[ "${awks_installed_states[$awks_index]}" == "failed" ]];then
@@ -558,9 +558,9 @@ if ! [[ -z $mailpath ]];then
           fi
           if ! [[ -z "$mailadd" ]];then
                printf "Sending a test email to $mailadd..."
-               start_progress_wheel
+               start_progress_spinner
                eval "$timeoutpath 10 $mailcmd $mailadd &>/dev/null"
-               stop_progress_wheel
+               stop_progress_spinner
                if [[ "$?" == "0" ]];then
                     printf "\n\nDid the test email get sent and received? y/n/t/a (Yes, No, or Try Again): "
                     read -r -n1
@@ -1938,9 +1938,9 @@ while true;do  #this loop allows user to change the email account for outbound s
           for MAIL_PROT in smtp mail;do
                for port in 587 25 2587 26 2525 25025 2526 3325 465 995 110 993 143;do
                     printf "\rChecking $MAIL_PROT.$outemailprovider:$port\e[K"
-                    start_progress_wheel
+                    start_progress_spinner
                     ($tmpfiles/timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$outemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$outemailprovider.outconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
-                    stop_progress_wheel
+                    stop_progress_spinner
                done  2> /dev/null
           done
           if [[ -f "$poofitee_home_dir/$outemailprovider.outconnects.txt" ]];then
@@ -1952,7 +1952,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           fi
      done
      while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a smtp connection for outgoing email
-         start_progress_wheel
+         start_progress_spinner
           chmod 644 /etc/postfix/main.cf
           [[ "$($greppath -c ^myhostname </etc/postfix/main.cf)" == "0" ]] \
               && echo "myhostname = ""$(hostname)" >> /etc/postfix/main.cf \
@@ -2000,7 +2000,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 644 /etc/postfix/cacert.pem
           chmod 644 /etc/postfix/master.cf
           cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
-          stop_progress_wheel
+          stop_progress_spinner
           if [[ -f /etc/init.d/postfix ]];then
                /etc/init.d/postfix reload
           elif [[ -f /etc/systemctl ]];then
@@ -2115,9 +2115,9 @@ while true;do
                   for MAIL_PROT in pop pop3 mail;do
                        for port in 465 995 110 993;do
                             printf "\rChecking $MAIL_PROT.$inemailprovider:$port\e[K"
-                            start_progress_wheel
+                            start_progress_spinner
                             ($tmpfiles/timeouttry.sh -t 2 "exec 5>&-;exec 5<>/dev/tcp/$MAIL_PROT.$inemailprovider/$port;read -u 5 HELO;! [[ -z \$HELO ]] && echo \"$MAIL_PROT:$port\" >> \"$poofitee_home_dir/$inemailprovider.inconnects.txt\";printf \"quit\" >&5;read -t 2 -u 5 QUIT;exec 5>&-")
-                            stop_progress_wheel
+                            stop_progress_spinner
                        done  2> /dev/null
                   done
                   if [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];then
@@ -2141,7 +2141,7 @@ while true;do
 # mkfifo $tmpfiles/fifo doesn't function ideally
               while read -u 3 -r line;do #? this while loop iterates once for each port that accepted a pop connection ${line%:*}"."$outemailprovider"]:"${line#*:}
                   while true;do # This loop for exact settings retry
-                      start_progress_wheel
+                      start_progress_spinner
                       exec 5>&-
                       exec 5<>/dev/tcp/"${line%:*}.$inemailprovider/${line#*:}"
                       printf "\rExecuted the connect of ${line%:*}.$inemailprovider/${line#*:}, now communicating with it for user $inemailacct...\e[K"
@@ -2175,7 +2175,7 @@ while true;do
                                 fi
                            done 2>/dev/null
                       done
-                      stop_progress_wheel
+                      stop_progress_spinner
                       if ! [[ "$( replystart="$($tailpath -n 1 $tmpfiles/fifo)";echo "${replystart::1}")" == "+" ]];then # present this choice with every error
                          printf "Unsuccessful sign-in of $inemailacct to ${line%:*}.$inemailprovider/${line#*:}" # with this error:\n$($tailpath -n 1 $tmpfiles/fifo)"
                          printf "quit\r" >&5
@@ -3647,7 +3647,7 @@ if ! [[ -z "$failreason" ]];then
     exit
 fi
 #We'll place this installer path variable here for future use possibly to inform in the next warning section
-progress_wheel_angles=("|" "/" "-" "\\" "|" "/" "-" "\\")
+progress_spinner_angles=("|" "/" "-" "\\" "|" "/" "-" "\\")
 installers=("apt-get" "-y install" dnf install yum "-y install" zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
 num_of_installers="${!installers[*]}"
 num_of_installers="${num_of_installers##* }"
@@ -4116,17 +4116,17 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
 #                                clear
                                 installeranswer="$REPLY"
                                 printf "\r\e[KCleaning up with apt-get autoremove..."
-                                start_progress_wheel
+                                start_progress_spinner
                                 apt-get autoremove -y &>/dev/null
-                                stop_progress_wheel
+                                stop_progress_spinner
                                 REPLY="$installeranswer"
                            fi
                            if [[ "$REPLY" =~ [UuBb] ]];then
                                 printf "\r\e[KUpdating your system\'s package installer..." # in arch, do pacman -Syuu
                                 if [[ "$installerpath" =~ apt-get ]];then
-                                    start_progress_wheel
+                                    start_progress_spinner
                                     apt-get update &>/dev/null
-                                    stop_progress_wheel
+                                    stop_progress_spinner
                                 else
                                     pacman --noconfirm -Syuu  # &>/dev/null
                                 fi
@@ -4135,7 +4135,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       fi
                  fi
                  printf "\r\e[KInstalling $not_installed_single_line..."
-                 start_progress_wheel
+                 start_progress_spinner
                  for package in `printf "\"$not_installed_single_line\""|$sedpath 's/ /" "/g'`;do
                      package="${package:1: -1}"
                      eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" 2>/dev/null
@@ -4194,17 +4194,17 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                       if [[ -z "$update_tried" ]];then
                            update_tried="yes"
                            printf "\r\e[KUpdating your system\'s package installer..."
-                           start_progress_wheel
+                           start_progress_spinner
                            apt-get update &>/dev/null
-                           stop_progress_wheel
+                           stop_progress_spinner
                       else
-                           stop_progress_wheel
+                           stop_progress_spinner
                            printf "\r\e[KThe following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \nInstall manually or press R to retry (recommended as long as progress is being\
 \nmade with repeated retries), any other alpha-numeric key to ignore:\n"
                            press_a_key r "<other-letter-or-number>" || break
                            printf "\n"
-                           start_progress_wheel
+                           start_progress_spinner
                            for package in `printf "\"$not_installed_single_line\""|$sedpath 's/ /" "/g'`;do
                                package="${package:1: -1}"
                                eval "$xargspath -a <(printf -- "$package") -r -- $installerpath" 2>/dev/null
@@ -4216,7 +4216,7 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                  break
             fi
         done  # this loop is to set path vars after pkgs get installed, every last pkg so paths populate even after new installs
-        stop_progress_wheel
+        stop_progress_spinner
         if [[ "$not_installed_single_line" =~ inotify-tools ]];then :
              cat <<-EOF
 		# Download inotify-tools source (for example from http://github.com/downloads/rvoicilas/inotify-tools/inotify-tools-3.14.tar.gz) then compile and install:
