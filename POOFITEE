@@ -373,32 +373,32 @@ install_or_upgrade_then_test_this_awktype () {
 }
 
 what_needs_to_be_installed () {
-[[ -z "$inotifywaitpath" ]] && inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}"
-[[ -z "$iptablespath" ]] && iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}"
-[[ -z "$stdbufpath" ]] && stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}"
-[[ -z "$crontabpath" ]] && crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
-[[ -z "$timeoutpath" ]] && timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}"
-[[ -z "$sleeppath" ]] && sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}"
-[[ -z "$ifdownpath" ]] && ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}"
-[[ -z "$ifuppath" ]] && ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}"
-[[ -z "$datepath" ]] && datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}"
-[[ -z "$bashpath" ]] && bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}"
-[[ -z "$bcpath" ]] && bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}"
-[[ -z "$wcpath" ]] && wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
-[[ -z "$freepath" ]] && freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}"
-[[ -z "$atpath" ]] && atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath=""
-[[ -z "$ipsetpath" ]] && ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}"
-[[ -z "$visudopath" ]] && visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}"
-[[ -z "$nicepath" ]] && nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}"
-[[ -z "$netfiltperspath" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
-# [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}"
-[[ -z "$mailpath" ]] && mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}"
-[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}"
-[[ -z "$mailpath" ]] && mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}"
+[[ -z "$inotifywaitpath" ]] && (inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}")
+[[ -z "$iptablespath" ]] && (iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}")
+[[ -z "$stdbufpath" ]] && (stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}")
+[[ -z "$crontabpath" ]] && (crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}")
+[[ -z "$timeoutpath" ]] && (timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}")
+[[ -z "$sleeppath" ]] && (sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}")
+[[ -z "$ifdownpath" ]] && (ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}")
+[[ -z "$ifuppath" ]] && (ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}")
+[[ -z "$datepath" ]] && (datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}")
+[[ -z "$bashpath" ]] && (bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}")
+[[ -z "$bcpath" ]] && (bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}")
+[[ -z "$wcpath" ]] && (wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}")
+[[ -z "$freepath" ]] && (freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}")
+[[ -z "$atpath" ]] && (atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath="")
+[[ -z "$ipsetpath" ]] && (ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}")
+[[ -z "$visudopath" ]] && (visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}")
+[[ -z "$nicepath" ]] && (nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}")
+[[ -z "$netfiltperspath" ]] && (netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}")
+# [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && (netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}")
+[[ -z "$mailpath" ]] && (mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}")
+[[ -z "$mailpath" ]] && (mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}")
+[[ -z "$mailpath" ]] && (mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}")
 mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
-[[ -z "$postmappath" ]] && postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}"
-[[ -z "$postfixpath" ]] && postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}"
-[[ -z "$postqueuepath" ]] && postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}"c
+[[ -z "$postmappath" ]] && (postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}")
+[[ -z "$postfixpath" ]] && (postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}")
+[[ -z "$postqueuepath" ]] && (postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}")
 if [[ "$1" == "checkawk" ]];then
     if [ -z "$been_here_before" ];then
         clear #then position cursor at bottom of screen
@@ -3535,6 +3535,7 @@ until whereispath="$usrdir$localdir$sharedir$bindir$sbindir$dirsign""whereis";[[
 done
 if [[ counter -eq 64 ]];then echo "Unable to locate executable files on your system";exit;fi
 whereispath="${whereispath#*:}";whereispath="${whereispath# }";whereispath="${whereispath%% *}"
+journalctlpath="$($whereispath $binaryflag journalctl)";journalctlpath="${journalctlpath#*:}";journalctlpath="${journalctlpath# }";journalctlpath="${journalctlpath%% *}"
 resizepath="$($whereispath $binaryflag resize)";resizepath="${resizepath#*:}";resizepath="${resizepath# }";resizepath="${resizepath%% *}"
 pspath="$($whereispath $binaryflag ps)";pspath="${pspath#*:}";pspath="${pspath# }";pspath="${pspath%% *}"
 greppath="$($whereispath $binaryflag grep)";greppath="${greppath#*:}";greppath="${greppath# }";greppath="${greppath%% *}"
@@ -3543,14 +3544,13 @@ wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# 
 sedpath="$($whereispath $binaryflag sed)";sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
-    index=1
-    for arg in "$@"
+for arg in "$@"
     do
         [[ "${arg#*'awk='}" == "$arg" ]] || awkpath="${arg#*'awk='}"
-        ! [[ -z "$awkpath" ]] && break
-        let "index+=1"
+        [[ -f "$awkpath" ]] && break
     done
-else
+fi
+if [[ -z "$awkpath" ]];then
      awkpath="$($whereispath $binaryflag awk)"
      awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
 fi
@@ -3566,7 +3566,7 @@ exitmsg="Thank you for running this POOFITEE configuration script...God loves yo
 dialogpath=""
 dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
-[[ -z "$dialogpath" ]] && whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
+[[ -z "$dialogpath" ]] && (whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}")
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
 tputpath="$($whereispath $binaryflag tput)" ;tputpath="${tputpath#*:}";tputpath="${tputpath# }";tputpath="${tputpath%% *}"
 globalbacktitle="Required Reading  POOFITEE  $version"
@@ -3707,7 +3707,7 @@ xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargsp
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
 timeoutpath="$($whereispath $binaryflag timeout)";timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
-[[ -z "$adduserpath" ]] && adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+[[ -z "$adduserpath" ]] && (adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}")
 passwdpath="$($whereispath $binaryflag passwd)";passwdpath="${passwdpath#*:}";passwdpath="${passwdpath# }";passwdpath="${passwdpath%% *}";
 for pgm in ifconfig uniq find tail xargs getent adduser;do
     if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
