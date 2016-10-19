@@ -525,7 +525,7 @@ if ! [[ -z $mailpath ]];then
 			test email.
 
 			For this test, provide an email address here that you can immediately receive
-			a test email through and verify reception of it, possibly on a different
+			a test email through and confirm reception of it, possibly on a different
 			computing device.
 
 			$(! [[ -z "$adds" ]] && printf "Optionally select, modify, or enter new, then e" || printf "E")nter that email address: 
@@ -550,7 +550,7 @@ if ! [[ -z $mailpath ]];then
 \n 1.  This is another chance for you to edit that address in place, and\
 \n 2.  In case this installer script isn't advanced enough to achieve email\
 \n     sending functionality without your intervention, it will be useful to\
-\n     you to verify your success configuring manually.\
+\n     you to confirm your success configuring manually.\
 \nYou can simply press enter to proceed...\n\n"
           read -eri "$mailadd" -p "$mailcmd " mailadd
           if ! [[ "$mailadd" =~ ^(([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))\.)*([-a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~]+|(\"([][,:;<>\&@a-zA-Z0-9\!#\$%\&\'*+/=?^_\`{\|}~-]|(\\\\[\\ \"]))+\"))+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$ ]];then
@@ -673,7 +673,7 @@ predictable for the purposes of writing this installer.  PLEASE exercise \
 due diligence in taking care of that aspect of \
 this installation:\
 \n\n\
-You must next twice or thrice verify persistence...that is, functionality after reboots.  Especially \
+You must next twice or thrice confirm persistence...that is, functionality after reboots.  Especially \
 check for iptables black and whitelist rules in $ipsetpath being persistent.  At a \
 minimum, ipset and iptables rulesets both need to be made persistent by you.\
 \n\n\
@@ -683,7 +683,7 @@ ruleset to log the packets with the log- prefix text that will trigger your \
 script coding.  The expected technique is to echo the blacklisting command into \
 'at now+min', delaying it enough minutes to allow log file entries to manifest.  \
 The command scheduled with 'at' could include some type of log file coordination \
-before blacklisting.  Don't forget to verify persistency afterwards.\
+before blacklisting.  Don't forget to confirm persistency afterwards.\
 \n\n\
 Thank you for using POOFITEE.  God loves you, pass it on.\
 \n\n\
@@ -728,7 +728,7 @@ fi
 \n\nConfirm you understand that the shell in POOFITEE's crontab is now getting\
 \nchanged which might affect the above entries if they send values out, contain\
 \nquotes, etc.\n"
-read -n1 -s -p "You will need to verify proper operation of current entries after this.")
+read -n1 -s -p "You will need to confirm proper operation of current entries after this.")
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -u poofitee -l 2>/dev/null|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
@@ -814,7 +814,7 @@ fi
 add_to_set () { # arg 1 is set name for address to get added to.  arg 2 is ipaddress plus proto plus port as is appropriate for the set.  arg 3 is comment from the log entry's pertinent info
 if ! [[ \$($sudopath $ipsetpath add \$1 \$2 comment "\$3"  1>/dev/null 2>"$poofitee_home_dir/ramdisk/returerr") ]]; then
      if [[ "\$(cat $poofitee_home_dir/ramdisk/returerr )" =~ is\ full ]];then # send the email notice out FIRST
-          echo "Increasing the size of the \$1 set. Verify continued server operation NOW"|$mailpath -s "Increasing the size of the \$1 set. Verify continued server operation NOW" "\$(cat $poofitee_home_dir/toemailadds)"
+          echo "Increasing the size of the \$1 set. Confirm continued server operation NOW"|$mailpath -s "Increasing the size of the \$1 set. Verify continued server operation NOW" "\$(cat $poofitee_home_dir/toemailadds)"
 # list too full, make a larger new one, then swap it out and destroy old
 # This would be a good time to consolidate single-host addresses into cidr ranges: static_trusted could be that only one address opens the whole range, blacklist could be that a percentage of range hits may be needed, say 50%
           if [[ "\$1" =~ trust ]];then 
@@ -2009,7 +2009,7 @@ while true;do  #this loop allows user to change the email account for outbound s
               $postfixpath reload
           fi
           if ! ([[ "$?" == "0" ]] && [[ "$($postqueuepath -p > "$tmpfiles/postqueue_reply";echo $?)" == "0" ]]);then
-              printf "\nPOOFITEE installer is unable to ensure that postfix is configured properly\
+              printf "\nPOOFITEE installer is unable to confirm that postfix is configured properly\
 \nenough to send out emails.  We\'ll test email sending now to find out.  If it\
 \nends up not working, you\'ll need to determine how to configure email sending\
 \nmanually.  Just in case, take note of the port/protocol settings just displayed\
@@ -2048,7 +2048,8 @@ See
             && printf "All emails sent just fine.  Have they all been received in a timely manner?  If\
 \nany were delayed, a different outgoing email server may do a better job." \
             || printf "Judging by the email queue not getting emptied quickly, a different outgoing\
-\nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
+\nemail server may do a better job.\n"
+# May want to check with journalctl instead of syslog: $($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
 # \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
           printf "\nNote that not all email providers keep a record of your emails sent from this\
 \ntype of connection.  If it is meaningful to you that these notification emails\
@@ -2561,7 +2562,7 @@ for dhcpclientpkg in "pump -i $external_net_interface --status" "udhcpc -i $exte
     $($dhcpclientpath ${dhcpclientpkg#* } | $greppath -i renew ) # |$greppath  # since there could be several dhcp clients installed we know only one will be working, eliminate non-working ones
 done
 if [[ -z "$dhcpclientpath" ]];then
-    printf "Unable to verify that the Internet-pointing interface is a DHCP client.  If said\
+    printf "Unable to confirm that the Internet-pointing interface is a DHCP client.  If said\
 \ninterface is not using DHCP as a DHCP client, there is no point in installing\
 \nthis feature.  If it IS a dhcp client, then the finding of this script is in\
 \nerror, and you'll have to modify this script to so it learns how to detect and\
@@ -3579,6 +3580,12 @@ if ! [[ "$($filepath "/bin/bash")" =~ ^/bin/bash:\ ELF ]];then
     failreason+="  This version of POOFITEE is unable to run on non-ELF platforms \
 such as yours simply because it's cron=scheduled 'tail -F ... /var/log/syslog' entry requires stdbuf, \
 which is available only on OS platforms using ELF."
+fi
+if ! [[ -f "/var/log/syslog" ]] || [[ $(ls -altr /var/log/syslog /run/*.pid|$headpath -n1|$greppath /var/log/syslog) ]];then
+    [[ -z "$failreason" ]] || failreason+="\n\n"
+    failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
+/var/log/syslog for logging.  But the good news is that the capability to run under systemd is  \
+forthcoming soon, so stay tuned"
 fi
 mkdir "$tmpfiles" 2>/dev/null
 chmod 777 "$tmpfiles"
