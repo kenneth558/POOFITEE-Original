@@ -3584,7 +3584,7 @@ fi
 if ! [[ -f "/var/log/syslog" ]] || [[ $(ls -altr /var/log/syslog /run/*.pid|$headpath -n1|$greppath /var/log/syslog) ]];then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
-/var/log/syslog for logging.  But the good news is that the capability to run under systemd is  \
+/var/log/syslog for logging.  But the good news is that the capability to run under systemd is \
 forthcoming soon, so stay tuned"
 fi
 mkdir "$tmpfiles" 2>/dev/null
