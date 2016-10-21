@@ -384,6 +384,7 @@ what_needs_to_be_installed () {
 [[ -z "$datepath" ]] && (datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}")
 [[ -z "$bashpath" ]] && (bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}")
 [[ -z "$bcpath" ]] && (bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}")
+[[ -z "$adduserpath" ]] && (adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}")
 [[ -z "$wcpath" ]] && (wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}")
 [[ -z "$freepath" ]] && (freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}")
 [[ -z "$atpath" ]] && (atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath="")
@@ -657,7 +658,7 @@ if [[ firewall_external_interface_not_in_privateIP_ranges =~ 3 ]];then
      $ipsetpath add poofitee_bogons,privateIPs_cidr 192.168.0.0/16 &>/dev/null
      $ipsetpath del poofitee_static_trusted_cidr  192.168.0.0/16 &>/dev/null
 fi
-$greppath -i DHCPACK < /var/log/syslog|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add poofitee_static_trusted $ipaddr comment "needed to acquire address via DHCP" &>/dev/null;done
+([[ "$use_journalctl_syslog" == true ]] && $journalctlpath --no-pager SYSLOG_FACILITY=3 || $greppath -i DHCPACK < /var/log/syslog)|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add poofitee_static_trusted $ipaddr comment "needed to acquire address via DHCP" &>/dev/null;done
 }
 advise_to_verify_persistency () {
 
@@ -701,6 +702,7 @@ set_notinstalled_var () {
 [[ -z "$bcpath" ]] && notinstalled+="bc\n"
 [[ -z "$atpath" ]] && notinstalled+="at\n"
 [[ -z "$nicepath" ]] && notinstalled+="coreutils\n"
+[[ -z "$adduserpath" ]] && notinstalled+="adduser\nuseradd\n"
 [[ -z "$sendmail_works" ]] && [[ -z $postmappath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z "$sendmail_works" ]] && [[ -z $postfixpath ]] && notinstalled+="postmap\npostfix\n"
 [[ -z "$ipsetpath" ]] && notinstalled+="ipset\n"
@@ -2049,8 +2051,8 @@ See
 \nany were delayed, a different outgoing email server may do a better job." \
             || printf "Judging by the email queue not getting emptied quickly, a different outgoing\
 \nemail server may do a better job.\n"
-# May want to check with journalctl instead of syslog: $($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
-# \nemail server may do a better job.\n$($tailpath /var/log/syslog|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
+# May want to check with journalctl instead of syslog: $(([[ "$use_journalctl_syslog" == true ]] && $journalctlpath -n --no-pager SYSLOG_FACILITY=3 || $tailpath /var/log/syslog)|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
+# \nemail server may do a better job.\n$(([[ "$use_journalctl_syslog" == true ]] && $journalctlpath -n --no-pager SYSLOG_FACILITY=3 || $tailpath /var/log/syslog)|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
           printf "\nNote that not all email providers keep a record of your emails sent from this\
 \ntype of connection.  If it is meaningful to you that these notification emails\
 \nremain in the sent folder of this email address, be sure to check for that\
@@ -2778,14 +2780,16 @@ outemail_warnings () {
 }
 
 end_warnings () {
-         printf "Remember always this fact of life:  Email providers do make unpredictable\
+printf "Remember always this fact of life:  Email providers do make unpredictable\
 \nchanges to their email service!  The same holds true for ISPs.  Blame that on any\
 \nnumber of different reasons...technical, social, and otherwise.  Be aware that\
 \nthe settings you just created may need to be adjusted in the future in response\
 \nto changes that others WILL make to affect your Internet experience, even\
 \nchanges expressly designed to limit the usefulness of this fine enhancement\
 \nyou've made to your Internet connectivity!  Though let's hope they'll have\
-\nbetter reason for doing so than merely to be that way."
+\nbetter reason for doing so than merely to be that way.\
+$(! [[ "$use_journalctl_syslog" == true ]] || ! [[ "$use_journalctl_kernlog" == true ]] || ! [[ "$use_journalctl_authlog" == true ]] \
+        && printf -- "\n\nIMPORTANT:  This installation will cease to function if this distro gets updated to fully systemd logging.")"
 }
 get_1_addr_from_bunch() {
 #one arg: a bunch of newline delimited email addresses, except no newline following last entry
@@ -3544,6 +3548,8 @@ ippath="$($whereispath $binaryflag ip)";ippath="${ippath#*:}";ippath="${ippath# 
 wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
 sedpath="$($whereispath $binaryflag sed)";sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
+journalctlpath="$($whereispath $binaryflag journalctl)";journalctlpath="${journalctlpath#*:}";journalctlpath="${journalctlpath# }";journalctlpath="${journalctlpath%% *}"
+
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
 for arg in "$@"
     do
@@ -3555,6 +3561,7 @@ if [[ -z "$awkpath" ]];then
      awkpath="$($whereispath $binaryflag awk)"
      awkpath="${awkpath#*:}";awkpath="${awkpath# }";awkpath="${awkpath%% *}"
 fi
+tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
 headpath="$($whereispath $binaryflag head)";headpath="${headpath#*:}";headpath="${headpath# }";headpath="${headpath%% *}"
 curlpath="$($whereispath $binaryflag curl)";curlpath="${curlpath#*:}";curlpath="${curlpath# }";curlpath="${curlpath%% *}"
 unamepath="$($whereispath $binaryflag uname)";unamepath="${unamepath#*:}";unamepath="${unamepath# }";unamepath="${unamepath%% *}"
@@ -3578,15 +3585,39 @@ fi
 if ! [[ "$($filepath "/bin/bash")" =~ ^/bin/bash:\ ELF ]];then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on non-ELF platforms \
-such as yours simply because it's cron=scheduled 'tail -F ... /var/log/syslog' entry requires stdbuf, \
+such as yours simply because it's cron=scheduled 'tail -F ... /var/log/kern.log' entry requires stdbuf, \
 which is available only on OS platforms using ELF."
 fi
-if ! [[ -f "/var/log/syslog" ]] || [[ $(ls -altr /var/log/syslog /run/*.pid|$headpath -n1|$greppath /var/log/syslog) ]];then
+use_journalctl_syslog=""
+use_journalctl_kernlog=""
+use_journalctl_authlog=""
+# OK as long as for all three we have one or the other means of examining, favor systemd
+
+if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=3 &>/dev/null;then
+     use_journalctl_syslog=true    
+elif ! [[ -f "/var/log/syslog" ]] \
+    || ! ls -altr /var/log/syslog /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/syslog &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
-/var/log/syslog for logging.  But the good news is that the capability to run under systemd is \
-forthcoming soon, so stay tuned"
+/var/log/syslog or systemd for logging."
 fi
+if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=0 &>/dev/null;then
+     use_journalctl_kernlog=true    
+elif ! [[ -f "/var/log/kern.log" ]] \
+     || ! ls -altr /var/log/kern.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/kern\.log &>/dev/null;then
+    [[ -z "$failreason" ]] || failreason+="\n\n"
+    failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
+/var/log/kern.log or systemd for logging."
+fi
+if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=4 &>/dev/null && $journalctlpath -n1 SYSLOG_FACILITY=10 &>/dev/null;then
+     use_journalctl_authlog=true    
+elif ! [[ -f "/var/log/auth.log" ]] \
+     || ! ls -altr /var/log/auth.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/auth\.log &>/dev/null;then
+    [[ -z "$failreason" ]] || failreason+="\n\n"
+    failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
+/var/log/auth.log or systemd for logging."
+fi
+
 mkdir "$tmpfiles" 2>/dev/null
 chmod 777 "$tmpfiles"
 touch $tmpfiles/file_create_rights_test 2>/dev/null
@@ -3719,15 +3750,17 @@ mawkpath=""
 # pythonpath="$($whereispath $binaryflag python)";pythonpath="${pythonpath#*:}";pythonpath="${pythonpath# }";pythonpath="${pythonpath%% *}"
 ifconfigpath="$($whereispath $binaryflag ifconfig)";ifconfigpath="${ifconfigpath#*:}";ifconfigpath="${ifconfigpath# }";ifconfigpath="${ifconfigpath%% *}"
 uniqpath="$($whereispath $binaryflag uniq)";uniqpath="${uniqpath#*:}";uniqpath="${uniqpath# }";uniqpath="${uniqpath%% *}"
-findpath="$($whereispath $binaryflag find)";findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}";
-tailpath="$($whereispath $binaryflag tail)";tailpath="${tailpath#*:}";tailpath="${tailpath# }";tailpath="${tailpath%% *}"
+findpath="$($whereispath $binaryflag find)";findpath="${findpath#*:}";findpath="${findpath# }";findpath="${findpath%% *}"
 xargspath="$($whereispath $binaryflag xargs)";xargspath="${xargspath#*:}";xargspath="${xargspath# }";xargspath="${xargspath%% *}"
 getentpath="$($whereispath $binaryflag getent)";getentpath="${getentpath#*:}";getentpath="${getentpath# }";getentpath="${getentpath%% *}"
 timeoutpath="$($whereispath $binaryflag timeout)";timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}"
 adduserpath="$(whereis $binaryflag adduser)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
-[[ -z "$adduserpath" ]] && (adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}")
+if [[ -z "$adduserpath" ]];then
+    adduserpath="$(whereis $binaryflag useradd)";adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+fi
 passwdpath="$($whereispath $binaryflag passwd)";passwdpath="${passwdpath#*:}";passwdpath="${passwdpath# }";passwdpath="${passwdpath%% *}";
-for pgm in ifconfig uniq find tail xargs getent adduser;do
+
+for pgm in ifconfig uniq find tail xargs getent;do
     if [[ -z "$(eval printf -- "\$$pgm""path" 2>/dev/null)" ]];then
         localwarning+="\n$pgm needs to be installed\n"
     fi
@@ -4202,9 +4235,23 @@ $([[ "$installerpath" =~ apt-get ]] && printf "\npress b to both update your sys
                            else
                                  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}"
                            fi
-                           crontabpath="$crontabpath"
                       else
                           cronie_already_given_a_chance="already_given_a_chance"
+                      fi
+                 fi
+                 if [[ "$not_installed_single_line" =~ ^adduser ]];then
+                      if ! [[ -z "$adduser_already_given_a_chance" ]];then
+                           adduser_already_given_a_chance=""
+                           adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+                           if [[ -z "$adduserpath" ]];then
+                                 eval "$xargspath -a <(printf "$not_installed_single_line"|$sedpath 's/adduser/useradd/1') -r -- $installerpath" 2>/dev/null
+                                 adduserpath=$($whereispath $binaryflag useradd);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+                                 what_needs_to_be_installed
+                           else
+                                 adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}"
+                           fi
+                      else
+                          adduser_already_given_a_chance="already_given_a_chance"
                       fi
                  fi
                  if [ $? != "0" ] && [ -z "$previous_not_installed" ] || [ "$(what_needs_to_be_installed;echo "$?")" != "$previous_not_installed" ];then
