@@ -3728,6 +3728,11 @@ one and only one of each, in a single string"
 fi
 sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 if ! $sudopath printf "" &>/dev/null;then
+    chmod 640 /etc/sudoers
+    echo "root    ALL=(ALL)       ALL" >> /etc/sudoers
+    chmod 440 /etc/sudoers
+fi
+if ! $sudopath printf "" &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  You are logged in as $(whoami), so that user needs to be authorized to sudo without producing the error that it does now: \"$($sudopath printf "" 2>&1)\""
 fi
