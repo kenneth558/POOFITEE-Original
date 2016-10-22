@@ -304,8 +304,8 @@ start_busy_spinner () {
 ! [[ -z "$progress_spinner_pid" ]] && return 1
 while true;do
     if ! $pspath a|$greppath -v grep|$greppath preconfigure &>/dev/null;then
-        progress_spinner_angles_index=$(((progress_spinner_angles_index + 1) % 4)) # parametric arithmetic doesn't need variable initialized (no exist == 0)
-        printf -- "${progress_spinner_angles[$progress_spinner_angles_index]}"
+        busy_spinner_angles_index=$(((busy_spinner_angles_index + 1) % 4)) # parametric arithmetic doesn't need variable initialized (no exist == 0)
+        printf -- "${busy_spinner_angles[$busy_spinner_angles_index]}"
         printf -- "\e[1D"
     fi
     sleep 0.15
@@ -320,20 +320,20 @@ progress_spinner_pid=""
 trap - SIGTERM
 printf -- " \e[1D"
 return 0
-} &>/dev/null
+} 2>/dev/null
 test_this_awk () {
     ! [[ -f  "${awkspaths[$awks_index]}" ]] && return 1
-    echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
-    echo "" > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults # This line might be optional depending on whether next line does this rain or shine
-    $tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed 2>/dev/null|$stdbufpath -o0 "${awkspaths[$awks_index]}" '{print $1}' > /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults 2>/dev/null &
+    echo "" > "$tmpfiles/awktestbed"
+    echo "" > "$tmpfiles/awktestresults" # This line might be optional depending on whether next line does this rain or shine
+    $tailpath -fn0 "$tmpfiles/awktestbed" 2>/dev/null|$stdbufpath -o0 "${awkspaths[$awks_index]}" '{print $1}' > "$tmpfiles/awktestresults" 2>/dev/null &
     awktestpid="$!"
-    tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed"|"$awkpath" '{print $2}')"
+    tailawktestpid="$($pspath aux|$greppath -v grep|$greppath "$tailpath -fn0 $tmpfiles/awktestbed"|"$awkpath" '{print $2}')"
     sleep 1
-    echo "testline" >> /tmp/fifos_and_temp_files_for_poofitee_installer/awktestbed
+    echo "testline" >> "$tmpfiles/awktestbed"
     sleep 1
     kill $awktestpid &>/dev/null
     kill $tailawktestpid &>/dev/null
-    if [[ "$($tailpath -n1 /tmp/fifos_and_temp_files_for_poofitee_installer/awktestresults)" =~ testline ]];then
+    if [[ "$($tailpath -n1 "$tmpfiles/awktestresults")" =~ testline ]];then
         return 0
     else
         return 1
@@ -373,33 +373,32 @@ install_or_upgrade_then_test_this_awktype () {
 }
 
 what_needs_to_be_installed () {
-[[ -z "$inotifywaitpath" ]] && (inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}")
-[[ -z "$iptablespath" ]] && (iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}")
-[[ -z "$stdbufpath" ]] && (stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}")
-[[ -z "$crontabpath" ]] && (crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}")
-[[ -z "$timeoutpath" ]] && (timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}")
-[[ -z "$sleeppath" ]] && (sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}")
-[[ -z "$ifdownpath" ]] && (ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}")
-[[ -z "$ifuppath" ]] && (ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}")
-[[ -z "$datepath" ]] && (datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}")
-[[ -z "$bashpath" ]] && (bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}")
-[[ -z "$bcpath" ]] && (bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}")
-[[ -z "$adduserpath" ]] && (adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}")
-[[ -z "$wcpath" ]] && (wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}")
-[[ -z "$freepath" ]] && (freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}")
-[[ -z "$atpath" ]] && (atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath="")
-[[ -z "$ipsetpath" ]] && (ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}")
-[[ -z "$visudopath" ]] && (visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}")
-[[ -z "$nicepath" ]] && (nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}")
-[[ -z "$netfiltperspath" ]] && (netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}")
-# [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && (netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}")
-[[ -z "$mailpath" ]] && (mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}")
-[[ -z "$mailpath" ]] && (mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}")
-[[ -z "$mailpath" ]] && (mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}")
-mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}" # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
-[[ -z "$postmappath" ]] && (postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}")
-[[ -z "$postfixpath" ]] && (postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}")
-[[ -z "$postqueuepath" ]] && (postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}")
+[[ -z "$inotifywaitpath" ]] &&  inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}" 
+[[ -z "$iptablespath" ]] &&  iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}" 
+[[ -z "$stdbufpath" ]] &&  stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}" 
+[[ -z "$crontabpath" ]] &&  crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}" 
+[[ -z "$timeoutpath" ]] &&  timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}" 
+[[ -z "$sleeppath" ]] &&  sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}" 
+[[ -z "$ifdownpath" ]] &&  ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}" 
+[[ -z "$ifuppath" ]] &&  ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}" 
+[[ -z "$datepath" ]] &&  datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}" 
+[[ -z "$bashpath" ]] &&  bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}" 
+[[ -z "$bcpath" ]] &&  bcpath=$($whereispath $binaryflag bc);bcpath="${bcpath#*:}";bcpath="${bcpath# }";bcpath="${bcpath%% *}" 
+[[ -z "$adduserpath" ]] &&  adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}" 
+[[ -z "$wcpath" ]] &&  wcpath=$($whereispath $binaryflag wc);wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}" 
+[[ -z "$freepath" ]] &&  freepath=$($whereispath $binaryflag free);freepath="${freepath#*:}";freepath="${freepath# }";freepath="${freepath%% *}" 
+[[ -z "$atpath" ]] &&  atpath=$($whereispath $binaryflag at);atpath="${atpath#*:}";atpath="${atpath# }";atpath="${atpath%% *}";! [[ "${atpath: -2:2}" == "at" ]] && atpath="" 
+[[ -z "$ipsetpath" ]] &&  ipsetpath=$($whereispath $binaryflag ipset);ipsetpath="${ipsetpath#*:}";ipsetpath="${ipsetpath# }";ipsetpath="${ipsetpath%% *}" 
+[[ -z "$visudopath" ]] &&  visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}" 
+[[ -z "$nicepath" ]] &&  nicepath=$($whereispath $binaryflag nice);nicepath="${nicepath#*:}";nicepath="${nicepath# }";nicepath="${nicepath%% *}" 
+[[ -z "$netfiltperspath" ]] &&  netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}" 
+# [[ -d "/usr/share/netfilter-persistent/plugins.d" ]] && { netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}" }
+[[ -z "$mailpath" ]] &&  mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}" 
+[[ -z "$mailpath" ]] &&  mailpath=" $($whereispath $binaryflag mailx)";mailpath="${mailpath#*:}" 
+[[ -z "$mailpath" ]] &&  mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}";mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}"  # note the unique filter here!!!!!!!!!!!!!!!!!!!!!!!!
+[[ -z "$postmappath" ]] &&  postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}" 
+[[ -z "$postfixpath" ]] &&  postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}" 
+[[ -z "$postqueuepath" ]] &&  postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}" 
 if [[ "$1" == "checkawk" ]];then
     if [ -z "$been_here_before" ];then
         clear #then position cursor at bottom of screen
@@ -507,7 +506,7 @@ not_installed_single_line="${not_installed_single_line:: -1}"
 return "$(printf "$notinstalled"|$wcpath -l)"
 }
 sendmail_works_or_not () {
-sendmail_works=""
+! [[ -z "$sendmail_works" ]] && return
 if ! [[ -z $mailpath ]];then
      mailadd=""
      mailcmd="echo $0 \"test at $($datepath).  Press y\"|$mailpath"
@@ -516,7 +515,7 @@ if ! [[ -z $mailpath ]];then
      elif [[ -f "./toemailadds" ]];then
            adds=$(cat "./toemailadds")
      fi
-
+    printf "\r"
      cat <<-EOF
 			One aspect of an option you selected will be to send you alert notices to your
 			email account.  For emailing alerts to you, specialized configuration is
@@ -661,10 +660,8 @@ fi
 ([[ "$use_journalctl_syslog" == true ]] && $journalctlpath --no-pager SYSLOG_FACILITY=3 || $greppath -i DHCPACK < /var/log/syslog)|$awkpath '{for (i=1;i<NF;i++){if ($i=="from"){print $(i+1);next}}}'|$sortpath -V|$uniqpath|while read ipaddr;do $ipsetpath add poofitee_static_trusted $ipaddr comment "needed to acquire address via DHCP" &>/dev/null;done
 }
 advise_to_verify_persistency () {
-
 # /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
 # $([[ -z "$iptabsavepath" ]] && printf "$netfiltperspath save" || printf "$iptabsavepath") >/dev/null  || $ipsetpath save > /etc/iptables/ipset.sets
-
 showthis "\
 <center>I AM FINISHED, BUT YOU ARE NOT.\
 \n\n\
@@ -726,18 +723,27 @@ if [[ -z "$user_poofitee_created_this_run" ]];then
      fi
 fi
 ! [[ $($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) == "0" ]] && \
-(printf "\n$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
+printf "\n$($crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$($crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$)\
 \n\nConfirm you understand that the shell in POOFITEE's crontab is now getting\
 \nchanged which might affect the above entries if they send values out, contain\
-\nquotes, etc.\n"
-read -n1 -s -p "You will need to confirm proper operation of current entries after this.")
+\nquotes, etc.\nYou will need to confirm proper operation of current entries after this.\n"
+press_a_key
 # NOTE -- BECAUSE OF THE COMPLEX QUOTING IN THE CRONTAB @REBOOT LINE BELOW, WE OPTED FOR READABILITY IN THIS SCRIPT AND DID NOT CREATE A VARIABLE WITH THAT AS ITS CONTENTS EVEN THOUGH IT IS ALSO NEEDED BY THE install_tail_f_lines_and_receiving_script FUNCTION
 (cat << CRONTAB_ENTRIES_END
-$($crontabpath -u poofitee -l 2>/dev/null|$greppath -v poofitee_fw|$greppath -v "tail -F -n 0 /var/log/kern.log"|$greppath -v "tail -F -n 0 /var/log/auth.log")
+$($crontabpath -u poofitee -l 2>/dev/null| \
+   $greppath \
+       -ve poofitee_fw \
+       -e "journalctl -fn0 --no-pager SYSLOG_FACILITY=0" \
+       -e "tail -F -n 0 /var/log/kern.log")" \
+       -e "journalctl -fn0 --no-pager SYSLOG_FACILITY=4" \
+       -e "tail -F -n 0 /var/log/auth.log")" \
+       -e "journalctl -fn0 --no-pager SYSLOG_FACILITY=10"
 
 # lines below are from poofitee_fw
-@reboot $sudopath $nicepath -n-15 $sudopath $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffer ' SRC='|$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null
-# @reboot $sudopath $nicepath -n15 $sudopath $tailpath -F -n 0 /var/log/auth.log|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null
+@reboot $sudopath $nicepath -n-15 $sudopath \
+$([[ $use_journalctl_kernlog == true ]] && printf -- "$journalctlpath -fn0 --no-pager SYSLOG_FACILITY=0" || printf -- "$tailpath -F -n 0 /var/log/kern.log") \
+|$greppath --line-buffer ' SRC='|$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.' \
+|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT"  || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\\" \\\""; for (j=6;j<i;j++) {printf " "\$j} print "\\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null # poofitee_fw
 
 CRONTAB_ENTRIES_END
 ) |$crontabpath -u poofitee -
@@ -750,38 +756,59 @@ if ! [[ -f "$poofitee_home_dir/process_logfile_line" ]];then
      echo;echo "$poofitee_home_dir/process_logfile_line did not get created.  It should have well before now."
      exit
 fi
-if ! ($sudopath -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && $sudopath -u poofitee $pspath u|$greppath "kern.log" &>/dev/null);then
-	$sudopath -u poofitee mkdir /tmp/poofitee &>/dev/null
+
+# The next segment needs a root sudoers file entry present before entering or errors occur
+if ! ($sudopath -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath -e "$poofitee_home_dir/process_logfile_line"|$greppath -e "kern.log" -e "SYSLOG_FACILITY=0" &>/dev/null);then
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-	nohup $sudopath $nicepath -n-15 $sudopath $tailpath -F -n 0 /var/log/kern.log|$greppath --line-buffer ' SRC='|$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.'|$stdbufpath -o0 $awkpath '{for (i=6;i<=NF;i++) {if (\$i ~ "^SRC=") {{gsub("SRC=","",\$i); printf \$i" \\""} printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") {printf " "\$j}} printf "\\" \\""; for (j=6;j<i;j++) {printf " "\$j} print "\\"";i=NF+1}}}'|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
+	nohup $sudopath $nicepath -n-15 $sudopath \
+        "$([[ $use_journalctl_kernlog == true ]] && printf -- "$journalctlpath -fn0 --no-pager SYSLOG_FACILITY=0"  || printf -- "$tailpath -F -n 0 /var/log/kern.log")" \
+        |$greppath --line-buffer ' SRC=' \
+        |$greppath --line-buffer -vE 'SRC=0\.0\.0\.0|SRC=127\.0\.0\.1|SRC=10\.|SRC=172\.1[6-9]\.|SRC=172\.2.\.|SRC=172\.3[01]\.|SRC=192\.168\.' \
+        |$stdbufpath -o0 $awkpath \
+        '{for (i=6;i<=NF;i++) \
+         {if (\$i ~ "^SRC=") \
+         {{gsub("SRC=","",\$i); printf \$i" \\\""} \
+         printf "kern.log "\$1" "\$2" "\$3; for (j=i;j<=NF;j++) \
+         {if (\$j ~ "^PROTO=" || \$j ~ "^SPT=" || \$j ~ "^DPT" || ((\$j ~ "^URGP") && (\$j !~ "^URGP=0$")) || \$j ~ "^SYN$" || \$j ~ "^ACK$" || \$j ~ "^FIN$" || \$j ~ "^PSH$" || \$j ~ "^RST$") \
+         {printf " "\$j}} \
+         printf "\\\" \\\""; for (j=6;j<i;j++) \
+         {printf " "\$j} \
+         print "\\\"";i=NF+1}}}' \
+         |$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 
 	SCRIPT_END
 	) > $tmpfiles/launch_complex_cron_line1
-        chown poofitee $tmpfiles/launch_complex_cron_line1
+    chown poofitee $tmpfiles/launch_complex_cron_line1
 	chmod 700 $tmpfiles/launch_complex_cron_line1
 	# Cannot proceed until "$poofitee_home_dir/toemailadds" is created
       # mv toemailadds "$poofitee_home_dir/toemailadds"
       # chown poofitee "$poofitee_home_dir/toemailadds"
+echo "Line 792"
 	$sudopath -u poofitee $tmpfiles/launch_complex_cron_line1
+echo "Line 794"
 fi
+echo "Line 796"
 if ! ($sudopath -u poofitee ps u|$greppath -v grep|$greppath "$xargspath"|$greppath "$poofitee_home_dir/process_logfile_line" &>/dev/null && $sudopath -u poofitee ps u|$greppath "auth.log" &>/dev/null);then
-	$sudopath -u poofitee mkdir /tmp/poofitee &>/dev/null
+echo "Line 798"
 	(cat <<-SCRIPT_END
 
 	#!/bin/bash
-#	nohup $sudopath $nicepath -n15 $sudopath $tailpath -F -n 0 /var/log/auth.log||$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
+#	nohup $sudopath $nicepath -n15 $sudopath "$([[ $use_journalctl_kernlog == true ]] && printf -- "$journalctlpath -fn0 --no-pager SYSLOG_FACILITY=0"  || printf -- "$tailpath -F -n 0 /var/log/auth.log")"|$xargspath -L 1 "$poofitee_home_dir/process_logfile_line"  &>/dev/null &
 	SCRIPT_END
 	) > $tmpfiles/launch_complex_cron_line2
-        chown poofitee $tmpfiles/launch_complex_cron_line2
+echo "Line 805"
+    chown poofitee $tmpfiles/launch_complex_cron_line2
+echo "Line 807"
 	chmod 700 $tmpfiles/launch_complex_cron_line2
+echo "Line 809"
 	# Cannot proceed until "$poofitee_home_dir/toemailadds" is created
       # mv toemailadds "$poofitee_home_dir/toemailadds"
       # chown poofitee "$poofitee_home_dir/toemailadds"
 	$sudopath -u poofitee $tmpfiles/launch_complex_cron_line2
 fi
-
+echo "Line 815"
 printf "\ncrontab for user poofitee set up...Original can be found in $poofitee_home_dir/cronentries\n"
 }
 
@@ -1633,9 +1660,11 @@ exit \$rc
      chmod 711 /usr/share/netfilter-persistent/plugins.d/14-poofitee-ip4tables
      printf "." # insert friendly progress indicators
 # verify the following line inserts into correct location[s]
-     if ! ($greppath ^pre-down\ /etc/init.d/netfilter-persistent\ save < /etc/network/interfaces &>/dev/null );then
-          echo "pre-down /etc/init.d/netfilter-persistent save" >> /etc/network/interfaces
-     fi
+    if [[ -f /etc/network/interfaces ]];then
+        if ! ($greppath ^pre-down\ /etc/init.d/netfilter-persistent\ save < /etc/network/interfaces &>/dev/null );then
+            echo "pre-down /etc/init.d/netfilter-persistent save" >> /etc/network/interfaces
+        fi
+    fi
 else
 :
 # here is where to configure persistence for iptables-persistent only
@@ -1696,7 +1725,7 @@ printf "." # insert friendly progress indicators
 	# These will all go after any and all existing rules, so the order will be totally unpredictable if only some of these get installed, or if there are existing non-poofitee rules
 	#  TODO:  warn installer in that case
 #  preload default router and dns name server, etc into ipset poofitee_static_trusted, all addresses that show up in ip route output, /etc/resolv.conf, /etc/network/interfaces, etc, etc.
-($ippath route;cat /etc/resolv.conf /etc/network/interfaces)|\
+($ippath route;cat /etc/resolv.conf $([[ -f /etc/network/interfaces ]] && printf -- "/etc/network/interfaces"))|\
      $greppath -Eo '((([1-9]|[1-9][0-9]|1[0-9])?[0-9]|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])((/[0-2]?[0-9])|(/3[0-2]))?'|\
      while read ipadd;do
            if [[ $ipadd =~ / ]];then
@@ -1876,6 +1905,7 @@ nickserv
 anope
 SANDBOX
 }
+
        conf_postfix () {
 ! [[ -z "$postfix_already_conf" ]] && return
 # See https://www.linode.com/docs/email/postfix/postfix-smtp-debian7
@@ -2001,8 +2031,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           chmod 600 /etc/postfix/sasl_passwd.db
           chmod 644 /etc/postfix/cacert.pem
           chmod 644 /etc/postfix/master.cf
-          cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 1&>/dev/null
-          stop_busy_spinner
+          cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem 2>/dev/null
           if [[ -f /etc/init.d/postfix ]];then
                /etc/init.d/postfix reload
           elif [[ -f /etc/systemctl ]];then
@@ -2010,6 +2039,7 @@ while true;do  #this loop allows user to change the email account for outbound s
           elif ! ($postfixpath start);then
               $postfixpath reload
           fi
+          stop_busy_spinner
           if ! ([[ "$?" == "0" ]] && [[ "$($postqueuepath -p > "$tmpfiles/postqueue_reply";echo $?)" == "0" ]]);then
               printf "\nPOOFITEE installer is unable to confirm that postfix is configured properly\
 \nenough to send out emails.  We\'ll test email sending now to find out.  If it\
@@ -2050,9 +2080,12 @@ See
             && printf "All emails sent just fine.  Have they all been received in a timely manner?  If\
 \nany were delayed, a different outgoing email server may do a better job." \
             || printf "Judging by the email queue not getting emptied quickly, a different outgoing\
-\nemail server may do a better job.\n"
-# May want to check with journalctl instead of syslog: $(([[ "$use_journalctl_syslog" == true ]] && $journalctlpath -n --no-pager SYSLOG_FACILITY=3 || $tailpath /var/log/syslog)|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
-# \nemail server may do a better job.\n$(([[ "$use_journalctl_syslog" == true ]] && $journalctlpath -n --no-pager SYSLOG_FACILITY=3 || $tailpath /var/log/syslog)|$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
+\nemail server may do a better job.\
+\n\n $( { [[ "$use_journalctl_syslog" == true ]] \
+    && $journalctlpath -n --no-pager SYSLOG_FACILITY=3 \
+    || $tailpath /var/log/syslog } \
+     |$greppath postfix|$greppath ${line%:*}.$outemailprovider|$greppath -m 1 \]:${line#*:}|$sedpath 's/^.*status=//g')"
+
           printf "\nNote that not all email providers keep a record of your emails sent from this\
 \ntype of connection.  If it is meaningful to you that these notification emails\
 \nremain in the sent folder of this email address, be sure to check for that\
@@ -2122,7 +2155,7 @@ while true;do
                        done  2> /dev/null
                   done
                   if [[ -f "$poofitee_home_dir/$inemailprovider.inconnects.txt" ]];then
-                       printf "\rThe possibilities are\e[K\n$(<"$poofitee_home_dir/$inemailprovider.inconnects.txt")"
+                       printf "\rThe possibilities are\e[K\n$(<"$poofitee_home_dir/$inemailprovider.inconnects.txt")\n"
                   else
                        printf "\r\e[K\e[2ASelected email provider isn't allowing an initial connection right now or maybe\
 \nthe Internet connection is faulty.  Press Ctrl-c to abort retries...\n"
@@ -2151,19 +2184,26 @@ while true;do
                       start_busy_spinner
                       exec 5>&-
                       exec 5<>/dev/tcp/"${line%:*}.$inemailprovider/${line#*:}"
+                      stop_busy_spinner
                       printf "\rExecuted the connect of ${line%:*}.$inemailprovider/${line#*:}, now communicating with it for user $inemailacct...\e[K"
+                      start_busy_spinner
                       read -t 2 -u 5 HELO 
                       printf "$HELO" >> $tmpfiles/fifo 
 # printf "\n$HELO"
                       msgnumber=0
-                      for msg in "user $inemailacct\r" "pass $inemailpw\r" stat list;do
+                      for msg in "user $inemailacct" "pass $inemailpw" stat list;do
                            msgnumber=$(( msgnumber+=1 ))
-                           printf "\r\e[KSending ${msg%'pass '*}\n"
-                           printf "$msg" >&5
+                           stop_busy_spinner
+                           printf "\nSending ${msg%'pass '*}"
+                           start_busy_spinner
+#                           printf "\r\e[KSending ${msg%'pass '*}"
+                           printf "$msg\r" >&5
                          #  while true;do # this loop stores server responses for a configuration
 # using 'cat <&5' would probably timeout on most single-line reads
                            while (read -u 5 replyline
+                                  stop_busy_spinner
                                   printf "\r\e[K$replyline\n"
+                                  start_busy_spinner
                                   echo "$replyline" >> $tmpfiles/fifo 
                                   ! [[ "${replyline:0:1}" == "+" ]] && break # ! [[ "${replyline:0:1}" == "+" ]] && break
                                  ) &
@@ -2181,6 +2221,7 @@ while true;do
                            done 2>/dev/null
                       done
                       stop_busy_spinner
+                      echo
                       if ! [[ "$( replystart="$($tailpath -n 1 $tmpfiles/fifo)";echo "${replystart::1}")" == "+" ]];then # present this choice with every error
                          printf "Unsuccessful sign-in of $inemailacct to ${line%:*}.$inemailprovider/${line#*:}" # with this error:\n$($tailpath -n 1 $tmpfiles/fifo)"
                          printf "quit\r" >&5
@@ -2208,6 +2249,7 @@ while true;do
             # if we have even a single success, break
               [ -f "$poofitee_home_dir/successlogins" ] && break 2
               rcpw=""
+              stop_busy_spinner
               printf "No connection succeeded.  Is name and password correct?\n"
           done # This loop is for when a password is under question
 done # This loop is to change the account
@@ -2217,8 +2259,10 @@ elif [[ -f "./toemailadds" ]];then
      toemailadds="$(cat "./toemailadds")"
 fi
 until ! [[ -z "$got_sendto_emailadds" ]];do
+     stop_busy_spinner
      get_sendto_emailadds
 done
+start_busy_spinner
 #     printf "\n\nLet's look at the results:\n"
 #     cat $tmpfiles/fifo
 #     rm $tmpfiles/fifo 2>/dev/null
@@ -2430,7 +2474,7 @@ if [ \$((numofemails)) -gt -1 ]; then
           if [ \$($greppath -cwie "report" -e "send" -e "return" <(echo "\$line")) -gt 0 ] && [ \$($greppath -cwi "whitelist" <(echo "\$line")) -gt 0 ];then
               script="echo \"\$($sudopath $ipsetpath list whitelist|$awkpath 'NR>7 {print \$1}')\"|$mailpath -s \"As you requested\" \"\$recipient_list\""
           elif [ \$($greppath -cwie "recent" -e "report" -e "kern" -e "kernlog" -e "kern.log" -e "tail" -e "who" -e "whoami" -e "what" -e "me" <(echo "\$line")) -gt 0 ];then
-              script="echo \"\$($tailpath /var/log/kern.log)\"|$mailpath -s \"As you requested\" \"\$recipient_list\""
+              script="echo \"$([[ "$use_journalctl_kernlog" == true ]] && printf -- "$($journalctlpath -n --no-pager SYSLOG_FACILITY=3)" || printf -- "$($tailpath /var/log/kern.log)")"|$mailpath -s \"As you requested\" \"\$recipient_list\""
           elif [ \$($greppath -cwie "permit" -e "let" -e "on" -e "open" -e "allow" -e "whitelist" <(echo "\$line")) -gt 0 ]; then
               script="\$directoryforscripts/openall.sh \$(echo \"\$line\"|$awkpath '{print \$1}') \$option \"via email \$(date)\""
           elif [ \$($greppath -cwie "log" -e "logging" <\$(echo "\$line")) -gt 0 ];then
@@ -2472,6 +2516,7 @@ chown poofitee "$poofitee_home_dir/email_fetch_parse"
 chmod 700 "$poofitee_home_dir/email_fetch_parse"
 # TODO: iptables entry to log port knock for email reader
 # belongs inserted just before both whitelist and blacklist - use the lower line number of them both
+stop_busy_spinner
 until read -erp "Enter a port number you will knock to initiate email to be read: " emailport; [[ "$emailport" =~ ^[0-9]{1,5}$ ]] && [[ $(( $emailport )) -le 65536 ]];do
     printf "\nThe port number must be a number between 0 and 65535 inclusive,\
 \nbut 0 can be deemed by security-conscious routers to be invalid to traverse\
@@ -2738,9 +2783,9 @@ chown poofitee "$poofitee_home_dir/newdynip.sh"
 chmod 700 "$poofitee_home_dir/newdynip.sh"
 #  Only need to confirm if there are entries in crontab
 ! [[ "$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l)" == "0" ]] && \
-     (printf -- "\n$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
-      echo "Confirm you understand that your crontab shell is now getting changed which"
-      read -n1 -s -p "might affect the above entries if they send values on, contain quotes, etc.: ")
+     printf -- "\n$(eval $crontabpath -u poofitee -l 2>/dev/null|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$|$wcpath -l) entries in crontab:\n\n$(eval "$crontabpath -u poofitee -l|$greppath -E -v ^#|$greppath -v ^[[:space:]]*$")\n"
+     echo "Confirm you understand that your crontab shell is now getting changed whichmight affect the above entries if they send values on, contain quotes, etc.: "
+     press_a_key
 (cat << CRONTAB_ENTRIES_END
 $($crontabpath -u poofitee -l 2>/dev/null)
 # line below is from poofitee_DynAddChangeNotify
@@ -2788,7 +2833,7 @@ printf "Remember always this fact of life:  Email providers do make unpredictabl
 \nchanges expressly designed to limit the usefulness of this fine enhancement\
 \nyou've made to your Internet connectivity!  Though let's hope they'll have\
 \nbetter reason for doing so than merely to be that way.\
-$(! [[ "$use_journalctl_syslog" == true ]] || ! [[ "$use_journalctl_kernlog" == true ]] || ! [[ "$use_journalctl_authlog" == true ]] \
+ $(! [[ "$use_journalctl_syslog" == true ]] || ! [[ "$use_journalctl_kernlog" == true ]] || ! [[ "$use_journalctl_authlog" == true ]] \
         && printf -- "\n\nIMPORTANT:  This installation will cease to function if this distro gets updated to fully systemd logging.")"
 }
 get_1_addr_from_bunch() {
@@ -3548,7 +3593,6 @@ ippath="$($whereispath $binaryflag ip)";ippath="${ippath#*:}";ippath="${ippath# 
 wcpath="$($whereispath $binaryflag wc)";wcpath="${wcpath#*:}";wcpath="${wcpath# }";wcpath="${wcpath%% *}"
 sedpath="$($whereispath $binaryflag sed)";sedpath="${sedpath#*:}";sedpath="${sedpath# }";sedpath="${sedpath%% *}"
 rhelchkconfigpath="$($whereispath $binaryflag chkconfig)";rhelchkconfigpath="${rhelchkconfigpath#*:}";rhelchkconfigpath="${rhelchkconfigpath# }";rhelchkconfigpath="${rhelchkconfigpath%% *}"
-journalctlpath="$($whereispath $binaryflag journalctl)";journalctlpath="${journalctlpath#*:}";journalctlpath="${journalctlpath# }";journalctlpath="${journalctlpath%% *}"
 
 if [[ "$*" =~ ^awk=/ ]] || [[ "$*" =~ \ awk=/ ]];then
 for arg in "$@"
@@ -3569,12 +3613,14 @@ sortpath="$($whereispath $binaryflag sort)";sortpath="${sortpath#*:}";sortpath="
 filepath="$($whereispath $binaryflag file)";filepath="${filepath#*:}";filepath="${filepath# }";filepath="${filepath%% *}"
 lsmodpath="$($whereispath $binaryflag lsmod)";lsmodpath="${lsmodpath#*:}";lsmodpath="${lsmodpath# }";lsmodpath="${lsmodpath%% *}"
 # The reject and exit notices should be in order of how extensive of upgrades would be required.  Entire computer first, then OS, then executable version, then installed packages
-trap "echo $exitmsg" EXIT
 exitmsg="Thank you for running this POOFITEE configuration script...God loves you...pass it on"
+trap "echo $exitmsg" EXIT
 dialogpath=""
 dialogpath="$($whereispath $binaryflag dialog)";dialogpath="${dialogpath#*:}";dialogpath="${dialogpath# }";dialogpath="${dialogpath%% *}"
 whiplogpath="$dialogpath"
-[[ -z "$dialogpath" ]] && (whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}")
+if [[ -z "$dialogpath" ]];then
+     whiptailpath="$($whereispath $binaryflag whiptail)";whiptailpath="${whiptailpath#*:}";whiptailpath="${whiptailpath# }";whiptailpath="${whiptailpath%% *}"
+fi
 [[ -z "$dialogpath" ]] && whiplogpath="$whiptailpath"
 tputpath="$($whereispath $binaryflag tput)" ;tputpath="${tputpath#*:}";tputpath="${tputpath# }";tputpath="${tputpath%% *}"
 globalbacktitle="Required Reading  POOFITEE  $version"
@@ -3588,6 +3634,7 @@ if ! [[ "$($filepath "/bin/bash")" =~ ^/bin/bash:\ ELF ]];then
 such as yours simply because it's cron=scheduled 'tail -F ... /var/log/kern.log' entry requires stdbuf, \
 which is available only on OS platforms using ELF."
 fi
+
 use_journalctl_syslog=""
 use_journalctl_kernlog=""
 use_journalctl_authlog=""
@@ -3617,7 +3664,6 @@ elif ! [[ -f "/var/log/auth.log" ]] \
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
 /var/log/auth.log or systemd for logging."
 fi
-
 mkdir "$tmpfiles" 2>/dev/null
 chmod 777 "$tmpfiles"
 touch $tmpfiles/file_create_rights_test 2>/dev/null
@@ -3680,6 +3726,11 @@ if ! [[ -z "$answer2" ]];then
     failreason+="  Invalid command line option: the first option is menu selections, \
 one and only one of each, in a single string"
 fi
+sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
+if ! $sudopath printf "" &>/dev/null;then
+    [[ -z "$failreason" ]] || failreason+="\n\n"
+    failreason+="  You are logged in as $(whoami), so that user needs to be authorized to sudo without producing the error that it does now: \"$($sudopath printf "" 2>&1)\""
+fi
 if ! [[ -z "$failreason" ]];then
     failreason="<center>Thank you for trying this POOFITEE installer, but...\
 \n<center>You cannot run POOFITEE installer this way for the following reason[s]:\n\n$failreason$([[ -z "$whiptailpath" ]] && printf -- "\n\nPress any key...")"
@@ -3700,7 +3751,7 @@ if ! [[ -z "$failreason" ]];then
     exit
 fi
 #We'll place this installer path variable here for future use possibly to inform in the next warning section
-progress_spinner_angles=("|" "/" "-" "\\" "|" "/" "-" "\\")
+busy_spinner_angles=("|" "/" "-" "\\" "|" "/" "-" "\\")
 installers=("apt-get" "-y install" dnf install yum "-y install" zypper install emerge "" pacman "--noconfirm -S" pkg install  pkg_add "" xbps-install -Sy brew install port install)
 num_of_installers="${!installers[*]}"
 num_of_installers="${num_of_installers##* }"
@@ -3724,7 +3775,6 @@ if ! [ "$(whoami)" == "root" ];then
 display menus.  No installation on this computer can be made by this script unless \
 re-launched by root.\n"
 fi
-sudopath="$($whereispath $binaryflag sudo)";sudopath="${sudopath#*:}";sudopath="${sudopath# }";sudopath="${sudopath%% *}"
 if  [[ -z "$sudopath" ]];then
     ! [[ -z "$localwarning" ]] && localwarning+="\nAdditionally, \n"
     localwarning+="\nThe actual sudo command is necessary for several aspects of this installer, \
