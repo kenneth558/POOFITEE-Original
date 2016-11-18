@@ -3642,24 +3642,24 @@ use_journalctl_authlog=""
 
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=3 &>/dev/null;then
      use_journalctl_syslog=true    
-elif ! [[ -f "/var/log/syslog" ]] \
-    || ! ls -altr /var/log/syslog /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/syslog &>/dev/null;then
+elif ! [[ -f "/var/log/syslog" ]];then
+#    || ! ls -altr /var/log/syslog /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/syslog &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
 /var/log/syslog or systemd for logging."
 fi
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=0 &>/dev/null;then
      use_journalctl_kernlog=true    
-elif ! [[ -f "/var/log/kern.log" ]] \
-     || ! ls -altr /var/log/kern.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/kern\.log &>/dev/null;then
+elif ! [[ -f "/var/log/kern.log" ]];then
+#     || ! ls -altr /var/log/kern.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/kern\.log &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
 /var/log/kern.log or systemd for logging."
 fi
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=4 &>/dev/null && $journalctlpath -n1 SYSLOG_FACILITY=10 &>/dev/null;then
      use_journalctl_authlog=true    
-elif ! [[ -f "/var/log/auth.log" ]] \
-     || ! ls -altr /var/log/auth.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/auth\.log &>/dev/null;then
+elif ! [[ -f "/var/log/auth.log" ]];then
+#     || ! ls -altr /var/log/auth.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/auth\.log &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
     failreason+="  This version of POOFITEE is unable to run on systems such as yours that don\'t use \
 /var/log/auth.log or systemd for logging."
