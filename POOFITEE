@@ -3873,6 +3873,7 @@ or no testing has been done in a virtual interface environment, but no problems 
 se are expected.\
 \n\n - No ability to differentiate between, nor work with, initsystem types.  \
 So for persistence of the  this script installs, you're on your own.\
+\n\n - Minimal package manager interfacing. \
 \n\n - Limited ability to configure postfix.  Enclosed postscript configuration was \
 developed under a single Linux distro with a single postscript version.\
 \n\n - No command line help, package [un]installation including dependency tracking, \
