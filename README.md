@@ -2,7 +2,7 @@
 
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
 
--- At first blush, we thought POOFITEE was operational 2016-09-16, but a few bugs remain.  
+-- At first blush, we thought POOFITEE was operational 2016-09-16, but a few bugs remain.  Now, responsibilities in my life have pulled me away from the POOFITEE project about the same time I was realizing how unrealistic it is to write a Linux/Unix installer hoping to make it work with umpteen different distros.  There are far too many uniquenesses among Linux distros to expect a single script to pull it all together and remain a reasonable length.  I'll get back to this project when I can and just make the script as shockingly long as it will need to be.  Thank you for your well wishes!
 
 -- Tested with Ubuntu server CLI, Linux Mint, Raspberry Pi, and Pine A64 (for which you'll have to manually load the ipset module for iptables).  We expect success with many or most other Linux distros.  Future expansion still planned including source code cleanup and screen layout enhancement.  
 
