@@ -1,3 +1,4 @@
+(I abandoned this project upon realizing just how disparately divergent the Linux universe is)
 # POOFITEE 
 
 Linux Scripting "Packet filtering Owner Only, adaptive, pseudo-application layer linux Firewall - the system is Invisible To Everyone Else"
