@@ -4371,7 +4371,7 @@ $([[ "$installerpath" =~ apt-get|dnf|yum ]] && printf "\npress b to both update 
                            stop_busy_spinner
                            printf "\r\e[KThe following $(what_needs_to_be_installed;echo "$?") packages failed to install:\n$notinstalled\
 \nInstall manually or press R to retry (recommended as long as progress is being\
-\nmade with repeated retries), any other alpha-numeric key to ignore:\n"
+\nmade with repeated retries), or run apt-get update in a side terminal session, any other alpha-numeric key to ignore:\n"
                            press_a_key r "<other-letter-or-number>" || break
                            printf "\n"
                            start_busy_spinner
