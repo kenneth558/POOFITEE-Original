@@ -3011,7 +3011,7 @@ showthis () {
  # THEREFORE THE WHIPLOG ANSWER WILL BE CONTROLLED WITHIN HERE, THE FILE NAME CONTAINING THE ANSWER IS THEN HARDCODED BOTH HERE AND IN THE CALLER 
 if ! [[ -z "$tputpath" ]];then
     rows="$($tputpath lines)"
-    cols="$(($($tputpath cols)))" 
+    cols="$(($($tputpath cols)))"
 fi
 if [[ -z "$tputpath" ]] && ! [[ -z "$resizepath" ]];then # Resizing tested slower than using tput
     eval `$resizepath`
@@ -3656,7 +3656,7 @@ use_journalctl_authlog=""
 # OK as long as for all three we have one or the other means of examining, favor systemd
 
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=3 &>/dev/null;then
-     use_journalctl_syslog=true    
+     use_journalctl_syslog=true
 elif ! [[ -f "/var/log/syslog" ]];then
 #    || ! ls -altr /var/log/syslog /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/syslog &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
@@ -3664,7 +3664,7 @@ elif ! [[ -f "/var/log/syslog" ]];then
 /var/log/syslog or systemd for logging."
 fi
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=0 &>/dev/null;then
-     use_journalctl_kernlog=true    
+     use_journalctl_kernlog=true
 elif ! [[ -f "/var/log/kern.log" ]];then
 #     || ! ls -altr /var/log/kern.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/kern\.log &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
@@ -3672,7 +3672,7 @@ elif ! [[ -f "/var/log/kern.log" ]];then
 /var/log/kern.log or systemd for logging."
 fi
 if ! [[ -z "$journalctlpath" ]] && $journalctlpath -n1 --no-pager SYSLOG_FACILITY=4 &>/dev/null && $journalctlpath -n1 SYSLOG_FACILITY=10 &>/dev/null;then
-     use_journalctl_authlog=true    
+     use_journalctl_authlog=true
 elif ! [[ -f "/var/log/auth.log" ]];then
 #     || ! ls -altr /var/log/auth.log /run/*.pid 2>/dev/null|$tailpath -n1|$greppath /var/log/auth\.log &>/dev/null;then
     [[ -z "$failreason" ]] || failreason+="\n\n"
@@ -3703,7 +3703,7 @@ maincheckitems+=("port knocking" \
 "quit (or Enter/Tab key with no selections)")
 maincheckitems+=("f" \
 "e")
-[[ -z "$not_dhcp_of_public_address" ]] && maincheckitems+=("d") 
+[[ -z "$not_dhcp_of_public_address" ]] && maincheckitems+=("d")
 maincheckitems+=("p" \
 "l" \
 "c" \
