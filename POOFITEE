@@ -376,13 +376,10 @@ install_or_upgrade_then_test_this_awktype () {
 what_needs_to_be_installed () {
 if [[ -z "$netfiltperspath" ]];then netfiltperspath=$($whereispath $binaryflag netfilter-persistent);netfiltperspath="${netfiltperspath#*:}";netfiltperspath="${netfiltperspath# }";netfiltperspath="${netfiltperspath%% *}";fi
 if [[ -z "$inotifywaitpath" ]];then inotifywaitpath=$($whereispath $binaryflag inotifywait);inotifywaitpath="${inotifywaitpath#*:}";inotifywaitpath="${inotifywaitpath# }";inotifywaitpath="${inotifywaitpath%% *}";fi
-if [[ -z "$postqueuepath" ]];then postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}";fi
 if [[ -z "$iptablespath" ]];then iptablespath=$($whereispath $binaryflag iptables);iptablespath="${iptablespath#*:}";iptablespath="${iptablespath# }";iptablespath="${iptablespath%% *}";fi
 if [[ -z "$crontabpath" ]];then crontabpath=$($whereispath $binaryflag crontab);crontabpath="${crontabpath#*:}";crontabpath="${crontabpath# }";crontabpath="${crontabpath%% *}";fi
 if [[ -z "$timeoutpath" ]];then timeoutpath=$($whereispath $binaryflag timeout);timeoutpath="${timeoutpath#*:}";timeoutpath="${timeoutpath# }";timeoutpath="${timeoutpath%% *}";fi
 if [[ -z "$adduserpath" ]];then adduserpath=$($whereispath $binaryflag adduser);adduserpath="${adduserpath#*:}";adduserpath="${adduserpath# }";adduserpath="${adduserpath%% *}";fi
-if [[ -z "$postmappath" ]];then postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}";fi
-if [[ -z "$postfixpath" ]];then postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}";fi
 if [[ -z "$visudopath" ]];then visudopath=$($whereispath $binaryflag visudo);visudopath="${visudopath#*:}";visudopath="${visudopath# }";visudopath="${visudopath%% *}";fi
 if [[ -z "$stdbufpath" ]];then stdbufpath=$($whereispath $binaryflag stdbuf);stdbufpath="${stdbufpath#*:}";stdbufpath="${stdbufpath# }";stdbufpath="${stdbufpath%% *}";fi
 if [[ -z "$ifdownpath" ]];then ifdownpath=$($whereispath $binaryflag ifdown);ifdownpath="${ifdownpath#*:}";ifdownpath="${ifdownpath# }";ifdownpath="${ifdownpath%% *}";fi
@@ -390,6 +387,13 @@ if [[ -z "$ipsetpath" ]];then ipsetpath=$($whereispath $binaryflag ipset);ipsetp
 if [[ -z "$sleeppath" ]];then sleeppath=$($whereispath $binaryflag sleep);sleeppath="${sleeppath#*:}";sleeppath="${sleeppath# }";sleeppath="${sleeppath%% *}";fi
 if [[ -z "$mailpath" ]];then mailpath=$($whereispath $binaryflag mail);mailpath="${mailpath#*:}";fi
 if [[ -z "$mailpath" ]];then mailpath=$($whereispath $binaryflag mailx);mailpath="${mailpath#*:}";fi;mailpath="${mailpath# }";mailpath="${mailpath%% *}"
+if [[ -z "$mailpath" ]];then mailpath=" $($whereispath $binaryflag sendmail)";mailpath="${mailpath#*:}";mailpath="${mailpath# }";mailpath="${mailpath%% *}";mailpath="${mailpath%%.*}";fi
+if [[ "$1" != "sendmailworks" ]];then
+#  These will not be needed if emailing already works
+     if [[ -z "$postmappath" ]];then postmappath=$($whereispath $binaryflag postmap);postmappath="${postmappath#*:}";postmappath="${postmappath# }";postmappath="${postmappath%% *}";fi
+     if [[ -z "$postfixpath" ]];then postfixpath=$($whereispath $binaryflag postfix);postfixpath="${postfixpath#*:}";postfixpath="${postfixpath# }";postfixpath="${postfixpath%% *}";fi
+     if [[ -z "$postqueuepath" ]];then postqueuepath=$($whereispath $binaryflag postqueue);postqueuepath="${postqueuepath#*:}";postqueuepath="${postqueuepath# }";postqueuepath="${postqueuepath%% *}";fi
+fi
 if [[ -z "$ifuppath" ]];then ifuppath=$($whereispath $binaryflag ifup);ifuppath="${ifuppath#*:}";ifuppath="${ifuppath# }";ifuppath="${ifuppath%% *}";fi
 if [[ -z "$datepath" ]];then datepath=$($whereispath $binaryflag date);datepath="${datepath#*:}";datepath="${datepath# }";datepath="${datepath%% *}";fi
 if [[ -z "$bashpath" ]];then bashpath=$($whereispath $binaryflag bash);bashpath="${bashpath#*:}";bashpath="${bashpath# }";bashpath="${bashpath%% *}";fi
@@ -695,7 +699,6 @@ set_notinstalled_var () {
 # binary name in cases where the less-preferred binary was found prior to finding the more-preferred binary name. 
 # every binary search looks for less-preferred name if more-preferred name not found.
 # more-preferred binary name[s, space-separated], [2] is the less-preferred binary name[s, space-separated], [3] 
-# if [[ -z "$inotifywaitpath" ]];then notinstalled+="$inotifywaitpath[]\n";fi
 [[ -z "$inotifywaitpath" ]] && notinstalled+="inotify-tools\n"
 [[ -z "$iptablespath" ]] && notinstalled+="iptables\n"
 [[ -z "$netfiltperspath" ]] && notinstalled+="netfilter-persistent\n"
@@ -1616,7 +1619,7 @@ install_rc
 get_sendto_emailadds
 install_buildiptablessh
 install_firewall_cronentries
-} 
+}
        install_buildiptablessh () {
 #ipset list error on stderr when ipset not working due to?: ipset v6.29: Kernel error received: Invalid argument
 printf "." # insert friendly progress indicators
@@ -2994,9 +2997,9 @@ layitout () { # For this to work
              fi
              printf -- "$printout"
          done
-    done 
-return 
-} 
+    done
+return
+}
 showthis () {
  # $1 is main text to display
  # $2 is type of box to use
